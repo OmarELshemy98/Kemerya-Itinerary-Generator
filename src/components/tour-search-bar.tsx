@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Search, MapPin, X } from "lucide-react";
-import { searchTours, getSubCategoryById, getMainCategoryById } from "@/data/tours";
+import { useToursData } from "@/components/tours-data-provider";
 import type { Tour } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,8 @@ export function TourSearchBar({
   placeholder = "Search tours by title... (e.g. Pyramids, Nile Cruise)",
   className,
 }: TourSearchBarProps) {
+  const { searchTours, getSubCategoryById, getMainCategoryById, tours } =
+    useToursData();
   const [query, setQuery] = React.useState("");
   const [results, setResults] = React.useState<Tour[]>([]);
   const [isOpen, setIsOpen] = React.useState(false);
@@ -48,7 +50,7 @@ export function TourSearchBar({
       setResults([]);
       setIsOpen(false);
     }
-  }, [query]);
+  }, [query, searchTours, tours]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!isOpen) return;

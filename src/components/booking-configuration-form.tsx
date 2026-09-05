@@ -17,6 +17,7 @@ import {
   Mail,
   Phone,
   Info,
+  MessageCircle,
 } from "lucide-react";
 import type { Tour, BookingConfig, Currency, ItineraryDay } from "@/types";
 import {
@@ -57,6 +58,7 @@ const bookingSchema = z
     clientName: z.string().min(2, "Client name required").optional().or(z.literal("")),
     clientEmail: z.string().email("Invalid email").optional().or(z.literal("")),
     clientPhone: z.string().optional().or(z.literal("")),
+    clientWhatsapp: z.string().optional().or(z.literal("")),
     notes: z.string().optional().or(z.literal("")),
     specialRequests: z.string().optional().or(z.literal("")),
     customInclusions: z.array(z.string()).optional(),
@@ -133,6 +135,7 @@ export function BookingConfigurationForm({
         clientName: "",
         clientEmail: "",
         clientPhone: "",
+        clientWhatsapp: "",
         notes: "",
         specialRequests: "",
         customInclusions: [],
@@ -208,6 +211,7 @@ export function BookingConfigurationForm({
       clientName: values.clientName || undefined,
       clientEmail: values.clientEmail || undefined,
       clientPhone: values.clientPhone || undefined,
+      clientWhatsapp: values.clientWhatsapp || undefined,
       notes: values.notes || undefined,
       specialRequests: values.specialRequests || undefined,
       createdAt: new Date().toISOString(),
@@ -443,7 +447,7 @@ export function BookingConfigurationForm({
           </Section>
 
           <Section icon={<User className="h-4 w-4" />} title="Client Information (Optional)">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <Label>Client Name</Label>
                 <div className="relative mt-1.5">
@@ -481,6 +485,18 @@ export function BookingConfigurationForm({
                     {...register("clientPhone")}
                     placeholder="+20 1xx xxx xxxx"
                     className="pl-9"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>WhatsApp *</Label>
+                <div className="relative mt-1.5">
+                  <MessageCircle className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-500" />
+                  <Input
+                    type="tel"
+                    {...register("clientWhatsapp")}
+                    placeholder="+20 1xx xxx xxxx (for PDF)"
+                    className="pl-9 border-emerald-200 focus:border-emerald-400 focus:ring-emerald-400"
                   />
                 </div>
               </div>

@@ -1,0 +1,734 @@
+import * as cheerio from "cheerio";
+import type {
+  MainCategory,
+  SubCategory,
+  Tour,
+  ItineraryDay,
+} from "@/types";
+import { MAIN_CATEGORIES, SUB_CATEGORIES } from "@/data/tours";
+
+export const KEMERYA_BASE_URL = "https://www.kemeryatours.com";
+
+export const MAIN_CATEGORY_URLS: Record<string, string> = {
+  "mc-001": `${KEMERYA_BASE_URL}/egypt-day-tours`,
+  "mc-002": `${KEMERYA_BASE_URL}/egypt-nile-cruise-tours`,
+  "mc-003": `${KEMERYA_BASE_URL}/egypt-shore-excursions`,
+  "mc-004": `${KEMERYA_BASE_URL}/egypt-travel-packages`,
+};
+
+const DEFAULT_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+
+const REQUEST_DELAY_MS = 300;
+
+function delay(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function fetchHtml(url: string): Promise<string> {
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent": DEFAULT_UA,
+      Accept:
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.5",
+    },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch ${url}: HTTP ${res.status}`);
+  }
+  return await res.text();
+}
+
+function toSlug(s: string): string {
+  return s
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function cleanText(s: string | undefined | null): string {
+  return (s || "")
+    .replace(/\s+/g, " ")
+    .replace(/\u00a0/g, " ")
+    .trim();
+}
+
+function extractPriceUSD(text: string): number | null {
+  const m = text.match(/\$\s*([\d,]+(?:\.\d+)?)/);
+  if (!m) return null;
+  const n = parseFloat(m[1].replace(/,/g, ""));
+  return isFinite(n) ? n : null;
+}
+
+function extractDaysFromText(text: string): number | null {
+  const m1 = text.match(/(\d+)\s*[-\s]*\s*(day|days|Day|Days)\b/i);
+  if (m1) return parseInt(m1[1], 10);
+  const m2 = text.match(/(\d+)\s*[-\s]*\s*(night|nights|Night|Nights)\b/i);
+  if (m2) return parseInt(m2[1], 10) + 1;
+  const m3 = text.match(/(\d+)\s*[-\/]\s*(\d+)\s*(day|night)/i);
+  if (m3) return parseInt(m3[1], 10);
+  return null;
+}
+
+function findMainCategoryByUrl(url: string): MainCategory | undefined {
+  for (const mc of MAIN_CATEGORIES) {
+    const mcUrl = MAIN_CATEGORY_URLS[mc.id];
+    if (mcUrl && url.startsWith(mcUrl)) return mc;
+  }
+  return undefined;
+}
+
+function matchExistingSubCategory(
+  mainCatId: string,
+  slug: string,
+  name: string
+): SubCategory | undefined {
+  const candidates = SUB_CATEGORIES.filter(
+    (s) => s.mainCategoryId === mainCatId
+  );
+  const exactSlug = candidates.find((s) => s.slug === slug);
+  if (exactSlug) return exactSlug;
+  const sameName = candidates.find(
+    (s) => cleanText(s.name).toLowerCase() === cleanText(name).toLowerCase()
+  );
+  if (sameName) return sameName;
+  const slugLike = candidates.find((s) => {
+    const a = toSlug(s.name);
+    const b = slug;
+    return a === b || a.includes(b) || b.includes(a);
+  });
+  return slugLike;
+}
+
+export interface ScrapedSubCategory {
+  name: string;
+  slug: string;
+  url: string;
+  description?: string;
+  image?: string;
+  matchedSubCategory?: SubCategory;
+  mainCategoryId: string;
+}
+
+export function parseMainCategoryPage(
+  html: string,
+  mainCatUrl: string
+): ScrapedSubCategory[] {
+  const $ = cheerio.load(html);
+  const out: ScrapedSubCategory[] = [];
+  const mainCat = findMainCategoryByUrl(mainCatUrl);
+  const mainCatId = mainCat?.id || "";
+
+  const links = $("a");
+  const seen = new Set<string>();
+
+  links.each((_, el) => {
+    const href = $(el).attr("href") || "";
+    const absHref = href.startsWith("http")
+      ? href
+      : href.startsWith("/")
+      ? `${KEMERYA_BASE_URL}${href}`
+      : "";
+    if (!absHref || !absHref.startsWith(mainCatUrl + "/")) return;
+    const parts = absHref.split("/").filter(Boolean);
+    if (parts.length < 4 || parts.length > 6) return;
+    const slug = parts[parts.length - 1];
+    if (seen.has(slug)) return;
+    const h3 = $(el).find("h3").first();
+    const h2 = $(el).find("h2").first();
+    const titleEl = h3.length ? h3 : h2.length ? h2 : null;
+    const title = cleanText(titleEl?.text());
+    if (!title) return;
+    seen.add(slug);
+
+    const img = $(el).find("img").first();
+    const imgSrc =
+      img.attr("src") || img.attr("data-src") || img.attr("data-lazy-src");
+
+    const descCandidates = $(el)
+      .find("p, span, div")
+      .filter((_, ch) => {
+        const t = cleanText($(ch).clone().children().remove().end().text());
+        return t.length > 30 && t.length < 600;
+      });
+    let description: string | undefined;
+    if (descCandidates.length) {
+      description = cleanText(
+        $(descCandidates.first()).clone().children().remove().end().text()
+      ).slice(0, 280);
+    }
+    if (!description) {
+      const inner = cleanText($(el).text()).slice(title.length);
+      if (inner.length > 20) description = inner.slice(0, 280);
+    }
+
+    const matched = matchExistingSubCategory(mainCatId, slug, title);
+
+    out.push({
+      name: title,
+      slug,
+      url: absHref,
+      description,
+      image: imgSrc,
+      matchedSubCategory: matched,
+      mainCategoryId: mainCatId,
+    });
+  });
+
+  return out;
+}
+
+export interface ScrapedTourListItem {
+  title: string;
+  slug: string;
+  url: string;
+  priceUSD?: number;
+  shortDescription?: string;
+  durationText?: string;
+  image?: string;
+  mainCategoryId: string;
+  subCategoryId?: string;
+  rawDurationDays?: number;
+}
+
+export function parseSubCategoryPage(
+  html: string,
+  subCategoryUrl: string,
+  mainCatId: string,
+  subCatId?: string
+): ScrapedTourListItem[] {
+  const $ = cheerio.load(html);
+  const out: ScrapedTourListItem[] = [];
+  const seen = new Set<string>();
+
+  $(".tour-card.card, a.tour-card").each((_, el) => {
+    const href = $(el).attr("href") || "";
+    const absHref = href.startsWith("http")
+      ? href
+      : href.startsWith("/")
+      ? `${KEMERYA_BASE_URL}${href}`
+      : "";
+    if (!absHref) return;
+    const parts = absHref.split("/").filter(Boolean);
+    if (parts.length < 5) return;
+    const slug = parts[parts.length - 1];
+    if (seen.has(slug)) return;
+    seen.add(slug);
+
+    const h3 = $(el).find("h3").first();
+    const title = cleanText(h3.text());
+    if (!title) return;
+
+    const img = $(el).find("img").first();
+    const image =
+      img.attr("src") || img.attr("data-src") || img.attr("data-lazy-src");
+
+    const innerText = cleanText($(el).text());
+    const price = extractPriceUSD(innerText);
+
+    const durationRegex =
+      /(\d+\s*[-–]\s*\d+\s*(?:Hours?|Days?|Nights?)|\d+\s*(?:Hours?|Days?|Nights?|Days?\s*\/\s*\d+\s*Nights?))\b/gi;
+    const durationMatches = innerText.match(durationRegex);
+    let durationText: string | undefined;
+    if (durationMatches && durationMatches.length) {
+      durationText = durationMatches[0].trim();
+    }
+    let rawDays = durationText ? extractDaysFromText(durationText) : null;
+    if (!rawDays) rawDays = extractDaysFromText(title);
+
+    const afterTitle = innerText.slice(title.length);
+    let shortDescription: string | undefined;
+    const descCandidate = afterTitle
+      .replace(/From\s*\$[\d.,]+\s*Per\s*person/i, "")
+      .replace(durationRegex, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (descCandidate.length > 20) {
+      shortDescription = descCandidate.slice(0, 250);
+    }
+
+    out.push({
+      title,
+      slug,
+      url: absHref,
+      priceUSD: price ?? undefined,
+      shortDescription,
+      durationText,
+      image,
+      mainCategoryId: mainCatId,
+      subCategoryId: subCatId,
+      rawDurationDays: rawDays ?? undefined,
+    });
+  });
+
+  return out;
+}
+
+export interface ScrapedTourDetails {
+  title: string;
+  priceUSD?: number;
+  pricesTable?: { personsLabel: string; priceUSD: number }[];
+  inclusions: string[];
+  exclusions: string[];
+  itineraryItems: string[];
+  overviewText?: string;
+  durationText?: string;
+  locationText?: string;
+  groupText?: string;
+  meetingPoint?: string;
+  mainImage?: string;
+  gallery?: string[];
+  durationDays?: number;
+  durationNights?: number;
+  longDescription?: string;
+  highlights?: string[];
+}
+
+export function parseTourDetailsPage(html: string): ScrapedTourDetails {
+  const $ = cheerio.load(html);
+
+  const title = cleanText($("h1").first().text());
+
+  const bodyText = cleanText($("body").text());
+  const priceMatches = [
+    ...bodyText.matchAll(/\$\s*([\d,]+(?:\.\d+)?)/g),
+  ].map((m) => parseFloat(m[1].replace(/,/g, "")));
+  const fromPriceMatch = bodyText.match(
+    /From[^\n\r\$]{0,6}\$\s*([\d,]+(?:\.\d+)?)\s*Per\s*person/i
+  );
+  const priceUSD = fromPriceMatch
+    ? parseFloat(fromPriceMatch[1].replace(/,/g, ""))
+    : priceMatches.length
+    ? priceMatches[priceMatches.length - 1]
+    : undefined;
+
+  let durationText: string | undefined;
+  let locationText: string | undefined;
+  let groupText: string | undefined;
+  const metaBox = $("main").first().text() || bodyText;
+  const durM = metaBox.match(/Duration\s*([\s\S]{0,80}?)(?=Location|Group|Language|Price|\n{2,})/i);
+  if (durM) durationText = cleanText(durM[1]);
+  const locM = metaBox.match(/Location\s*([\s\S]{0,80}?)(?=Duration|Group|Language|Price|\n{2,})/i);
+  if (locM) locationText = cleanText(locM[1]);
+  const grpM = metaBox.match(/Group\s*([\s\S]{0,80}?)(?=Location|Duration|Language|Price|\n{2,})/i);
+  if (grpM) groupText = cleanText(grpM[1]);
+
+  const mainImage =
+    $("main img").first().attr("src") ||
+    $("main img").first().attr("data-src");
+  const gallerySrcs = $("main img")
+    .map((_, i) => $(i).attr("src") || $(i).attr("data-src") || "")
+    .toArray();
+  const gallery = Array.from(
+    new Set(
+      (gallerySrcs as unknown as string[])
+        .filter((s) => s && s.includes("storage/"))
+        .slice(0, 8)
+    )
+  ) as string[];
+
+  const lists: { prevHeading: string | null; items: string[] }[] = [];
+  $("main ul, main ol").each((_, ul) => {
+    const itemEls = $(ul)
+      .find("li")
+      .map((_, li) => cleanText($(li).text()))
+      .toArray();
+    const items = (itemEls as unknown as string[]).filter(
+      (t) => t.length > 2 && t.length < 500
+    );
+    if (items.length === 0) return;
+    let p: any = (ul as any).previousSibling;
+    let prevHeading: string | null = null;
+    let guard = 0;
+    while (p && guard < 15) {
+      guard++;
+      if (p.type === "tag" && /^h[1-6]$/i.test((p as any).tagName || "")) {
+        prevHeading = cleanText($(p).text());
+        break;
+      }
+      p = (p as any).previousSibling;
+    }
+    if (!prevHeading) {
+      let par: any = (ul as any).parent;
+      guard = 0;
+      while (par && guard < 6) {
+        guard++;
+        const sib = (par as any).previousSibling;
+        if (sib && sib.type === "tag" && /^h[1-6]$/i.test(sib.tagName || "")) {
+          prevHeading = cleanText($(sib).text());
+          break;
+        }
+        par = (par as any).parent;
+      }
+    }
+    lists.push({ prevHeading, items });
+  });
+
+  let inclusions: string[] = [];
+  let exclusions: string[] = [];
+  let itineraryItems: string[] = [];
+  let highlights: string[] = [];
+
+  for (const lst of lists) {
+    const h = (lst.prevHeading || "").toLowerCase();
+    if (
+      /included|include|includes|what's included|what is included/i.test(h)
+    ) {
+      inclusions = inclusions.concat(lst.items);
+    } else if (
+      /not included|excluded|exclude|not include|what's not/i.test(h)
+    ) {
+      exclusions = exclusions.concat(lst.items);
+    } else if (
+      /itinerary|tour plan|day by day|daily|program|schedule/i.test(h)
+    ) {
+      itineraryItems = itineraryItems.concat(lst.items);
+    } else if (/highlights|feature|what you|experience/i.test(h)) {
+      highlights = highlights.concat(lst.items);
+    } else {
+      const joined = lst.items.join(" ");
+      if (itineraryItems.length === 0 && lst.items.length >= 3) {
+        const looksLikeItinerary = lst.items.some(
+          (i) =>
+            /(pyramid|temple|museum|sphinx|nile|lunch|dinner|cruise|visit|oasis|desert)/i.test(
+              i
+            ) && i.length > 30
+        );
+        if (looksLikeItinerary) {
+          itineraryItems = lst.items.slice();
+        } else if (
+          /(pickup|guide|entrance|fees|hotel|transport|water|tax)/i.test(
+            joined
+          ) &&
+          inclusions.length === 0
+        ) {
+          inclusions = lst.items.slice();
+        } else if (exclusions.length === 0 && lst.items.length < 8) {
+          const looksExcl = lst.items.some((i) =>
+            /(expenses|optional|gratuity|tip|flight|visa|insurance|lunch|dinner|drink)/i.test(
+              i
+            )
+          );
+          if (looksExcl) exclusions = lst.items.slice();
+        }
+      }
+    }
+  }
+
+  if (itineraryItems.length === 0) {
+    const longLst = lists
+      .filter((l) => l.items.length >= 3)
+      .sort((a, b) => b.items.join("").length - a.items.join("").length)[0];
+    if (longLst) itineraryItems = longLst.items.slice();
+  }
+
+  const tables: { personsLabel: string; priceUSD: number }[] = [];
+  $("main table").each((_, tbl) => {
+    $(tbl)
+      .find("tr")
+      .each((_, tr) => {
+        const cellsEls = $(tr)
+          .find("td, th")
+          .map((_, c) => cleanText($(c).text()))
+          .toArray();
+        const cells = cellsEls as unknown as string[];
+        if (cells.length < 2) return;
+        const pCell = cells.find((c) => /\$/.test(c));
+        if (!pCell) return;
+        const personsCell = cells.find((c) => c !== pCell && /(person|group|single|double|twin|suite|people)/i.test(c)) || cells.find((c) => c !== pCell);
+        const p = extractPriceUSD(pCell);
+        if (!p || !personsCell) return;
+        tables.push({ personsLabel: personsCell, priceUSD: p });
+      });
+  });
+
+  const sectionText = (id: string) => {
+    const root = $(`#${id}, [name="${id}"]`).first();
+    if (!root.length) return "";
+    let parts: string[] = [];
+    let cur: any = (root[0] as any).nextSibling;
+    let guard = 0;
+    while (cur && guard < 25) {
+      guard++;
+      if (cur.type === "tag") {
+        const idAttr = cur.attribs?.id;
+        if (
+          idAttr &&
+          ["overview", "itinerary", "included", "prices", "notes", "meeting_point"].includes(
+            idAttr
+          ) &&
+          idAttr !== id
+        )
+          break;
+        const t = cleanText($(cur).clone().children().remove().end().text());
+        if (t.length > 10) parts.push(t.slice(0, 1500));
+      }
+      cur = cur.nextSibling;
+    }
+    return parts.join("\n").trim();
+  };
+
+  const overviewText = sectionText("overview") || undefined;
+  const meetingPoint = sectionText("meeting_point") || undefined;
+
+  let durationDays = durationText ? extractDaysFromText(durationText) : null;
+  if (!durationDays) durationDays = extractDaysFromText(title);
+  if (!durationDays && itineraryItems.length > 0) durationDays = 1;
+  const durationNights = durationDays ? Math.max(durationDays - 1, 0) : 0;
+
+  const paragraphsEls = $("main p")
+    .map((_, p) => cleanText($(p).text()))
+    .toArray();
+  const allParagraphs = (paragraphsEls as unknown as string[]).filter(
+    (t) => t.length > 60
+  );
+  const longDescription = allParagraphs.slice(0, 3).join("\n\n").slice(0, 1500) || undefined;
+
+  if (highlights.length === 0 && itineraryItems.length) {
+    highlights = itineraryItems.slice(0, 5).map((i) =>
+      i.length > 120 ? i.slice(0, 117) + "..." : i
+    );
+  }
+
+  return {
+    title: title || "",
+    priceUSD: priceUSD ?? undefined,
+    pricesTable: tables.length ? tables : undefined,
+    inclusions,
+    exclusions,
+    itineraryItems,
+    overviewText,
+    durationText,
+    locationText,
+    groupText,
+    meetingPoint,
+    mainImage,
+    gallery: gallery.length ? gallery : undefined,
+    durationDays: durationDays ?? undefined,
+    durationNights: durationNights || undefined,
+    longDescription,
+    highlights: highlights.length ? highlights : undefined,
+  };
+}
+
+export async function scrapeMainCategoryPage(
+  mainCategoryId: string
+): Promise<ScrapedSubCategory[]> {
+  const url = MAIN_CATEGORY_URLS[mainCategoryId];
+  if (!url) return [];
+  const html = await fetchHtml(url);
+  const list = parseMainCategoryPage(html, url);
+  return list;
+}
+
+export async function scrapeSubCategoryPage(
+  subCat: ScrapedSubCategory | SubCategory,
+  mainCatId: string,
+  pageUrl?: string
+): Promise<ScrapedTourListItem[]> {
+  let url: string | undefined = pageUrl;
+  if (!url && "url" in subCat) url = (subCat as any).url;
+  if (!url && MAIN_CATEGORY_URLS[mainCatId]) {
+    url = `${MAIN_CATEGORY_URLS[mainCatId]}/${subCat.slug}`;
+  }
+  if (!url) return [];
+  const html = await fetchHtml(url);
+  const scId = (subCat as ScrapedSubCategory).matchedSubCategory?.id || (subCat as SubCategory).id;
+  return parseSubCategoryPage(html, url, mainCatId, scId);
+}
+
+export async function scrapeTourDetails(url: string): Promise<ScrapedTourDetails> {
+  const html = await fetchHtml(url);
+  return parseTourDetailsPage(html);
+}
+
+function tourFromDetails(
+  counter: number,
+  mainCatId: string,
+  subCatId: string,
+  listItem: ScrapedTourListItem,
+  details: ScrapedTourDetails
+): Tour {
+  const actualTitle = details.title || listItem.title;
+  const days =
+    details.durationDays ||
+    listItem.rawDurationDays ||
+    extractDaysFromText(actualTitle) ||
+    1;
+  const nights = Math.max(days - 1, 0);
+  const basePriceUSD =
+    details.priceUSD ||
+    listItem.priceUSD ||
+    (details.pricesTable && details.pricesTable.length
+      ? details.pricesTable[details.pricesTable.length - 1].priceUSD
+      : 0);
+  const eurRate = 0.92;
+  const basePriceEUR = basePriceUSD ? Math.round(basePriceUSD * eurRate) : 0;
+
+  const inclusionsFromDetails =
+    details.inclusions && details.inclusions.length
+      ? details.inclusions
+      : listItem.shortDescription
+      ? []
+      : [];
+  const exclusionsFromDetails =
+    details.exclusions && details.exclusions.length ? details.exclusions : [];
+
+  const itineraryList = details.itineraryItems?.length
+    ? details.itineraryItems
+    : [];
+  const itinerary: ItineraryDay[] = [];
+  if (itineraryList.length) {
+    if (days <= 1) {
+      itinerary.push({
+        day: 1,
+        title: actualTitle,
+        description: itineraryList.join("\n"),
+        highlights: itineraryList.slice(0, 4).map((s) =>
+          s.length > 80 ? s.slice(0, 77) + "..." : s
+        ),
+        meals: ["Lunch"] as any,
+      });
+    } else {
+      const perDay = Math.ceil(itineraryList.length / days);
+      for (let d = 1; d <= days; d++) {
+        const slice = itineraryList.slice((d - 1) * perDay, d * perDay);
+        itinerary.push({
+          day: d,
+          title: `Day ${d}`,
+          description: slice.join("\n"),
+          highlights: slice.slice(0, 4),
+          meals: ["Breakfast", "Lunch"] as any,
+          accommodation: d < days ? "4-Star Hotel" : undefined,
+        });
+      }
+    }
+  }
+
+  const tags: string[] = [];
+  if (counter <= 2) tags.push("Best Seller");
+  if (basePriceUSD && basePriceUSD < 60) tags.push("Budget Friendly");
+  if (days >= 5) tags.push("Multi-Day");
+
+  return {
+    id: `tour-web-${String(counter).padStart(3, "0")}`,
+    subCategoryId: subCatId,
+    mainCategoryId: mainCatId,
+    title: actualTitle,
+    slug: toSlug(actualTitle) || listItem.slug,
+    durationDays: days,
+    durationNights: nights || undefined,
+    shortDescription:
+      details.overviewText?.slice(0, 200) ||
+      listItem.shortDescription ||
+      `Explore ${actualTitle} with Kemerya Tours`,
+    longDescription:
+      details.longDescription ||
+      details.overviewText ||
+      listItem.shortDescription,
+    image: details.mainImage || listItem.image,
+    basePriceEUR: basePriceEUR || undefined,
+    basePriceUSD: basePriceUSD || undefined,
+    highlights: details.highlights,
+    inclusions: inclusionsFromDetails,
+    exclusions: exclusionsFromDetails,
+    itinerary,
+    tags,
+    isPopular: counter <= 2,
+  };
+}
+
+export interface FullScrapeResult {
+  tours: Tour[];
+  source: "website";
+  scrapedAt: string;
+  stats: {
+    mainCategories: number;
+    subCategories: number;
+    toursTotal: number;
+    withDetails: number;
+  };
+}
+
+export async function scrapeAllTours(options?: {
+  maxToursPerSub?: number;
+  skipDetails?: boolean;
+}): Promise<FullScrapeResult> {
+  const maxPerSub = options?.maxToursPerSub ?? 20;
+  const skipDetails = options?.skipDetails ?? false;
+  const allTours: Tour[] = [];
+  let counter = 0;
+  let subCount = 0;
+  let withDetails = 0;
+
+  for (const mc of MAIN_CATEGORIES) {
+    const url = MAIN_CATEGORY_URLS[mc.id];
+    if (!url) continue;
+    try {
+      const html = await fetchHtml(url);
+      const subList = parseMainCategoryPage(html, url);
+      for (const sc of subList) {
+        subCount++;
+        const subCatId = sc.matchedSubCategory?.id || `scraped-${sc.slug}`;
+        try {
+          await delay(REQUEST_DELAY_MS);
+          const tourList = await scrapeSubCategoryPage(sc, mc.id, sc.url);
+          const take = tourList.slice(0, maxPerSub);
+          for (const tItem of take) {
+            counter++;
+            try {
+              let details: ScrapedTourDetails = {
+                title: tItem.title,
+                inclusions: [],
+                exclusions: [],
+                itineraryItems: [],
+              };
+              if (!skipDetails) {
+                await delay(REQUEST_DELAY_MS);
+                details = await scrapeTourDetails(tItem.url);
+                withDetails++;
+              }
+              const tour = tourFromDetails(
+                counter,
+                mc.id,
+                subCatId,
+                tItem,
+                details
+              );
+              allTours.push(tour);
+            } catch (e) {
+              allTours.push(
+                tourFromDetails(counter, mc.id, subCatId, tItem, {
+                  title: tItem.title,
+                  inclusions: [],
+                  exclusions: [],
+                  itineraryItems: [],
+                  priceUSD: tItem.priceUSD,
+                })
+              );
+            }
+          }
+        } catch (e) {
+          console.error(`Failed subcat ${sc.url}:`, e);
+        }
+      }
+    } catch (e) {
+      console.error(`Failed main cat ${mc.name}:`, e);
+    }
+  }
+
+  return {
+    tours: allTours,
+    source: "website",
+    scrapedAt: new Date().toISOString(),
+    stats: {
+      mainCategories: MAIN_CATEGORIES.length,
+      subCategories: subCount,
+      toursTotal: allTours.length,
+      withDetails,
+    },
+  };
+}

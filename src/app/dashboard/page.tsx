@@ -3,9 +3,8 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import { Map, FileText, Sparkles, CheckCircle2 } from "lucide-react";
-import { getTourById } from "@/data/tours";
+import { ToursDataProvider, useToursData } from "@/components/tours-data-provider";
 import type { Tour, BookingConfig } from "@/types";
-import { TOURS } from "@/data/tours";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { TourSearchBar } from "@/components/tour-search-bar";
 import { HierarchicalCategorySelector } from "@/components/hierarchical-category-selector";
@@ -17,19 +16,18 @@ import { Separator } from "@/components/ui/separator";
 import { KEMERYA_COMPANY_INFO } from "@/data/company";
 import { formatDateShort, formatCurrency, cn } from "@/lib/utils";
 
-export default function DashboardPage() {
+function DashboardInner() {
+  const { tours, getTourById } = useToursData();
   const [selectedTour, setSelectedTour] = React.useState<Tour | null>(null);
   const [isCustomMode, setIsCustomMode] = React.useState(false);
   const [bookingConfig, setBookingConfig] = React.useState<BookingConfig | null>(null);
   const [showPDF, setShowPDF] = React.useState(false);
   const [bookingCount, setBookingCount] = React.useState(0);
 
-  // Hydrate selectedTour object when searching
   const handleTourSelect = (tour: Tour) => {
     const fullTour = getTourById(tour.id) ?? tour;
     setSelectedTour(fullTour);
     setIsCustomMode(false);
-    // Scroll to booking form for UX
     setTimeout(() => {
       const el = document.getElementById("booking-section");
       if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -77,7 +75,7 @@ export default function DashboardPage() {
                     </Badge>
                   </div>
                   <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                    Find a tour from our {TOURS.length}+ catalog
+                    Find a tour from our {tours.length}+ catalog
                   </h2>
                   <p className="mt-1 max-w-2xl text-sm text-slate-500">
                     Instantly search across every tour in the Kemerya catalog by
@@ -326,5 +324,13 @@ function SummaryLine({ label, value }: { label: string; value: string }) {
         {value}
       </p>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <ToursDataProvider>
+      <DashboardInner />
+    </ToursDataProvider>
   );
 }

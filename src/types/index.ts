@@ -71,6 +71,7 @@ export interface BookingConfig {
   clientName?: string;
   clientEmail?: string;
   clientPhone?: string;
+  clientWhatsapp?: string;
   notes?: string;
   specialRequests?: string;
   createdAt: string;

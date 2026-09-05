@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Font,
   Link,
+  Image,
 } from "@react-pdf/renderer";
 import type { Tour, BookingConfig, CompanyInfo, ItineraryDay } from "@/types";
 import { KEMERYA_COMPANY_INFO } from "@/data/company";
@@ -42,6 +43,18 @@ const styles = StyleSheet.create({
     paddingBottom: 60,
     paddingHorizontal: 40,
     fontFamily: "Helvetica",
+  },
+  logoImg: {
+    height: 55,
+    width: 220,
+    objectFit: "contain",
+    marginBottom: 8,
+  },
+  logoImgSmall: {
+    height: 40,
+    width: 160,
+    objectFit: "contain",
+    marginBottom: 6,
   },
   header: {
     flexDirection: "row",
@@ -679,8 +692,14 @@ export function ItineraryPDF({
         {/* HEADER */}
         <View style={styles.header}>
           <View style={styles.brandBlock}>
-            <Text style={styles.brandName}>{companyInfo.name}</Text>
-            <Text style={styles.brandTagline}>{companyInfo.tagline}</Text>
+            {companyInfo.logo ? (
+              <Image src={companyInfo.logo} style={styles.logoImg} />
+            ) : (
+              <>
+                <Text style={styles.brandName}>{companyInfo.name}</Text>
+                <Text style={styles.brandTagline}>{companyInfo.tagline}</Text>
+              </>
+            )}
             <View style={styles.brandLine} />
           </View>
           <View style={styles.headerContact}>
@@ -767,6 +786,9 @@ export function ItineraryPDF({
             {booking.clientPhone && (
               <SummaryCard label="Client Phone" value={booking.clientPhone} />
             )}
+            {booking.clientWhatsapp && (
+              <SummaryCard label="Client WhatsApp" value={booking.clientWhatsapp} />
+            )}
             {booking.pricePerPerson !== undefined && (
               <SummaryCard
                 label="Price Per Person"
@@ -813,7 +835,11 @@ export function ItineraryPDF({
 
         <View style={styles.header}>
           <View style={styles.brandBlock}>
-            <Text style={{ ...styles.brandName, fontSize: 18 }}>{companyInfo.name}</Text>
+            {companyInfo.logo ? (
+              <Image src={companyInfo.logo} style={styles.logoImgSmall} />
+            ) : (
+              <Text style={{ ...styles.brandName, fontSize: 18 }}>{companyInfo.name}</Text>
+            )}
             <Text style={styles.brandTagline}>{tourTitle}</Text>
             <View style={styles.brandLine} />
           </View>
@@ -862,7 +888,11 @@ export function ItineraryPDF({
 
           <View style={styles.header}>
             <View style={styles.brandBlock}>
-              <Text style={{ ...styles.brandName, fontSize: 18 }}>{companyInfo.name}</Text>
+              {companyInfo.logo ? (
+                <Image src={companyInfo.logo} style={styles.logoImgSmall} />
+              ) : (
+                <Text style={{ ...styles.brandName, fontSize: 18 }}>{companyInfo.name}</Text>
+              )}
               <Text style={styles.brandTagline}>{tourTitle}</Text>
               <View style={styles.brandLine} />
             </View>
@@ -900,7 +930,11 @@ export function ItineraryPDF({
 
         <View style={styles.header}>
           <View style={styles.brandBlock}>
-            <Text style={{ ...styles.brandName, fontSize: 18 }}>{companyInfo.name}</Text>
+            {companyInfo.logo ? (
+              <Image src={companyInfo.logo} style={styles.logoImgSmall} />
+            ) : (
+              <Text style={{ ...styles.brandName, fontSize: 18 }}>{companyInfo.name}</Text>
+            )}
             <Text style={styles.brandTagline}>{tourTitle}</Text>
             <View style={styles.brandLine} />
           </View>

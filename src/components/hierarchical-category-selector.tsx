@@ -15,14 +15,9 @@ import {
   Clock,
   Euro,
   Check,
+  RefreshCw,
 } from "lucide-react";
-import {
-  MAIN_CATEGORIES,
-  getSubCategoriesByMain,
-  getToursBySubCategory,
-  getMainCategoryById,
-  getSubCategoryById,
-} from "@/data/tours";
+import { useToursData } from "@/components/tours-data-provider";
 import type { Tour, MainCategory, SubCategory } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -52,22 +47,35 @@ export function HierarchicalCategorySelector({
   onTourSelect,
   selectedTourId,
 }: HierarchicalCategorySelectorProps) {
+  const {
+    mainCategories,
+    subCategories: allSubs,
+    tours: allTours,
+    getSubCategoriesByMain,
+    getToursBySubCategory,
+    getMainCategoryById,
+    getSubCategoryById,
+    loading,
+    source,
+    scrapedAt,
+    refresh,
+  } = useToursData();
+
   const [stage, setStage] = React.useState<Stage>("main");
   const [selectedMainId, setSelectedMainId] = React.useState<string | null>(null);
   const [selectedSubId, setSelectedSubId] = React.useState<string | null>(null);
   const [tours, setTours] = React.useState<Tour[]>([]);
 
-  const mainCategories = MAIN_CATEGORIES;
   const subCategories = React.useMemo(
     () => (selectedMainId ? getSubCategoriesByMain(selectedMainId) : []),
-    [selectedMainId]
+    [selectedMainId, getSubCategoriesByMain]
   );
 
   React.useEffect(() => {
     if (selectedSubId) {
       setTours(getToursBySubCategory(selectedSubId));
     }
-  }, [selectedSubId]);
+  }, [selectedSubId, getToursBySubCategory, allTours]);
 
   const handleMainSelect = (id: string) => {
     setSelectedMainId(id);
@@ -100,6 +108,32 @@ export function HierarchicalCategorySelector({
   return (
     <Card className="border-slate-200 bg-white/60 backdrop-blur">
       <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+        <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-slate-100 pb-3">
+          <Badge
+            variant={source === "website" || source === "cache" ? "gold" : "outline"}
+            className="rounded-md px-2 py-1 text-[10px]"
+          >
+            Data: {source === "website" ? "Live from kemeryatours.com" : source === "cache" ? `Cached${scrapedAt ? ` · ${new Date(scrapedAt).toLocaleDateString()}` : ""}` : "Fallback dataset"}
+          </Badge>
+          {loading && (
+            <Badge variant="outline" className="rounded-md px-2 py-1 text-[10px]">
+              <RefreshCw className="mr-1 inline h-3 w-3 animate-spin" />
+              Loading…
+            </Badge>
+          )}
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refresh()}
+              disabled={loading}
+              className="h-8 rounded-md px-2.5 text-xs"
+            >
+              <RefreshCw className={cn("mr-1 h-3.5 w-3.5", loading && "animate-spin")} />
+              Refresh Cache
+            </Button>
+          </div>
+        </div>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2 text-xl text-slate-900">
@@ -186,6 +220,7 @@ export function HierarchicalCategorySelector({
           <MainCategoryGrid
             categories={mainCategories}
             onSelect={handleMainSelect}
+            getSubCount={getSubCategoriesByMain}
           />
         )}
         {stage === "sub" && (
@@ -193,6 +228,7 @@ export function HierarchicalCategorySelector({
             main={selectedMain}
             subCategories={subCategories}
             onSelect={handleSubSelect}
+            getTourCount={getToursBySubCategory}
           />
         )}
         {stage === "tours" && (
@@ -210,15 +246,17 @@ export function HierarchicalCategorySelector({
 function MainCategoryGrid({
   categories,
   onSelect,
+  getSubCount,
 }: {
   categories: MainCategory[];
   onSelect: (id: string) => void;
+  getSubCount: (id: string) => SubCategory[];
 }) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {categories.map((cat) => {
         const Icon = ICON_MAP[cat.icon || "Sparkles"] || Sparkles;
-        const subsCount = getSubCategoriesByMain(cat.id).length;
+        const subsCount = getSubCount(cat.id).length;
         return (
           <button
             key={cat.id}
@@ -252,10 +290,12 @@ function SubCategoryList({
   main,
   subCategories,
   onSelect,
+  getTourCount,
 }: {
   main: MainCategory | null;
   subCategories: SubCategory[];
   onSelect: (id: string) => void;
+  getTourCount: (subId: string) => Tour[];
 }) {
   return (
     <div>
@@ -269,7 +309,7 @@ function SubCategoryList({
       </div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {subCategories.map((sub) => {
-          const count = getToursBySubCategory(sub.id).length;
+          const count = getTourCount(sub.id).length;
           return (
             <button
               key={sub.id}
