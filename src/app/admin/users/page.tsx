@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/select";
 import { cn, formatDateShort } from "@/lib/utils";
 import type { AdminUser, CreateUserRequest, UpdateUserRequest, UserRole } from "@/types";
+import { AuthGate } from "@/components/auth-gate";
 
 const ROLE_OPTIONS: { value: UserRole; label: string; description: string; icon: React.ReactNode }[] = [
   {
@@ -213,8 +214,9 @@ export default function AdminUsersPage() {
   const deletingUser = deleteUserId ? users.find((u) => u.id === deleteUserId) : null;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header Bar */}
+    <AuthGate requireRole="super_admin">
+      <div className="min-h-screen bg-slate-50">
+        {/* Header Bar */}
       <header className="kemerya-gradient text-white shadow-2xl">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -477,7 +479,8 @@ export default function AdminUsersPage() {
           </div>
         ))}
       </div>
-    </div>
+      </div>
+    </AuthGate>
   );
 }
 

@@ -1,106 +1,103 @@
-import { type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/middleware";
-import { NextResponse } from "next/server";
 
-function isPublicAsset(pathname: string): boolean {
-  if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/__next") ||
-    pathname.startsWith("/favicon.") ||
-    pathname.startsWith("/logo-") ||
-    pathname.endsWith(".png") ||
-    pathname.endsWith(".jpg") ||
-    pathname.endsWith(".jpeg") ||
-    pathname.endsWith(".svg") ||
-    pathname.endsWith(".ico") ||
-    pathname.endsWith(".css") ||
-    pathname.endsWith(".js") ||
-    pathname.endsWith(".woff") ||
-    pathname.endsWith(".woff2") ||
-    pathname.endsWith(".ttf") ||
-    pathname === "/robots.txt" ||
-    pathname === "/sitemap.xml"
-  ) {
-    return true;
+const PUBLIC_ROUTES = new Set(["/login", "/_not-found", "/_error"]);
+const PUBLIC_API_PREFIXES = ["/api/auth/", "/api/tours"];
+const PUBLIC_FILE_EXT = [
+  ".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp", ".gif",
+  ".css", ".js", ".mjs", ".woff", ".woff2", ".ttf", ".otf",
+  ".map", ".txt", ".xml", ".json"
+];
+
+function isPublicRequest(pathname: string): boolean {
+  if (pathname.startsWith("/_next/") || pathname.startsWith("/__next/")) return true;
+  if (PUBLIC_ROUTES.has(pathname)) return true;
+  for (const prefix of PUBLIC_API_PREFIXES) {
+    if (pathname.startsWith(prefix)) return true;
   }
+  const lower = pathname.toLowerCase();
+  for (const ext of PUBLIC_FILE_EXT) {
+    if (lower.endsWith(ext)) return true;
+  }
+  if (pathname.startsWith("/logo-") || pathname.startsWith("/favicon.")) return true;
+  if (pathname === "/robots.txt" || pathname === "/sitemap.xml") return true;
   return false;
 }
 
 export async function middleware(request: NextRequest) {
-  const { supabase, response } = createClient(request);
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const { pathname } = request.nextUrl;
 
-  if (isPublicAsset(pathname)) {
+  if (isPublicRequest(pathname)) {
+    const { response } = createClient(request);
     return response;
   }
 
-  const isLoginPage = pathname === "/login";
-  const isAuthApi = pathname.startsWith("/api/auth");
-  const isToursPublicApi = pathname === "/api/tours";
-  const isNotFoundPage = pathname === "/_not-found";
+  const { supabase, response } = createClient(request);
 
-  if (isLoginPage || isAuthApi || isToursPublicApi || isNotFoundPage) {
-    if (isLoginPage && user) {
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = "/dashboard";
-      redirectUrl.searchParams.delete("next");
-      return NextResponse.redirect(redirectUrl);
+  try {
+    const { data: { session }, error: sessErr } = await supabase.auth.getSession();
+    if (sessErr || !session?.user) {
+      const redirect = NextResponse.redirect(new URL("/login", request.url));
+      redirect.headers.set("x-middleware-cache", "no-cache");
+      return redirect;
     }
+
+    if (pathname === "/login") {
+      const redirect = NextResponse.redirect(new URL("/dashboard", request.url));
+      redirect.headers.set("x-middleware-cache", "no-cache");
+      return redirect;
+    }
+
+    if (pathname === "/") {
+      const redirect = NextResponse.redirect(new URL("/dashboard", request.url));
+      redirect.headers.set("x-middleware-cache", "no-cache");
+      return redirect;
+    }
+
+    const isAdminRoute = pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
+    if (isAdminRoute) {
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, is_active")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (!profile || !profile.is_active || profile.role !== "super_admin") {
+          if (pathname.startsWith("/api/admin")) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+          }
+          const redirect = NextResponse.redirect(new URL("/dashboard", request.url));
+          redirect.headers.set("x-middleware-cache", "no-cache");
+          return redirect;
+        }
+      } catch {
+        if (pathname.startsWith("/api/admin")) {
+          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+        const redirect = NextResponse.redirect(new URL("/dashboard", request.url));
+        redirect.headers.set("x-middleware-cache", "no-cache");
+        return redirect;
+      }
+    }
+
+    response.headers.set("x-middleware-cache", "no-cache");
     return response;
-  }
-
-  if (!user) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/login";
-    if (pathname !== "/" && pathname !== "/login") {
-      redirectUrl.searchParams.set("next", pathname);
-    }
-    return NextResponse.redirect(redirectUrl);
-  }
-
-  if (pathname === "/") {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/dashboard";
-    return NextResponse.redirect(redirectUrl);
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, is_active")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile || !profile.is_active) {
-    const logoutUrl = request.nextUrl.clone();
-    logoutUrl.pathname = "/api/auth/logout";
+  } catch {
     const redirect = NextResponse.redirect(new URL("/login", request.url));
-    try {
-      await supabase.auth.signOut();
-    } catch {}
-    redirect.cookies.delete("sb-access-token");
-    redirect.cookies.delete("sb-refresh-token");
+    redirect.headers.set("x-middleware-cache", "no-cache");
     return redirect;
   }
-
-  if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
-    if (profile.role !== "super_admin") {
-      if (pathname.startsWith("/api/admin")) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = "/dashboard";
-      return NextResponse.redirect(redirectUrl);
-    }
-  }
-
-  return response;
 }
 
 export const config = {
-  matcher: ["/((?!.*\\.).*)"],
+  matcher: [
+    "/",
+    "/login",
+    "/dashboard/:path*",
+    "/admin/:path*",
+    "/api/admin/:path*",
+    "/api/scrape/:path*",
+    "/((?!_next|__next|favicon|logo-.*\\.png$|.*\\.(png|jpg|jpeg|svg|ico|webp|gif|css|js|mjs|woff|woff2|ttf|otf|map|txt|xml|json)$).*)",
+  ],
 };
