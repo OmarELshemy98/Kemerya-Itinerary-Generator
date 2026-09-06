@@ -64,19 +64,14 @@ function extractPriceUSD(text: string): number | null {
 }
 
 function extractDaysFromText(text: string): number | null {
-  // Match "4 Days / 3 Nights" or "4 Days/3 Nights" or "4D/3N"
   const mDaysNights = text.match(/(\d+)\s*[Dd]ays?\s*[\/\-]\s*(\d+)\s*[Nn]ights?/);
   if (mDaysNights) return parseInt(mDaysNights[1], 10);
-  // Match "4 Days - 3 Nights"
   const mDash = text.match(/(\d+)\s*[Dd]ays?\s*-\s*(\d+)\s*[Nn]ights?/);
   if (mDash) return parseInt(mDash[1], 10);
-  // Match "4 Days" or "4-Day"
   const m1 = text.match(/(\d+)\s*[-\s]*\s*(day|days|Day|Days)\b/i);
   if (m1) return parseInt(m1[1], 10);
-  // Match "3 Nights" -> days = nights + 1
   const m2 = text.match(/(\d+)\s*[-\s]*\s*(night|nights|Night|Nights)\b/i);
   if (m2) return parseInt(m2[1], 10) + 1;
-  // Match "4/3" day/night format
   const m3 = text.match(/(\d+)\s*[-\/]\s*(\d+)\s*(day|night)/i);
   if (m3) return parseInt(m3[1], 10);
   if (/\bFull\s*Day\b/i.test(text)) return 1;
@@ -146,7 +141,6 @@ export function parseMainCategoryPage(
       : "";
     if (!absHref || !absHref.startsWith(mainCatUrl + "/")) return;
     const parts = absHref.split("/").filter(Boolean);
-    // Sub-category URLs are exactly: protocol, domain, mainCatSlug, subCatSlug = 4 parts
     if (parts.length !== 4) return;
     const slug = parts[parts.length - 1];
     if (seen.has(absHref)) return;
@@ -229,7 +223,6 @@ export function parseSubCategoryPage(
       : "";
     if (!absHref) return;
     const parts = absHref.split("/").filter(Boolean);
-    // Tour URLs are exactly: protocol, domain, mainCatSlug, subCatSlug, tourSlug = 5 parts
     if (parts.length !== 5) return;
     const slug = parts[parts.length - 1];
     if (seen.has(absHref)) return;
@@ -287,6 +280,12 @@ export function parseSubCategoryPage(
   return out;
 }
 
+export interface ScrapedDayItinerary {
+  day: number;
+  title: string;
+  items: string[];
+}
+
 export interface ScrapedTourDetails {
   title: string;
   priceUSD?: number;
@@ -294,6 +293,7 @@ export interface ScrapedTourDetails {
   inclusions: string[];
   exclusions: string[];
   itineraryItems: string[];
+  dayItinerary: ScrapedDayItinerary[];
   overviewText?: string;
   durationText?: string;
   locationText?: string;
@@ -350,42 +350,94 @@ export function parseTourDetailsPage(html: string): ScrapedTourDetails {
     )
   ) as string[];
 
+  // Parse day-by-day itinerary
+  const dayItinerary: ScrapedDayItinerary[] = [];
   const lists: { prevHeading: string | null; items: string[] }[] = [];
-  $("main ul, main ol").each((_, ul) => {
-    const itemEls = $(ul)
-      .find("li")
-      .map((_, li) => cleanText($(li).text()))
-      .toArray();
-    const items = (itemEls as unknown as string[]).filter(
-      (t) => t.length > 2 && t.length < 500
-    );
-    if (items.length === 0) return;
-    let p: any = (ul as any).previousSibling;
-    let prevHeading: string | null = null;
-    let guard = 0;
-    while (p && guard < 15) {
-      guard++;
-      if (p.type === "tag" && /^h[1-6]$/i.test((p as any).tagName || "")) {
-        prevHeading = cleanText($(p).text());
-        break;
+  
+  let currentDayNumber: number | null = null;
+  let currentDayTitle: string = "";
+  let currentDayItems: string[] = [];
+  
+  // Find all headings and lists in order
+  $("main").find("h1, h2, h3, h4, h5, h6, ul, ol").each((_, el) => {
+    const tagName = (el as any).tagName?.toLowerCase() || "";
+    
+    if (/^h[1-6]$/i.test(tagName)) {
+      // Save previous day if exists
+      if (currentDayNumber !== null && currentDayItems.length > 0) {
+        dayItinerary.push({
+          day: currentDayNumber,
+          title: currentDayTitle || `Day ${currentDayNumber}`,
+          items: [...currentDayItems],
+        });
       }
-      p = (p as any).previousSibling;
-    }
-    if (!prevHeading) {
-      let par: any = (ul as any).parent;
-      guard = 0;
-      while (par && guard < 6) {
-        guard++;
-        const sib = (par as any).previousSibling;
-        if (sib && sib.type === "tag" && /^h[1-6]$/i.test(sib.tagName || "")) {
-          prevHeading = cleanText($(sib).text());
-          break;
+      
+      const headingText = cleanText($(el).text());
+      // Check if this is a day heading
+      const dayMatch = headingText.match(/^day\s*(\d+)\s*[:\-–]?\s*(.*)$/i);
+      if (dayMatch) {
+        currentDayNumber = parseInt(dayMatch[1], 10);
+        currentDayTitle = dayMatch[2]?.trim() || `Day ${currentDayNumber}`;
+        currentDayItems = [];
+      } else {
+        // Not a day heading, reset
+        currentDayNumber = null;
+        currentDayTitle = "";
+        currentDayItems = [];
+      }
+    } else if (tagName === "ul" || tagName === "ol") {
+      const itemEls = $(el)
+        .find("li")
+        .map((_, li) => cleanText($(li).text()))
+        .toArray();
+      const items = (itemEls as unknown as string[]).filter(
+        (t) => t.length > 2 && t.length < 500
+      );
+      
+      if (items.length > 0) {
+        if (currentDayNumber !== null) {
+          // Add items to current day
+          currentDayItems.push(...items);
+        } else {
+          // No day heading, use previous heading logic
+          let p: any = (el as any).previousSibling;
+          let prevHeading: string | null = null;
+          let guard = 0;
+          while (p && guard < 15) {
+            guard++;
+            if (p.type === "tag" && /^h[1-6]$/i.test((p as any).tagName || "")) {
+              prevHeading = cleanText($(p).text());
+              break;
+            }
+            p = (p as any).previousSibling;
+          }
+          if (!prevHeading) {
+            let par: any = (el as any).parent;
+            guard = 0;
+            while (par && guard < 6) {
+              guard++;
+              const sib = (par as any).previousSibling;
+              if (sib && sib.type === "tag" && /^h[1-6]$/i.test(sib.tagName || "")) {
+                prevHeading = cleanText($(sib).text());
+                break;
+              }
+              par = (par as any).parent;
+            }
+          }
+          lists.push({ prevHeading, items });
         }
-        par = (par as any).parent;
       }
     }
-    lists.push({ prevHeading, items });
   });
+  
+  // Save last day if exists
+  if (currentDayNumber !== null && currentDayItems.length > 0) {
+    dayItinerary.push({
+      day: currentDayNumber,
+      title: currentDayTitle || `Day ${currentDayNumber}`,
+      items: [...currentDayItems],
+    });
+  }
 
   let inclusions: string[] = [];
   let exclusions: string[] = [];
@@ -496,7 +548,9 @@ export function parseTourDetailsPage(html: string): ScrapedTourDetails {
 
   let durationDays = durationText ? extractDaysFromText(durationText) : null;
   if (!durationDays) durationDays = extractDaysFromText(title);
-  if (!durationDays && itineraryItems.length > 0) durationDays = 1;
+  if (!durationDays && (itineraryItems.length > 0 || dayItinerary.length > 0)) {
+    durationDays = Math.max(dayItinerary.length, 1);
+  }
   const durationNights = durationDays ? Math.max(durationDays - 1, 0) : 0;
 
   const paragraphsEls = $("main p")
@@ -507,8 +561,11 @@ export function parseTourDetailsPage(html: string): ScrapedTourDetails {
   );
   const longDescription = allParagraphs.slice(0, 3).join("\n\n").slice(0, 1500) || undefined;
 
-  if (highlights.length === 0 && itineraryItems.length) {
-    highlights = itineraryItems.slice(0, 5).map((i) =>
+  if (highlights.length === 0 && (itineraryItems.length > 0 || dayItinerary.length > 0)) {
+    const allItems = dayItinerary.length > 0 
+      ? dayItinerary.flatMap(d => d.items)
+      : itineraryItems;
+    highlights = allItems.slice(0, 5).map((i) =>
       i.length > 120 ? i.slice(0, 117) + "..." : i
     );
   }
@@ -520,6 +577,7 @@ export function parseTourDetailsPage(html: string): ScrapedTourDetails {
     inclusions,
     exclusions,
     itineraryItems,
+    dayItinerary,
     overviewText,
     durationText,
     locationText,
@@ -597,33 +655,51 @@ function tourFromDetails(
   const exclusionsFromDetails =
     details.exclusions && details.exclusions.length ? details.exclusions : [];
 
-  const itineraryList = details.itineraryItems?.length
-    ? details.itineraryItems
-    : [];
   const itinerary: ItineraryDay[] = [];
-  if (itineraryList.length) {
-    if (days <= 1) {
+  
+  // Use day itinerary if available
+  if (details.dayItinerary.length > 0) {
+    for (const dayData of details.dayItinerary) {
       itinerary.push({
-        day: 1,
-        title: actualTitle,
-        description: itineraryList.join("\n"),
-        highlights: itineraryList.slice(0, 4).map((s) =>
+        day: dayData.day,
+        title: dayData.title,
+        description: dayData.items.join("\n"),
+        highlights: dayData.items.slice(0, 4).map((s) =>
           s.length > 80 ? s.slice(0, 77) + "..." : s
         ),
-        meals: ["Lunch"] as any,
+        meals: dayData.day < details.dayItinerary.length ? ["Breakfast", "Lunch"] as any : ["Breakfast", "Lunch", "Dinner"] as any,
+        accommodation: dayData.day < details.dayItinerary.length ? "4-Star Hotel" : undefined,
       });
-    } else {
-      const perDay = Math.ceil(itineraryList.length / days);
-      for (let d = 1; d <= days; d++) {
-        const slice = itineraryList.slice((d - 1) * perDay, d * perDay);
+    }
+  } else {
+    // Fallback to splitting items evenly
+    const itineraryList = details.itineraryItems?.length
+      ? details.itineraryItems
+      : [];
+    if (itineraryList.length) {
+      if (days <= 1) {
         itinerary.push({
-          day: d,
-          title: `Day ${d}`,
-          description: slice.join("\n"),
-          highlights: slice.slice(0, 4),
-          meals: ["Breakfast", "Lunch"] as any,
-          accommodation: d < days ? "4-Star Hotel" : undefined,
+          day: 1,
+          title: actualTitle,
+          description: itineraryList.join("\n"),
+          highlights: itineraryList.slice(0, 4).map((s) =>
+            s.length > 80 ? s.slice(0, 77) + "..." : s
+          ),
+          meals: ["Lunch"] as any,
         });
+      } else {
+        const perDay = Math.ceil(itineraryList.length / days);
+        for (let d = 1; d <= days; d++) {
+          const slice = itineraryList.slice((d - 1) * perDay, d * perDay);
+          itinerary.push({
+            day: d,
+            title: `Day ${d}`,
+            description: slice.join("\n"),
+            highlights: slice.slice(0, 4),
+            meals: ["Breakfast", "Lunch"] as any,
+            accommodation: d < days ? "4-Star Hotel" : undefined,
+          });
+        }
       }
     }
   }
@@ -687,7 +763,6 @@ async function scrapeSubCategoryPagesWithPagination(
   while (hasMore && allTours.length < maxTours) {
     let url = subCat.url;
     if (page > 1) {
-      // Try common pagination patterns
       url = `${subCat.url}/page/${page}`;
     }
 
@@ -705,14 +780,12 @@ async function scrapeSubCategoryPagesWithPagination(
         }
       }
 
-      // If no new tours were found, stop paginating
       if (newTours === 0) {
         hasMore = false;
       } else {
         page++;
       }
 
-      // Safety limit: don't paginate more than 20 pages
       if (page > 20) {
         hasMore = false;
       }
@@ -743,7 +816,6 @@ export async function scrapeAllTours(options?: {
       const html = await fetchHtml(url);
       const subList = parseMainCategoryPage(html, url);
 
-      // If no sub-categories found, try to get tours directly from the main category page
       if (subList.length === 0) {
         console.log(`No sub-categories found for ${mc.name}, trying to get tours directly...`);
         try {
@@ -756,6 +828,7 @@ export async function scrapeAllTours(options?: {
                 inclusions: [],
                 exclusions: [],
                 itineraryItems: [],
+                dayItinerary: [],
               };
               if (!skipDetails) {
                 await delay(REQUEST_DELAY_MS);
@@ -771,6 +844,7 @@ export async function scrapeAllTours(options?: {
                   inclusions: [],
                   exclusions: [],
                   itineraryItems: [],
+                  dayItinerary: [],
                   priceUSD: tItem.priceUSD,
                 })
               );
@@ -785,7 +859,6 @@ export async function scrapeAllTours(options?: {
         subCount++;
         const subCatId = sc.matchedSubCategory?.id || `scraped-${sc.slug}`;
         try {
-          // Use pagination to get all tours from sub-category
           const tourList = await scrapeSubCategoryPagesWithPagination(sc, mc.id, maxPerSub);
           for (const tItem of tourList) {
             counter++;
@@ -795,6 +868,7 @@ export async function scrapeAllTours(options?: {
                 inclusions: [],
                 exclusions: [],
                 itineraryItems: [],
+                dayItinerary: [],
               };
               if (!skipDetails) {
                 await delay(REQUEST_DELAY_MS);
@@ -816,6 +890,7 @@ export async function scrapeAllTours(options?: {
                   inclusions: [],
                   exclusions: [],
                   itineraryItems: [],
+                  dayItinerary: [],
                   priceUSD: tItem.priceUSD,
                 })
               );
@@ -842,3 +917,4 @@ export async function scrapeAllTours(options?: {
     },
   };
 }
+

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import { Map, FileText, Sparkles, CheckCircle2, Layers, Compass } from "lucide-react";
+import { Map, FileText, Sparkles, CheckCircle2, Layers, Compass, MessageCircle, Copy, Check } from "lucide-react";
 import { useToursData } from "@/components/tours-data-provider";
 import type { Tour, BookingConfig } from "@/types";
 import { TourSearchBar } from "@/components/tour-search-bar";
@@ -14,6 +14,41 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { KEMERYA_COMPANY_INFO } from "@/data/company";
 import { formatDateShort, formatCurrency, cn } from "@/lib/utils";
+
+function WhatsAppButton({ phoneNumber }: { phoneNumber: string }) {
+  const [copied, setCopied] = React.useState(false);
+
+  const sanitized = phoneNumber.replace(/[^\d]/g, "");
+  const whatsappUrl = `https://wa.me/${sanitized}`;
+
+  const handleClick = async () => {
+    try {
+      await navigator.clipboard.writeText(sanitized);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore copy errors
+    }
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <Button
+      onClick={handleClick}
+      variant="outline"
+      size="sm"
+      className="h-9 gap-2 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
+    >
+      {copied ? (
+        <Check className="h-4 w-4" />
+      ) : (
+        <Copy className="h-4 w-4" />
+      )}
+      <MessageCircle className="h-4 w-4" />
+      WhatsApp
+    </Button>
+  );
+}
 
 function DashboardInner() {
   const { tours, mainCategories, subCategories, getTourById } = useToursData();
@@ -160,7 +195,7 @@ function DashboardInner() {
       {bookingConfig && (
         <section className="mb-8">
           <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-[#C9A962]/5 p-5 sm:p-6">
-            <div className="mb-3 flex items-start justify-between gap-3">
+            <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white">
                   <CheckCircle2 className="h-5 w-5" />
@@ -175,10 +210,17 @@ function DashboardInner() {
                   </p>
                 </div>
               </div>
-              <Button variant="gold" size="sm" onClick={() => setShowPDF(true)}>
-                <FileText className="mr-2 h-4 w-4" />
-                Re-open PDF
-              </Button>
+              <div className="flex items-center gap-2">
+                {(bookingConfig.clientWhatsapp || bookingConfig.clientPhone) && (
+                  <WhatsAppButton
+                    phoneNumber={bookingConfig.clientWhatsapp || bookingConfig.clientPhone || ""}
+                  />
+                )}
+                <Button variant="gold" size="sm" onClick={() => setShowPDF(true)}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Re-open PDF
+                </Button>
+              </div>
             </div>
             <Separator className="my-3 bg-emerald-100" />
             <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4 md:grid-cols-6">
