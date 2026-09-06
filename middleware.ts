@@ -1,59 +1,54 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/middleware";
 
-const PUBLIC_ROUTES = new Set(["/login", "/_not-found", "/_error"]);
-const PUBLIC_API_PREFIXES = ["/api/auth/", "/api/tours"];
 const PUBLIC_FILE_EXT = [
   ".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp", ".gif",
   ".css", ".js", ".mjs", ".woff", ".woff2", ".ttf", ".otf",
   ".map", ".txt", ".xml", ".json"
 ];
 
-function isPublicRequest(pathname: string): boolean {
+function isStaticFile(pathname: string) {
   if (pathname.startsWith("/_next/") || pathname.startsWith("/__next/")) return true;
-  if (PUBLIC_ROUTES.has(pathname)) return true;
-  for (const prefix of PUBLIC_API_PREFIXES) {
-    if (pathname.startsWith(prefix)) return true;
-  }
   const lower = pathname.toLowerCase();
   for (const ext of PUBLIC_FILE_EXT) {
     if (lower.endsWith(ext)) return true;
   }
   if (pathname.startsWith("/logo-") || pathname.startsWith("/favicon.")) return true;
-  if (pathname === "/robots.txt" || pathname === "/sitemap.xml") return true;
   return false;
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (isPublicRequest(pathname)) {
-    const { response } = createClient(request);
-    return response;
+  // تجاهل الملفات الثابتة والصور
+  if (isStaticFile(pathname)) {
+    return NextResponse.next();
   }
 
   const { supabase, response } = createClient(request);
+  const { data: { session } } = await supabase.auth.getSession();
 
-  try {
-    const { data: { session }, error: sessErr } = await supabase.auth.getSession();
-    if (sessErr || !session?.user) {
-      const redirect = NextResponse.redirect(new URL("/login", request.url));
-      redirect.headers.set("x-middleware-cache", "no-cache");
-      return redirect;
+  const isAuthRoute = pathname === "/login";
+  const isPublicApi = pathname.startsWith("/api/auth/") || pathname.startsWith("/api/tours");
+
+  // الحالة الأولى: لو المستخدم مش مسجل دخول
+  if (!session?.user) {
+    // مسموح له فقط بصفحة تسجيل الدخول أو الـ APIs العامة
+    if (isAuthRoute || isPublicApi) {
+      return response;
+    }
+    // طرده لصفحة تسجيل الدخول لو حاول يفتح أي مسار تاني
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  // الحالة الثانية: لو المستخدم مسجل دخول
+  if (session?.user) {
+    // لو حاول يفتح الصفحة الرئيسية أو صفحة الدخول، وجهه فوراً للوحة التحكم
+    if (pathname === "/" || isAuthRoute) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
-    if (pathname === "/login") {
-      const redirect = NextResponse.redirect(new URL("/dashboard", request.url));
-      redirect.headers.set("x-middleware-cache", "no-cache");
-      return redirect;
-    }
-
-    if (pathname === "/") {
-      const redirect = NextResponse.redirect(new URL("/dashboard", request.url));
-      redirect.headers.set("x-middleware-cache", "no-cache");
-      return redirect;
-    }
-
+    // حماية مسارات السوبر أدمن
     const isAdminRoute = pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
     if (isAdminRoute) {
       try {
@@ -67,37 +62,19 @@ export async function middleware(request: NextRequest) {
           if (pathname.startsWith("/api/admin")) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
           }
-          const redirect = NextResponse.redirect(new URL("/dashboard", request.url));
-          redirect.headers.set("x-middleware-cache", "no-cache");
-          return redirect;
+          return NextResponse.redirect(new URL("/dashboard", request.url));
         }
       } catch {
-        if (pathname.startsWith("/api/admin")) {
-          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
-        const redirect = NextResponse.redirect(new URL("/dashboard", request.url));
-        redirect.headers.set("x-middleware-cache", "no-cache");
-        return redirect;
+        return NextResponse.redirect(new URL("/dashboard", request.url));
       }
     }
-
-    response.headers.set("x-middleware-cache", "no-cache");
-    return response;
-  } catch {
-    const redirect = NextResponse.redirect(new URL("/login", request.url));
-    redirect.headers.set("x-middleware-cache", "no-cache");
-    return redirect;
   }
+
+  return response;
 }
 
 export const config = {
   matcher: [
-    "/",
-    "/login",
-    "/dashboard/:path*",
-    "/admin/:path*",
-    "/api/admin/:path*",
-    "/api/scrape/:path*",
-    "/((?!_next|__next|favicon|logo-.*\\.png$|.*\\.(png|jpg|jpeg|svg|ico|webp|gif|css|js|mjs|woff|woff2|ttf|otf|map|txt|xml|json)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
