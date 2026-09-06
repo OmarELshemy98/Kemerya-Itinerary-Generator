@@ -43,6 +43,29 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { cn, calculateNights, formatCurrency } from "@/lib/utils";
 
+/** Helper: given a pricing table from the website, pick the per-person price for N travelers */
+function pickPricePerPerson(pricesTable: { personsLabel: string; priceUSD: number }[] | undefined, travelers: number): number {
+  if (!pricesTable || pricesTable.length === 0) return 0;
+  // Try to find an exact range match, else use the last (largest group) tier
+  for (const tier of pricesTable) {
+    const label = tier.personsLabel.toLowerCase();
+    // Match patterns like "2 - 3 persons", "4-6 persons", "7 - 10 persons", "1 person"
+    const rangeMatch = label.match(/(\d+)\s*[-–]\s*(\d+)/);
+    if (rangeMatch) {
+      const lo = parseInt(rangeMatch[1], 10);
+      const hi = parseInt(rangeMatch[2], 10);
+      if (travelers >= lo && travelers <= hi) return tier.priceUSD;
+    }
+    const singleMatch = label.match(/^(\d+)\s*(?:person|people)/);
+    if (singleMatch && travelers === parseInt(singleMatch[1], 10)) return tier.priceUSD;
+    // "10+ persons" style
+    const plusMatch = label.match(/(\d+)\s*\+/);
+    if (plusMatch && travelers >= parseInt(plusMatch[1], 10)) return tier.priceUSD;
+  }
+  // Fallback: return the last tier (usually the best per-person price for large groups)
+  return pricesTable[pricesTable.length - 1].priceUSD;
+}
+
 const bookingSchema = z
   .object({
     isCustomTour: z.boolean(),
@@ -415,7 +438,141 @@ export function BookingConfigurationForm({
                 </p>
               </div>
             </div>
+            {/* Pricing tiers from the website */}
+            {!isCustomMode && selectedTour && selectedTour.pricesTable && selectedTour.pricesTable.length > 0 && (
+              <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                <p className="mb-2 text-xs font-semibold text-blue-800">Website Pricing Tiers (per person)</p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedTour.pricesTable.map((tier, i) => {
+                    const isApplicable = (() => {
+                      const label = tier.personsLabel.toLowerCase();
+                      const rangeMatch = label.match(/(\d+)\s*[-–]\s*(\d+)/);
+                      if (rangeMatch) return totalTravelers >= parseInt(rangeMatch[1]) && totalTravelers <= parseInt(rangeMatch[2]);
+                      const singleMatch = label.match(/^(\d+)\s*(?:person|people)/);
+                      if (singleMatch) return totalTravelers === parseInt(singleMatch[1]);
+                      const plusMatch = label.match(/(\d+)\s*\+/);
+                      if (plusMatch) return totalTravelers >= parseInt(plusMatch[1]);
+                      return false;
+                    })();
+                    return (
+                      <div key={i} className={cn("rounded-md px-2.5 py-1.5 text-xs", isApplicable ? "bg-blue-600 text-white font-bold" : "bg-white text-blue-700 border border-blue-200")}>
+                        <span>{tier.personsLabel}</span>
+                        <span className="ml-1.5">${tier.priceUSD}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="mt-1.5 text-[10px] text-blue-600">Highlighted tier applies to your group of {totalTravelers}. Total = {formatCurrency(pickPricePerPerson(selectedTour.pricesTable, totalTravelers) * totalTravelers, currency)}</p>
+              </div>
+            )}
           </Section>
+
+          {/* Inclusions & Exclusions for standard tours */}
+          {!isCustomMode && selectedTour && (selectedTour.inclusions.length > 0 || selectedTour.exclusions.length > 0) && (
+            <Section icon={<Plus className="h-4 w-4" />} title="Inclusions & Exclusions">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {selectedTour.inclusions.length > 0 && (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                    <Label className="mb-2 block text-xs font-semibold text-emerald-800">Inclusions</Label>
+                    <ul className="space-y-1">
+                      {selectedTour.inclusions.map((item, i) => (
+                        <li key={i} className="flex items-start gap-1.5 text-xs text-emerald-700">
+                          <span className="mt-0.5 text-emerald-500">✓</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {selectedTour.exclusions.length > 0 && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                    <Label className="mb-2 block text-xs font-semibold text-red-800">Exclusions</Label>
+                    <ul className="space-y-1">
+                      {selectedTour.exclusions.map((item, i) => (
+                        <li key={i} className="flex items-start gap-1.5 text-xs text-red-700">
+                          <span className="mt-0.5 text-red-500">✗</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </Section>
+          )}
+
+          {/* Editable Itinerary for standard tours */}
+          {!isCustomMode && selectedTour && selectedTour.itinerary.length > 0 && (
+            <Section icon={<Calendar className="h-4 w-4" />} title="Itinerary (Editable)">
+              <div className="space-y-3">
+                {selectedTour.itinerary.map((day, index) => (
+                  <div key={index} className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <Badge variant="gold" className="rounded-md px-2.5 py-1 text-xs">
+                        Day {day.day}
+                      </Badge>
+                      <span className="text-xs text-slate-500">
+                        {day.meals?.join(" • ") || "Meals not specified"}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <Label className="text-xs">Title</Label>
+                        <Input
+                          defaultValue={day.title}
+                          onChange={(e) => {
+                            const updated = [...selectedTour.itinerary];
+                            updated[index] = { ...updated[index], title: e.target.value };
+                            setValue("customItinerary", updated as any);
+                          }}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Description</Label>
+                        <Textarea
+                          defaultValue={day.description}
+                          onChange={(e) => {
+                            const updated = [...selectedTour.itinerary];
+                            updated[index] = { ...updated[index], description: e.target.value };
+                            setValue("customItinerary", updated as any);
+                          }}
+                          rows={3}
+                          className="mt-1"
+                        />
+                      </div>
+                      {day.highlights && day.highlights.length > 0 && (
+                        <div>
+                          <Label className="text-xs">Highlights</Label>
+                          <div className="mt-1 flex flex-wrap gap-1.5">
+                            {day.highlights.map((h, hi) => (
+                              <Badge key={hi} variant="outline" className="text-[10px]">
+                                {h}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {day.accommodation && (
+                        <div>
+                          <Label className="text-xs">Accommodation</Label>
+                          <Input
+                            defaultValue={day.accommodation}
+                            onChange={(e) => {
+                              const updated = [...selectedTour.itinerary];
+                              updated[index] = { ...updated[index], accommodation: e.target.value };
+                              setValue("customItinerary", updated as any);
+                            }}
+                            className="mt-1"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
 
           <Section icon={<Calendar className="h-4 w-4" />} title="Travel Dates">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -454,6 +611,13 @@ export function BookingConfigurationForm({
               </div>
             </div>
           </Section>
+
+          {/* Optional Tours */}
+          {!isCustomMode && selectedTour && selectedTour.itinerary.length > 0 && (
+            <Section icon={<Plus className="h-4 w-4" />} title="Optional Tours">
+              <OptionalToursEditor selectedTour={selectedTour} />
+            </Section>
+          )}
 
           <Section icon={<User className="h-4 w-4" />} title="Client Information (Optional)">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -660,6 +824,106 @@ export function BookingConfigurationForm({
         </CardContent>
       </Card>
     </form>
+  );
+}
+
+function OptionalToursEditor({ selectedTour }: { selectedTour: Tour }) {
+  const [optionalTours, setOptionalTours] = React.useState<Array<{
+    day: number;
+    name: string;
+    price: number;
+    location: string;
+  }>>([]);
+  const [draft, setDraft] = React.useState({ day: 1, name: "", price: 0, location: "" });
+
+  const addTour = () => {
+    if (!draft.name.trim()) return;
+    setOptionalTours([...optionalTours, { ...draft }]);
+    setDraft({ day: 1, name: "", price: 0, location: "" });
+  };
+
+  const removeTour = (idx: number) => {
+    setOptionalTours(optionalTours.filter((_, i) => i !== idx));
+  };
+
+  const totalOptional = optionalTours.reduce((sum, t) => sum + t.price, 0);
+
+  return (
+    <div className="space-y-3">
+      {optionalTours.length > 0 && (
+        <div className="space-y-2">
+          {optionalTours.map((tour, i) => (
+            <div key={i} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3">
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-[10px]">Day {tour.day}</Badge>
+                  <span className="text-sm font-medium text-slate-900">{tour.name}</span>
+                </div>
+                <div className="mt-1 flex items-center gap-3 text-xs text-slate-500">
+                  {tour.location && <span>📍 {tour.location}</span>}
+                  <span className="font-medium text-emerald-700">${tour.price}/pax</span>
+                </div>
+              </div>
+              <Button type="button" variant="ghost" size="sm" onClick={() => removeTour(i)} className="text-red-500">
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ))}
+          <div className="rounded-lg bg-emerald-50 p-2 text-xs text-emerald-800">
+            Total optional tours: <span className="font-bold">${totalOptional}/pax</span>
+          </div>
+        </div>
+      )}
+      <div className="rounded-lg border border-dashed border-slate-300 p-3">
+        <p className="mb-2 text-xs font-semibold text-slate-700">Add Optional Tour</p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div>
+            <Label className="text-[10px]">Day</Label>
+            <select
+              value={draft.day}
+              onChange={(e) => setDraft({ ...draft, day: Number(e.target.value) })}
+              className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white text-sm"
+            >
+              {selectedTour.itinerary.map((d) => (
+                <option key={d.day} value={d.day}>Day {d.day}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label className="text-[10px]">Tour Name</Label>
+            <Input
+              value={draft.name}
+              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              placeholder="e.g. Hot Air Balloon"
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label className="text-[10px]">Price/pax ($)</Label>
+            <Input
+              type="number"
+              min={0}
+              value={draft.price || ""}
+              onChange={(e) => setDraft({ ...draft, price: Number(e.target.value) || 0 })}
+              placeholder="0"
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label className="text-[10px]">Location</Label>
+            <Input
+              value={draft.location}
+              onChange={(e) => setDraft({ ...draft, location: e.target.value })}
+              placeholder="e.g. Luxor"
+              className="mt-1"
+            />
+          </div>
+        </div>
+        <Button type="button" size="sm" variant="outline" onClick={addTour} className="mt-2">
+          <Plus className="mr-1 h-3 w-3" /> Add
+        </Button>
+      </div>
+    </div>
   );
 }
 

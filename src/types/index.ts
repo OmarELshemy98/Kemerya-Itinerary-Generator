@@ -37,6 +37,8 @@ export interface Tour {
   image?: string;
   basePriceEUR?: number;
   basePriceUSD?: number;
+  /** Per-person pricing tiers from the website, e.g. [{personsLabel: "1 Person", priceUSD: 132}, {personsLabel: "2 - 3 Persons", priceUSD: 86}, ...] */
+  pricesTable?: { personsLabel: string; priceUSD: number }[];
   highlights?: string[];
   inclusions: string[];
   exclusions: string[];

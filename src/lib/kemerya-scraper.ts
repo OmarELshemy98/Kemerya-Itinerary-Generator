@@ -64,10 +64,19 @@ function extractPriceUSD(text: string): number | null {
 }
 
 function extractDaysFromText(text: string): number | null {
+  // Match "4 Days / 3 Nights" or "4 Days/3 Nights" or "4D/3N"
+  const mDaysNights = text.match(/(\d+)\s*[Dd]ays?\s*[\/\-]\s*(\d+)\s*[Nn]ights?/);
+  if (mDaysNights) return parseInt(mDaysNights[1], 10);
+  // Match "4 Days - 3 Nights"
+  const mDash = text.match(/(\d+)\s*[Dd]ays?\s*-\s*(\d+)\s*[Nn]ights?/);
+  if (mDash) return parseInt(mDash[1], 10);
+  // Match "4 Days" or "4-Day"
   const m1 = text.match(/(\d+)\s*[-\s]*\s*(day|days|Day|Days)\b/i);
   if (m1) return parseInt(m1[1], 10);
+  // Match "3 Nights" -> days = nights + 1
   const m2 = text.match(/(\d+)\s*[-\s]*\s*(night|nights|Night|Nights)\b/i);
   if (m2) return parseInt(m2[1], 10) + 1;
+  // Match "4/3" day/night format
   const m3 = text.match(/(\d+)\s*[-\/]\s*(\d+)\s*(day|night)/i);
   if (m3) return parseInt(m3[1], 10);
   if (/\bFull\s*Day\b/i.test(text)) return 1;
@@ -643,6 +652,7 @@ function tourFromDetails(
     image: details.mainImage || listItem.image,
     basePriceEUR: basePriceEUR || undefined,
     basePriceUSD: basePriceUSD || undefined,
+    pricesTable: details.pricesTable,
     highlights: details.highlights,
     inclusions: inclusionsFromDetails,
     exclusions: exclusionsFromDetails,
@@ -668,7 +678,7 @@ export async function scrapeAllTours(options?: {
   maxToursPerSub?: number;
   skipDetails?: boolean;
 }): Promise<FullScrapeResult> {
-  const maxPerSub = options?.maxToursPerSub ?? 20;
+  const maxPerSub = options?.maxToursPerSub ?? 100;
   const skipDetails = options?.skipDetails ?? false;
   const allTours: Tour[] = [];
   let counter = 0;

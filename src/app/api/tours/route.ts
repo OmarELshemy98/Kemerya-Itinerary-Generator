@@ -10,7 +10,7 @@ const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
 async function triggerBackgroundScrape() {
   try {
-    const result = await scrapeAllTours({ maxToursPerSub: 20 });
+    const result = await scrapeAllTours({ maxToursPerSub: 100 });
     await writeCache({
       tours: result.tours,
       scrapedAt: result.scrapedAt,

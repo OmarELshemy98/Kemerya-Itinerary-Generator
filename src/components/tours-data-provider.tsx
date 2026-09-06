@@ -113,7 +113,7 @@ export function ToursDataProvider({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            maxToursPerSub: opts?.maxToursPerSub ?? 20,
+            maxToursPerSub: opts?.maxToursPerSub ?? 100,
             skipDetails: Boolean(opts?.skipDetails),
           }),
         });

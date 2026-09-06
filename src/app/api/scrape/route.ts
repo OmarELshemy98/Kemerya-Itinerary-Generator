@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     } catch {}
     const maxToursPerSub = body?.maxToursPerSub
       ? Number(body.maxToursPerSub)
-      : 20;
+      : 100;
     const skipDetails = Boolean(body?.skipDetails);
     const result = await scrapeAllTours({ maxToursPerSub, skipDetails });
 
