@@ -3,7 +3,7 @@
 import * as React from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { Map, FileText, Sparkles, CheckCircle2, Layers, Compass } from "lucide-react";
-import { ToursDataProvider, useToursData } from "@/components/tours-data-provider";
+import { useToursData } from "@/components/tours-data-provider";
 import type { Tour, BookingConfig } from "@/types";
 import { TourSearchBar } from "@/components/tour-search-bar";
 import { HierarchicalCategorySelector } from "@/components/hierarchical-category-selector";
@@ -354,18 +354,10 @@ function SummaryLine({ label, value }: { label: string; value: string }) {
   );
 }
 
-function DashboardContent() {
-  return (
-    <ToursDataProvider>
-      <DashboardInner />
-    </ToursDataProvider>
-  );
-}
-
 export default function DashboardPage() {
   return (
     <DashboardLayout>
-      <DashboardContent />
+      <DashboardInner />
     </DashboardLayout>
   );
 }

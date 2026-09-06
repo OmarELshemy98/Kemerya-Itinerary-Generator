@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { SideMenu } from "@/components/dashboard/side-menu";
 import { DashboardHeader } from "@/components/dashboard-header";
+import { ToursDataProvider } from "@/components/tours-data-provider";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/auth/rbac";
 
@@ -13,12 +13,10 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const router = useRouter();
   const supabase = createClient();
   const [collapsed, setCollapsed] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [userRole, setUserRole] = React.useState<UserRole>("viewer");
-  const [userEmail, setUserEmail] = React.useState<string | null>(null);
   const [userLoading, setUserLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -29,8 +27,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         } = await supabase.auth.getUser();
 
         if (user) {
-          setUserEmail(user.email ?? null);
-
           const { data: profile } = await supabase
             .from("profiles")
             .select("role")
@@ -68,23 +64,25 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <SideMenu
-        userRole={userRole}
-        collapsed={collapsed}
-        onToggle={handleToggle}
-        mobileOpen={mobileOpen}
-        onMobileClose={handleMobileClose}
-      />
-      <div
-        className={cn(
-          "transition-all duration-300 ease-in-out",
-          collapsed ? "lg:ml-16" : "lg:ml-64"
-        )}
-      >
-        <DashboardHeader />
-        <main className="p-4 sm:p-6 lg:p-8">{children}</main>
+    <ToursDataProvider>
+      <div className="min-h-screen bg-slate-50">
+        <SideMenu
+          userRole={userRole}
+          collapsed={collapsed}
+          onToggle={handleToggle}
+          mobileOpen={mobileOpen}
+          onMobileClose={handleMobileClose}
+        />
+        <div
+          className={cn(
+            "transition-all duration-300 ease-in-out",
+            collapsed ? "lg:ml-16" : "lg:ml-64"
+          )}
+        >
+          <DashboardHeader />
+          <main className="p-4 sm:p-6 lg:p-8">{children}</main>
+        </div>
       </div>
-    </div>
+    </ToursDataProvider>
   );
 }
