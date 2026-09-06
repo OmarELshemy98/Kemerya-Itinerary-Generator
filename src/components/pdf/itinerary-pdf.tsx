@@ -593,6 +593,34 @@ const styles = StyleSheet.create({
     fontSize: 8,
     color: BRAND_COLORS.muted,
   },
+  socialSection: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: BRAND_COLORS.border,
+  },
+  socialTitle: {
+    fontSize: 11,
+    fontWeight: "bold",
+    color: BRAND_COLORS.navy,
+    marginBottom: 8,
+  },
+  socialLinks: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginBottom: 12,
+  },
+  socialLink: {
+    fontSize: 9,
+    color: BRAND_COLORS.gold,
+    textDecoration: "underline",
+  },
+  reviewPrompt: {
+    fontSize: 9,
+    color: BRAND_COLORS.text,
+    lineHeight: 1.6,
+  },
 });
 
 function buildItineraryList(

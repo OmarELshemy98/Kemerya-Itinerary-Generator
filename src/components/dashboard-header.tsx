@@ -140,33 +140,17 @@ export function DashboardHeader() {
       <div className="border-b border-white/10">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            {KEMERYA_COMPANY_INFO.logo ? (
-              <div className="relative h-14 w-44 rounded-xl bg-white/95 p-2 shadow-lg flex items-center justify-center">
-                <Image
-                  src={KEMERYA_COMPANY_INFO.logo}
-                  alt={KEMERYA_COMPANY_INFO.name}
-                  fill
-                  className="object-contain"
-                  sizes="176px"
-                />
-              </div>
-            ) : (
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl kemerya-gold-gradient shadow-lg">
-                <Compass className="h-6 w-6 text-[#0F172A]" />
-              </div>
-            )}
-            {!KEMERYA_COMPANY_INFO.logo && (
-              <div>
-                <h1 className="text-xl font-bold tracking-wider">
-                  {KEMERYA_COMPANY_INFO.name}
-                </h1>
-                <p className="text-xs text-[#C9A962] tracking-[0.2em] uppercase">
-                  {KEMERYA_COMPANY_INFO.tagline}
-                </p>
-              </div>
-            )}
+            <div className="relative h-14 w-44 rounded-xl bg-white/95 p-2 shadow-lg flex items-center justify-center">
+              <Image
+                src={KEMERYA_COMPANY_INFO.logo}
+                alt={KEMERYA_COMPANY_INFO.name}
+                fill
+                className="object-contain"
+                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 176px"
+              />
+            </div>
           </div>
-          <div className="flex flex-col items-start gap-2 text-sm sm:flex-row sm:items-center sm:gap-4">
+          <div className="flex flex-col items-start gap-2 text-sm sm:flex-row sm:items-center sm:gap-4 flex-grow justify-end">
             <div className="flex flex-wrap items-center gap-2">
               <Badge
                 className={cn(

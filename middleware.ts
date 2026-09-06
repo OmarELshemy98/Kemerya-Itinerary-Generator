@@ -37,8 +37,10 @@ export async function middleware(request: NextRequest) {
     if (isAuthRoute || isPublicApi) {
       return response;
     }
-    // طرده لصفحة تسجيل الدخول لو حاول يفتح أي مسار تاني
-    return NextResponse.redirect(new URL("/login", request.url));
+    // طرده لصفحة تسجيل الدخول لو حاول يفتح أي مسار تاني (بما في ذلك الصفحة الرئيسية)
+    if (pathname === "/" || !isStaticFile(pathname)) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
   }
 
   // الحالة الثانية: لو المستخدم مسجل دخول
