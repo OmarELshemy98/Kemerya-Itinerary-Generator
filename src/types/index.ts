@@ -109,3 +109,30 @@ export interface CategoryTreeNode {
     tours: Tour[];
   })[];
 }
+
+export type UserRole = "super_admin" | "admin" | "operator" | "viewer";
+
+export interface Profile {
+  id: string;
+  full_name: string;
+  email: string;
+  role: UserRole;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface AdminUser extends Profile {}
+
+export interface CreateUserRequest {
+  email: string;
+  password: string;
+  full_name: string;
+  role: UserRole;
+}
+
+export interface UpdateUserRequest {
+  full_name?: string;
+  role?: UserRole;
+  is_active?: boolean;
+}
+

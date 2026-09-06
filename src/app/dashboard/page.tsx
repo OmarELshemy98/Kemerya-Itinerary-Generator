@@ -289,11 +289,15 @@ function SelectedTourBanner({
               {tour.durationDays} day{tour.durationDays !== 1 ? "s" : ""}
               {tour.durationNights ? ` / ${tour.durationNights} nights` : ""}
             </span>
-            {tour.basePriceEUR !== undefined && (
+            {tour.basePriceUSD !== undefined ? (
+              <span>
+                From {formatCurrency(tour.basePriceUSD, "USD")} / pax
+              </span>
+            ) : tour.basePriceEUR !== undefined ? (
               <span>
                 From {formatCurrency(tour.basePriceEUR, "EUR")} / pax
               </span>
-            )}
+            ) : null}
           </p>
         </div>
       </div>

@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatCurrency(
   amount: number,
-  currency: "EUR" | "USD" = "EUR"
+  currency: "EUR" | "USD" = "USD"
 ): string {
   const symbols: Record<string, string> = {
     EUR: "€",

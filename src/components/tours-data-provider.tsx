@@ -2,17 +2,12 @@
 
 import * as React from "react";
 import type { Tour, MainCategory, SubCategory } from "@/types";
-import {
-  TOURS as FALLBACK_TOURS,
-  MAIN_CATEGORIES as FALLBACK_MAIN,
-  SUB_CATEGORIES as FALLBACK_SUB,
-} from "@/data/tours";
 
 export interface ToursDataState {
   tours: Tour[];
   mainCategories: MainCategory[];
   subCategories: SubCategory[];
-  source: "fallback" | "cache" | "website";
+  source: "loading" | "fallback" | "cache" | "website";
   scrapedAt: string | null;
   stats: any | null;
   loading: boolean;
@@ -32,13 +27,25 @@ export interface ToursDataContextValue extends ToursDataState {
   getSubCategoriesByMain: (mainCategoryId: string) => SubCategory[];
   getMainCategoryById: (id: string) => MainCategory | undefined;
   getSubCategoryById: (id: string) => SubCategory | undefined;
+
+  addCategory: (payload: Partial<MainCategory> & { name: string }) => Promise<{ ok: boolean; category?: MainCategory; error?: string }>;
+  updateCategory: (id: string, payload: Partial<MainCategory>) => Promise<{ ok: boolean; category?: MainCategory; error?: string }>;
+  deleteCategory: (id: string) => Promise<{ ok: boolean; error?: string }>;
+
+  addSubCategory: (payload: Partial<SubCategory> & { name: string; mainCategoryId: string }) => Promise<{ ok: boolean; subCategory?: SubCategory; error?: string }>;
+  updateSubCategory: (id: string, payload: Partial<SubCategory> & { mainCategoryId?: string }) => Promise<{ ok: boolean; subCategory?: SubCategory; error?: string }>;
+  deleteSubCategory: (id: string) => Promise<{ ok: boolean; error?: string }>;
+
+  addTour: (payload: Partial<Tour> & { title: string; mainCategoryId: string; subCategoryId: string; durationDays: number }) => Promise<{ ok: boolean; tour?: Tour; error?: string }>;
+  updateTour: (id: string, payload: Partial<Tour>) => Promise<{ ok: boolean; tour?: Tour; error?: string }>;
+  deleteTour: (id: string) => Promise<{ ok: boolean; error?: string }>;
 }
 
 const initialState: ToursDataState = {
-  tours: FALLBACK_TOURS,
-  mainCategories: FALLBACK_MAIN,
-  subCategories: FALLBACK_SUB,
-  source: "fallback",
+  tours: [],
+  mainCategories: [],
+  subCategories: [],
+  source: "loading",
   scrapedAt: null,
   stats: null,
   loading: false,
@@ -72,17 +79,34 @@ export function ToursDataProvider({
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json.ok) {
-        setState({
-          tours: json.tours || FALLBACK_TOURS,
-          mainCategories: json.mainCategories || FALLBACK_MAIN,
-          subCategories: json.subCategories || FALLBACK_SUB,
-          source: json.source || "fallback",
-          scrapedAt: json.scrapedAt || null,
-          stats: json.stats || null,
-          loading: false,
-          lastRefreshed: new Date(),
-          error: null,
-        });
+        const isEmpty = !json.tours || json.tours.length === 0;
+        const isFallbackEmpty = isEmpty && json.source === "fallback";
+
+        if (isFallbackEmpty) {
+          setState({
+            tours: [],
+            mainCategories: [],
+            subCategories: [],
+            source: json.source || "fallback",
+            scrapedAt: json.scrapedAt || null,
+            stats: json.stats || null,
+            loading: false,
+            lastRefreshed: new Date(),
+            error: "No data synced. Please trigger a full scrape to load data.",
+          });
+        } else {
+          setState({
+            tours: json.tours || [],
+            mainCategories: json.mainCategories || [],
+            subCategories: json.subCategories || [],
+            source: json.source || "cache",
+            scrapedAt: json.scrapedAt || null,
+            stats: json.stats || null,
+            loading: false,
+            lastRefreshed: new Date(),
+            error: null,
+          });
+        }
         return;
       }
       throw new Error(json.error || "Unknown error");
@@ -131,6 +155,192 @@ export function ToursDataProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const addCategory = React.useCallback(
+    async (payload: Partial<MainCategory> & { name: string }) => {
+      try {
+        const res = await fetch("/api/admin/categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.ok) {
+          return { ok: false, error: json.error || `HTTP ${res.status}` };
+        }
+        await refresh();
+        return { ok: true, category: json.category };
+      } catch (e: any) {
+        return { ok: false, error: String(e?.message || e) };
+      }
+    },
+    [refresh]
+  );
+
+  const updateCategory = React.useCallback(
+    async (id: string, payload: Partial<MainCategory>) => {
+      try {
+        const res = await fetch(`/api/admin/categories/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.ok) {
+          return { ok: false, error: json.error || `HTTP ${res.status}` };
+        }
+        await refresh();
+        return { ok: true, category: json.category };
+      } catch (e: any) {
+        return { ok: false, error: String(e?.message || e) };
+      }
+    },
+    [refresh]
+  );
+
+  const deleteCategory = React.useCallback(
+    async (id: string) => {
+      try {
+        const res = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.ok) {
+          return { ok: false, error: json.error || `HTTP ${res.status}` };
+        }
+        await refresh();
+        return { ok: true };
+      } catch (e: any) {
+        return { ok: false, error: String(e?.message || e) };
+      }
+    },
+    [refresh]
+  );
+
+  const addSubCategory = React.useCallback(
+    async (
+      payload: Partial<SubCategory> & { name: string; mainCategoryId: string }
+    ) => {
+      try {
+        const res = await fetch("/api/admin/subcategories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.ok) {
+          return { ok: false, error: json.error || `HTTP ${res.status}` };
+        }
+        await refresh();
+        return { ok: true, subCategory: json.subCategory };
+      } catch (e: any) {
+        return { ok: false, error: String(e?.message || e) };
+      }
+    },
+    [refresh]
+  );
+
+  const updateSubCategory = React.useCallback(
+    async (id: string, payload: Partial<SubCategory> & { mainCategoryId?: string }) => {
+      try {
+        const res = await fetch(`/api/admin/subcategories/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.ok) {
+          return { ok: false, error: json.error || `HTTP ${res.status}` };
+        }
+        await refresh();
+        return { ok: true, subCategory: json.subCategory };
+      } catch (e: any) {
+        return { ok: false, error: String(e?.message || e) };
+      }
+    },
+    [refresh]
+  );
+
+  const deleteSubCategory = React.useCallback(
+    async (id: string) => {
+      try {
+        const res = await fetch(`/api/admin/subcategories/${id}`, { method: "DELETE" });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.ok) {
+          return { ok: false, error: json.error || `HTTP ${res.status}` };
+        }
+        await refresh();
+        return { ok: true };
+      } catch (e: any) {
+        return { ok: false, error: String(e?.message || e) };
+      }
+    },
+    [refresh]
+  );
+
+  const addTour = React.useCallback(
+    async (
+      payload: Partial<Tour> & {
+        title: string;
+        mainCategoryId: string;
+        subCategoryId: string;
+        durationDays: number;
+      }
+    ) => {
+      try {
+        const res = await fetch("/api/admin/tours", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.ok) {
+          return { ok: false, error: json.error || `HTTP ${res.status}` };
+        }
+        await refresh();
+        return { ok: true, tour: json.tour };
+      } catch (e: any) {
+        return { ok: false, error: String(e?.message || e) };
+      }
+    },
+    [refresh]
+  );
+
+  const updateTour = React.useCallback(
+    async (id: string, payload: Partial<Tour>) => {
+      try {
+        const res = await fetch(`/api/admin/tours/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.ok) {
+          return { ok: false, error: json.error || `HTTP ${res.status}` };
+        }
+        await refresh();
+        return { ok: true, tour: json.tour };
+      } catch (e: any) {
+        return { ok: false, error: String(e?.message || e) };
+      }
+    },
+    [refresh]
+  );
+
+  const deleteTour = React.useCallback(
+    async (id: string) => {
+      try {
+        const res = await fetch(`/api/admin/tours/${id}`, { method: "DELETE" });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.ok) {
+          return { ok: false, error: json.error || `HTTP ${res.status}` };
+        }
+        await refresh();
+        return { ok: true };
+      } catch (e: any) {
+        return { ok: false, error: String(e?.message || e) };
+      }
+    },
+    [refresh]
+  );
+
   const value: ToursDataContextValue = React.useMemo(() => {
     const getTourById = (id: string) =>
       state.tours.find((t) => t.id === id);
@@ -165,8 +375,30 @@ export function ToursDataProvider({
       getSubCategoriesByMain,
       getMainCategoryById,
       getSubCategoryById,
+      addCategory,
+      updateCategory,
+      deleteCategory,
+      addSubCategory,
+      updateSubCategory,
+      deleteSubCategory,
+      addTour,
+      updateTour,
+      deleteTour,
     };
-  }, [state, refresh, triggerFullScrape]);
+  }, [
+    state,
+    refresh,
+    triggerFullScrape,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    addSubCategory,
+    updateSubCategory,
+    deleteSubCategory,
+    addTour,
+    updateTour,
+    deleteTour,
+  ]);
 
   return (
     <ToursDataContext.Provider value={value}>

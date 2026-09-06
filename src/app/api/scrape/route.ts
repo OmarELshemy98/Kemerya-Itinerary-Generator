@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { scrapeAllTours } from "@/lib/kemerya-scraper";
 import { writeCache } from "@/lib/tour-cache";
+import { MAIN_CATEGORIES, SUB_CATEGORIES } from "@/data/tours";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +23,8 @@ export async function POST(req: Request) {
       scrapedAt: result.scrapedAt,
       source: result.source,
       stats: result.stats,
+      mainCategories: MAIN_CATEGORIES,
+      subCategories: SUB_CATEGORIES,
     });
 
     return NextResponse.json({

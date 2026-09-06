@@ -693,6 +693,7 @@ export function ItineraryPDF({
         <View style={styles.header}>
           <View style={styles.brandBlock}>
             {companyInfo.logo ? (
+              // eslint-disable-next-line jsx-a11y/alt-text
               <Image src={companyInfo.logo} style={styles.logoImg} />
             ) : (
               <>
@@ -836,6 +837,7 @@ export function ItineraryPDF({
         <View style={styles.header}>
           <View style={styles.brandBlock}>
             {companyInfo.logo ? (
+              // eslint-disable-next-line jsx-a11y/alt-text
               <Image src={companyInfo.logo} style={styles.logoImgSmall} />
             ) : (
               <Text style={{ ...styles.brandName, fontSize: 18 }}>{companyInfo.name}</Text>
@@ -889,6 +891,7 @@ export function ItineraryPDF({
           <View style={styles.header}>
             <View style={styles.brandBlock}>
               {companyInfo.logo ? (
+                // eslint-disable-next-line jsx-a11y/alt-text
                 <Image src={companyInfo.logo} style={styles.logoImgSmall} />
               ) : (
                 <Text style={{ ...styles.brandName, fontSize: 18 }}>{companyInfo.name}</Text>
@@ -931,6 +934,7 @@ export function ItineraryPDF({
         <View style={styles.header}>
           <View style={styles.brandBlock}>
             {companyInfo.logo ? (
+              // eslint-disable-next-line jsx-a11y/alt-text
               <Image src={companyInfo.logo} style={styles.logoImgSmall} />
             ) : (
               <Text style={{ ...styles.brandName, fontSize: 18 }}>{companyInfo.name}</Text>

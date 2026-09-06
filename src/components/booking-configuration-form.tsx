@@ -124,8 +124,8 @@ export function BookingConfigurationForm({
         adults: 2,
         children: 0,
         infants: 0,
-        currency: "EUR",
-        totalPrice: selectedTour?.basePriceEUR ?? 0,
+        currency: "USD",
+        totalPrice: selectedTour?.basePriceUSD ?? 0,
         startDate: todayISO(),
         endDate: (() => {
           const d = new Date();
@@ -153,7 +153,7 @@ export function BookingConfigurationForm({
     if (selectedTour && !isCustomMode) {
       const end = new Date(watch("startDate"));
       end.setDate(end.getDate() + (selectedTour.durationDays || 0));
-      setValue("totalPrice", selectedTour.basePriceEUR ?? 0);
+      setValue("totalPrice", selectedTour.basePriceUSD ?? 0);
       setValue(
         "endDate",
         end.toISOString().split("T")[0]
@@ -376,8 +376,8 @@ export function BookingConfigurationForm({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="EUR">€ EUR (Euro)</SelectItem>
                         <SelectItem value="USD">$ USD (US Dollar)</SelectItem>
+                        <SelectItem value="EUR">€ EUR (Euro)</SelectItem>
                       </SelectContent>
                     </Select>
                   )}

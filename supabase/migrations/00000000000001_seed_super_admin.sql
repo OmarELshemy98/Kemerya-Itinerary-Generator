@@ -1,0 +1,71 @@
+-- Kemerya Itinerary Generator — Seed Super Admin User
+-- Timestamp: 00000000000001_seed_super_admin.sql
+--
+-- ===========================================================================
+--  INSTRUCTIONS: How to seed the initial super admin (since anon key can't
+--  create users and you may not have set SUPABASE_SERVICE_ROLE_KEY yet).
+-- ===========================================================================
+--
+--  OPTION A — SQL Editor (2 steps, recommended when no service_role key):
+--  ---------
+--  1. First, in the Supabase Dashboard → Authentication → Users, click
+--     "Add user" → "Create new user".
+--       Email:    omarelshemy010@gmail.com
+--       Password: Omar@1998
+--     (enable "Auto confirm user")
+--     Then copy the generated user UUID from the Users list and replace
+--     <<AUTH_USER_UUID>> in step 2 below, then run that SQL.
+--
+--  OR alternatively you can create the auth.user directly via SQL:
+--     (only works when executed by a postgres role with insert access to auth schema)
+--     INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at)
+--     VALUES (
+--       '00000000-0000-0000-0000-000000000000',
+--       gen_random_uuid(),
+--       'authenticated',
+--       'authenticated',
+--       'omarelshemy010@gmail.com',
+--       crypt('Omar@1998', gen_salt('bf')),
+--       now(),
+--       now(),
+--       now()
+--     ) RETURNING id;
+--     Then use the returned UUID in step 2.
+--
+--  2. Insert the matching profile row (paste the UUID from step 1):
+--     (edit <<AUTH_USER_UUID>> below)
+-- ===========================================================================
+--
+--  OPTION B — Via the seed endpoint (requires SUPABASE_SERVICE_ROLE_KEY):
+--  ---------
+--  Set SUPABASE_SERVICE_ROLE_KEY in your environment (and optionally
+--  SUPER_ADMIN_SEED_PASSWORD=Omar@1998), then run:
+--
+--     curl -X POST http://localhost:3000/api/auth/seed \
+--          -H "Content-Type: application/json" \
+--          -d '{ "password": "Omar@1998" }'
+--
+--  (If SUPER_ADMIN_SEED_PASSWORD env is NOT set, password body can be omitted.)
+-- ===========================================================================
+
+
+-- ===== STEP 2 / OPTION A: INSERT PROFILE =====================================
+-- Replace <<AUTH_USER_UUID>> with the UUID of the auth user created in step 1:
+
+-- INSERT INTO public.profiles (id, full_name, email, role, is_active, created_at)
+-- VALUES (
+--   '<<AUTH_USER_UUID>>',
+--   'Omar Elshemy',
+--   'omarelshemy010@gmail.com',
+--   'super_admin',
+--   TRUE,
+--   now()
+-- );
+
+
+-- ===== VERIFICATION QUERY ====================================================
+-- After seeding, confirm the super admin exists:
+
+-- SELECT id, full_name, email, role, is_active, created_at
+-- FROM public.profiles
+-- WHERE role = 'super_admin';

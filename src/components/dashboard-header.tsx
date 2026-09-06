@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
   Compass,
   Sparkles,
@@ -9,6 +10,11 @@ import {
   Phone,
   RefreshCw,
   Globe2,
+  Shield,
+  LogOut,
+  UserCircle2,
+  ChevronDown,
+  Loader2,
 } from "lucide-react";
 import { KEMERYA_COMPANY_INFO } from "@/data/company";
 import { useToursData } from "@/components/tours-data-provider";
@@ -16,10 +22,21 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { createClient } from "@/lib/supabase/client";
+import type { UserRole } from "@/lib/auth/rbac";
 
 export function DashboardHeader() {
+  const router = useRouter();
+  const supabase = createClient();
+
   const [time, setTime] = React.useState(new Date());
   const [scrapeConfirm, setScrapeConfirm] = React.useState(false);
+  const [userMenuOpen, setUserMenuOpen] = React.useState(false);
+  const [userEmail, setUserEmail] = React.useState<string | null>(null);
+  const [userRole, setUserRole] = React.useState<UserRole>("viewer");
+  const [userLoading, setUserLoading] = React.useState(true);
+  const [loggingOut, setLoggingOut] = React.useState(false);
+
   const {
     tours,
     mainCategories,
@@ -38,6 +55,44 @@ export function DashboardHeader() {
     return () => clearInterval(interval);
   }, []);
 
+  React.useEffect(() => {
+    async function fetchUser() {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          setUserEmail(user.email ?? null);
+
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          if (profile?.role) {
+            setUserRole(profile.role as UserRole);
+          }
+        }
+      } finally {
+        setUserLoading(false);
+      }
+    }
+    fetchUser();
+  }, [supabase]);
+
+  React.useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-user-menu]")) {
+        setUserMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const dateText = time.toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -52,6 +107,33 @@ export function DashboardHeader() {
     setScrapeConfirm(false);
     await triggerFullScrape(opts);
   };
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
+      router.refresh();
+    } finally {
+      setLoggingOut(false);
+    }
+  };
+
+  const roleLabel: Record<UserRole, string> = {
+    super_admin: "Super Admin",
+    admin: "Admin",
+    operator: "Operator",
+    viewer: "Viewer",
+  };
+
+  const roleVariant: Record<UserRole, "gold" | "emerald" | "secondary" | "outline"> = {
+    super_admin: "gold",
+    admin: "emerald",
+    operator: "secondary",
+    viewer: "outline",
+  };
+
+  const isSuperAdmin = userRole === "super_admin";
 
   return (
     <header className="kemerya-gradient text-white shadow-2xl">
@@ -132,6 +214,96 @@ export function DashboardHeader() {
             <div className="hidden text-xs text-slate-300 md:block">
               {dateText}
             </div>
+
+            <div className="relative" data-user-menu>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setUserMenuOpen((o) => !o)}
+                className="h-9 rounded-lg border border-white/10 bg-white/5 px-2.5 text-white hover:bg-white/10 gap-2"
+              >
+                {userLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-[#C9A962]" />
+                ) : (
+                  <>
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full kemerya-gold-gradient">
+                      <UserCircle2 className="h-4 w-4 text-[#0F172A]" />
+                    </div>
+                    <div className="hidden text-left sm:block">
+                      <div className="text-xs font-medium leading-tight">
+                        {userEmail ?? "Guest"}
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <Badge
+                          variant={roleVariant[userRole]}
+                          className="h-4 px-1.5 text-[9px] rounded-sm py-0"
+                        >
+                          {roleLabel[userRole]}
+                        </Badge>
+                      </div>
+                    </div>
+                    <ChevronDown
+                      className={cn(
+                        "h-3.5 w-3.5 text-slate-400 transition-transform",
+                        userMenuOpen && "rotate-180"
+                      )}
+                    />
+                  </>
+                )}
+              </Button>
+
+              {userMenuOpen && !userLoading && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-xl border border-white/10 bg-[#0F172A]/95 shadow-2xl backdrop-blur-xl">
+                  <div className="border-b border-white/5 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full kemerya-gold-gradient">
+                        <UserCircle2 className="h-5 w-5 text-[#0F172A]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium text-white">
+                          {userEmail ?? "Guest"}
+                        </div>
+                        <Badge
+                          variant={roleVariant[userRole]}
+                          className="mt-1 h-4 px-1.5 text-[9px] rounded-sm py-0"
+                        >
+                          {roleLabel[userRole]}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="py-1.5">
+                    {isSuperAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          router.push("/admin/users");
+                        }}
+                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-slate-200 transition-colors hover:bg-white/5 hover:text-white"
+                      >
+                        <Shield className="h-4 w-4 text-[#C9A962]" />
+                        User Management
+                      </button>
+                    )}
+                    <div className="my-1 h-px bg-white/5" />
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      disabled={loggingOut}
+                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-red-300 transition-colors hover:bg-red-500/10 hover:text-red-200 disabled:opacity-50"
+                    >
+                      {loggingOut ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <LogOut className="h-4 w-4" />
+                      )}
+                      {loggingOut ? "Signing out…" : "Sign Out"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="border-t border-white/5 bg-white/5 backdrop-blur">
@@ -194,6 +366,17 @@ export function DashboardHeader() {
                   </Button>
                 </>
               )}
+              {isSuperAdmin && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push("/admin/users")}
+                  className="h-8 rounded-md border-[#C9A962]/40 bg-[#C9A962]/10 px-3 text-xs text-[#C9A962] hover:bg-[#C9A962]/15"
+                >
+                  <Shield className="mr-1.5 h-3.5 w-3.5" />
+                  User Management
+                </Button>
+              )}
             </div>
             <div className="flex items-center gap-1.5 text-[10px] text-slate-300">
               {stats?.toursTotal !== undefined && (
@@ -209,7 +392,6 @@ export function DashboardHeader() {
         </div>
       </div>
 
-      {/* Stats Row */}
       <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard
