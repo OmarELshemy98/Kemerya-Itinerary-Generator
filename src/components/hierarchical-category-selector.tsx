@@ -13,7 +13,7 @@ import {
   ChevronRight,
   MapPin,
   Clock,
-  Euro,
+  DollarSign,
   Check,
   RefreshCw,
 } from "lucide-react";
@@ -411,8 +411,8 @@ function ToursList({
                     {tour.durationNights ? ` / ${tour.durationNights} nights` : ""}
                   </span>
                   <span className="flex items-center gap-1">
-                    <Euro className="h-3.5 w-3.5" />
-                    From {tour.basePriceEUR ? formatCurrency(tour.basePriceEUR, "EUR") : "—"}
+                    <DollarSign className="h-3.5 w-3.5" />
+                    From {tour.basePriceUSD ? formatCurrency(tour.basePriceUSD, "USD") : tour.basePriceEUR ? formatCurrency(Math.round(tour.basePriceEUR / 0.92), "USD") : "—"}
                   </span>
                 </div>
                 {tour.shortDescription && (

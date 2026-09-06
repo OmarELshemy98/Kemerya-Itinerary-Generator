@@ -6,6 +6,7 @@ import { Map, FileText, Sparkles, CheckCircle2 } from "lucide-react";
 import { ToursDataProvider, useToursData } from "@/components/tours-data-provider";
 import type { Tour, BookingConfig } from "@/types";
 import { DashboardHeader } from "@/components/dashboard-header";
+import { AppFooter } from "@/components/app-footer";
 import { TourSearchBar } from "@/components/tour-search-bar";
 import { HierarchicalCategorySelector } from "@/components/hierarchical-category-selector";
 import { BookingConfigurationForm } from "@/components/booking-configuration-form";
@@ -55,10 +56,10 @@ function DashboardInner() {
   }, [bookingConfig]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="flex min-h-screen flex-col bg-slate-50">
       <DashboardHeader />
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Section: Hero Search */}
         <section className="mb-8">
           <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-white to-[#C9A962]/5 p-6 shadow-sm sm:p-8">
@@ -229,6 +230,8 @@ function DashboardInner() {
         tour={selectedTour}
         booking={bookingConfig}
       />
+
+      <AppFooter />
     </div>
   );
 }
@@ -289,15 +292,19 @@ function SelectedTourBanner({
               {tour.durationDays} day{tour.durationDays !== 1 ? "s" : ""}
               {tour.durationNights ? ` / ${tour.durationNights} nights` : ""}
             </span>
-            {tour.basePriceUSD !== undefined ? (
-              <span>
-                From {formatCurrency(tour.basePriceUSD, "USD")} / pax
-              </span>
-            ) : tour.basePriceEUR !== undefined ? (
-              <span>
-                From {formatCurrency(tour.basePriceEUR, "EUR")} / pax
-              </span>
-            ) : null}
+            {(() => {
+              const usd =
+                tour.basePriceUSD !== undefined
+                  ? tour.basePriceUSD
+                  : tour.basePriceEUR !== undefined
+                  ? Math.round(tour.basePriceEUR / 0.92)
+                  : undefined;
+              return usd !== undefined ? (
+                <span>
+                  From {formatCurrency(usd, "USD")} / pax
+                </span>
+              ) : null;
+            })()}
           </p>
         </div>
       </div>

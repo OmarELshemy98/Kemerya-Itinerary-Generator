@@ -97,9 +97,17 @@ export interface CompanyInfo {
     email: string;
   };
   whatsapp: string;
+  supportPhone?: string;
+  developer?: {
+    name: string;
+    website: string;
+  };
   socialMedia?: {
     facebook?: string;
     instagram?: string;
+    youtube?: string;
+    twitter?: string;
+    googleBusiness?: string;
   };
 }
 
