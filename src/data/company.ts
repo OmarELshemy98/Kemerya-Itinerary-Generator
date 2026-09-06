@@ -6,15 +6,15 @@ export const KEMERYA_COMPANY_INFO: CompanyInfo = {
   logo: "/logo-kemerya.png",
   address:
     "123 Pyramids Road, Giza, Cairo, Egypt",
-  phone: "+20 100 123 4567",
+  phone: "01275050450",
   email: "info@kemeryatours.com",
   website: "www.kemeryatours.com",
   operationsManager: {
-    name: "Ahmed Hassan",
-    phone: "+20 101 987 6543",
+    name: "Omar Elshemy",
+    phone: "01275050450",
     email: "operations@kemeryatours.com",
   },
-  whatsapp: "+20 100 123 4567",
+  whatsapp: "01275050450",
   socialMedia: {
     facebook: "facebook.com/kemeryatours",
     instagram: "@kemeryatours",
