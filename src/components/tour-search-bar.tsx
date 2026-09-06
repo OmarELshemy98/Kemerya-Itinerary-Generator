@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Search, MapPin, X } from "lucide-react";
+import { Search, MapPin, X, DollarSign } from "lucide-react";
 import { useToursData } from "@/components/tours-data-provider";
 import type { Tour } from "@/types";
 import { Input } from "@/components/ui/input";
@@ -155,6 +155,19 @@ export function TourSearchBar({
                         {tour.durationDays} day
                         {tour.durationDays !== 1 ? "s" : ""}
                       </span>
+                      {(tour.basePriceUSD || tour.basePriceEUR) && (
+                        <>
+                          <span className="text-slate-300">•</span>
+                          <span className="flex items-center gap-0.5 font-medium text-emerald-700">
+                            <DollarSign className="h-3 w-3" />
+                            From{" "}
+                            {tour.basePriceUSD
+                              ? `$${tour.basePriceUSD}`
+                              : `€${tour.basePriceEUR}`}
+                            /pax
+                          </span>
+                        </>
+                      )}
                     </div>
                     {tour.shortDescription && (
                       <p className="line-clamp-1 text-xs text-slate-500">

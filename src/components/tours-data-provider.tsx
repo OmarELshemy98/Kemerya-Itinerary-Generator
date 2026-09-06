@@ -80,33 +80,19 @@ export function ToursDataProvider({
       const json = await res.json();
       if (json.ok) {
         const isEmpty = !json.tours || json.tours.length === 0;
-        const isFallbackEmpty = isEmpty && json.source === "fallback";
-
-        if (isFallbackEmpty) {
-          setState({
-            tours: [],
-            mainCategories: [],
-            subCategories: [],
-            source: json.source || "fallback",
-            scrapedAt: json.scrapedAt || null,
-            stats: json.stats || null,
-            loading: false,
-            lastRefreshed: new Date(),
-            error: "No data synced. Please trigger a full scrape to load data.",
-          });
-        } else {
-          setState({
-            tours: json.tours || [],
-            mainCategories: json.mainCategories || [],
-            subCategories: json.subCategories || [],
-            source: json.source || "cache",
-            scrapedAt: json.scrapedAt || null,
-            stats: json.stats || null,
-            loading: false,
-            lastRefreshed: new Date(),
-            error: null,
-          });
-        }
+        setState({
+          tours: json.tours || [],
+          mainCategories: json.mainCategories || [],
+          subCategories: json.subCategories || [],
+          source: json.source || "cache",
+          scrapedAt: json.scrapedAt || null,
+          stats: json.stats || null,
+          loading: false,
+          lastRefreshed: new Date(),
+          error: isEmpty
+            ? "Tours are being synced from kemeryatours.com — categories are available, tours will appear shortly. You can also press 'Sync Now'."
+            : null,
+        });
         return;
       }
       throw new Error(json.error || "Unknown error");
@@ -349,14 +335,32 @@ export function ToursDataProvider({
     const searchTours = (query: string) => {
       const q = query.toLowerCase().trim();
       if (!q) return [];
-      return state.tours
-        .filter(
+      const matched = state.tours.filter(
+        (t) =>
+          t.title.toLowerCase().includes(q) ||
+          t.shortDescription?.toLowerCase().includes(q) ||
+          t.longDescription?.toLowerCase().includes(q) ||
+          t.slug.toLowerCase().includes(q) ||
+          t.tags?.some((tag) => tag.toLowerCase().includes(q))
+      );
+      // Also match against the parent sub-category / main-category names
+      if (matched.length < 20) {
+        const matchedIds = new Set(matched.map((t) => t.id));
+        const subCatMatches = state.subCategories.filter((s) =>
+          s.name.toLowerCase().includes(q)
+        );
+        const mainCatMatches = state.mainCategories.filter((m) =>
+          m.name.toLowerCase().includes(q)
+        );
+        const extra = state.tours.filter(
           (t) =>
-            t.title.toLowerCase().includes(q) ||
-            t.shortDescription?.toLowerCase().includes(q) ||
-            t.tags?.some((tag) => tag.toLowerCase().includes(q))
-        )
-        .slice(0, 20);
+            !matchedIds.has(t.id) &&
+            (subCatMatches.some((s) => s.id === t.subCategoryId) ||
+              mainCatMatches.some((m) => m.id === t.mainCategoryId))
+        );
+        matched.push(...extra);
+      }
+      return matched.slice(0, 20);
     };
     const getSubCategoriesByMain = (mainCategoryId: string) =>
       state.subCategories.filter((s) => s.mainCategoryId === mainCategoryId);

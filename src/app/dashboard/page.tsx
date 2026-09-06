@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
-import { Map, FileText, Sparkles, CheckCircle2 } from "lucide-react";
+import { Map, FileText, Sparkles, CheckCircle2, Layers, Compass } from "lucide-react";
 import { ToursDataProvider, useToursData } from "@/components/tours-data-provider";
 import type { Tour, BookingConfig } from "@/types";
 import { DashboardHeader } from "@/components/dashboard-header";
@@ -18,7 +18,7 @@ import { KEMERYA_COMPANY_INFO } from "@/data/company";
 import { formatDateShort, formatCurrency, cn } from "@/lib/utils";
 
 function DashboardInner() {
-  const { tours, getTourById } = useToursData();
+  const { tours, mainCategories, subCategories, getTourById } = useToursData();
   const [selectedTour, setSelectedTour] = React.useState<Tour | null>(null);
   const [isCustomMode, setIsCustomMode] = React.useState(false);
   const [bookingConfig, setBookingConfig] = React.useState<BookingConfig | null>(null);
@@ -89,6 +89,25 @@ function DashboardInner() {
                 <TourSearchBar
                   onTourSelect={handleTourSelect}
                   placeholder="Search for any tour by title (e.g. 'Pyramids', 'Nile Cruise', 'Luxor', 'Siwa', 'Hurghada'...)"
+                />
+              </div>
+
+              {/* Live catalog stats */}
+              <div className="relative z-10 mt-5 grid grid-cols-3 gap-3">
+                <StatCard
+                  label="Main Categories"
+                  value={mainCategories.length}
+                  icon={<Map className="h-4 w-4" />}
+                />
+                <StatCard
+                  label="Sub Categories"
+                  value={subCategories.length}
+                  icon={<Layers className="h-4 w-4" />}
+                />
+                <StatCard
+                  label="Tours"
+                  value={tours.length}
+                  icon={<Compass className="h-4 w-4" />}
                 />
               </div>
 
@@ -316,6 +335,32 @@ function SelectedTourBanner({
       >
         Clear selection
       </Button>
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#C9A962]/15 text-[#C9A962]">
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-lg font-bold leading-none text-slate-900">
+          {value}
+        </p>
+        <p className="mt-1 truncate text-[11px] font-medium uppercase tracking-wider text-slate-500">
+          {label}
+        </p>
+      </div>
     </div>
   );
 }

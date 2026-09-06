@@ -45,8 +45,8 @@ export async function GET() {
         scrapedAt: cache.scrapedAt || null,
         stats: cache.stats || null,
         tours: cache.tours,
-        mainCategories: cache.mainCategories,
-        subCategories: cache.subCategories,
+        mainCategories: cache.mainCategories?.length ? cache.mainCategories : MAIN_CATEGORIES,
+        subCategories: cache.subCategories?.length ? cache.subCategories : SUB_CATEGORIES,
       });
     }
 
@@ -54,10 +54,15 @@ export async function GET() {
       ok: true,
       source: "fallback",
       scrapedAt: null,
-      stats: null,
+      stats: {
+        mainCategories: MAIN_CATEGORIES.length,
+        subCategories: SUB_CATEGORIES.length,
+        toursTotal: 0,
+        withDetails: 0,
+      },
       tours: [],
-      mainCategories: [],
-      subCategories: [],
+      mainCategories: MAIN_CATEGORIES,
+      subCategories: SUB_CATEGORIES,
     });
   } catch (e: any) {
     return NextResponse.json(

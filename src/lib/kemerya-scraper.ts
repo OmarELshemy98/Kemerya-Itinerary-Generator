@@ -70,6 +70,9 @@ function extractDaysFromText(text: string): number | null {
   if (m2) return parseInt(m2[1], 10) + 1;
   const m3 = text.match(/(\d+)\s*[-\/]\s*(\d+)\s*(day|night)/i);
   if (m3) return parseInt(m3[1], 10);
+  if (/\bFull\s*Day\b/i.test(text)) return 1;
+  if (/\bHalf\s*Day\b/i.test(text)) return 1;
+  if (/\bOvernight\b/i.test(text)) return 2;
   return null;
 }
 
@@ -134,15 +137,19 @@ export function parseMainCategoryPage(
       : "";
     if (!absHref || !absHref.startsWith(mainCatUrl + "/")) return;
     const parts = absHref.split("/").filter(Boolean);
-    if (parts.length < 4 || parts.length > 6) return;
+    // Sub-category URLs are exactly: protocol, domain, mainCatSlug, subCatSlug = 4 parts
+    if (parts.length !== 4) return;
     const slug = parts[parts.length - 1];
-    if (seen.has(slug)) return;
+    if (seen.has(absHref)) return;
+    seen.add(absHref);
     const h3 = $(el).find("h3").first();
     const h2 = $(el).find("h2").first();
     const titleEl = h3.length ? h3 : h2.length ? h2 : null;
-    const title = cleanText(titleEl?.text());
+    let title = cleanText(titleEl?.text());
+    if (!title) {
+      title = cleanText($(el).text()).slice(0, 80);
+    }
     if (!title) return;
-    seen.add(slug);
 
     const img = $(el).find("img").first();
     const imgSrc =
@@ -213,13 +220,17 @@ export function parseSubCategoryPage(
       : "";
     if (!absHref) return;
     const parts = absHref.split("/").filter(Boolean);
-    if (parts.length < 5) return;
+    // Tour URLs are exactly: protocol, domain, mainCatSlug, subCatSlug, tourSlug = 5 parts
+    if (parts.length !== 5) return;
     const slug = parts[parts.length - 1];
-    if (seen.has(slug)) return;
-    seen.add(slug);
+    if (seen.has(absHref)) return;
+    seen.add(absHref);
 
     const h3 = $(el).find("h3").first();
-    const title = cleanText(h3.text());
+    let title = cleanText(h3.text());
+    if (!title) {
+      title = cleanText($(el).text()).slice(0, 100);
+    }
     if (!title) return;
 
     const img = $(el).find("img").first();
@@ -302,7 +313,7 @@ export function parseTourDetailsPage(html: string): ScrapedTourDetails {
   const priceUSD = fromPriceMatch
     ? parseFloat(fromPriceMatch[1].replace(/,/g, ""))
     : priceMatches.length
-    ? priceMatches[priceMatches.length - 1]
+    ? Math.min(...priceMatches)
     : undefined;
 
   let durationText: string | undefined;
