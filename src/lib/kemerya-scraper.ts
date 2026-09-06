@@ -674,6 +674,57 @@ export interface FullScrapeResult {
   };
 }
 
+async function scrapeSubCategoryPagesWithPagination(
+  subCat: ScrapedSubCategory,
+  mainCatId: string,
+  maxTours: number
+): Promise<ScrapedTourListItem[]> {
+  const allTours: ScrapedTourListItem[] = [];
+  const seen = new Set<string>();
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore && allTours.length < maxTours) {
+    let url = subCat.url;
+    if (page > 1) {
+      // Try common pagination patterns
+      url = `${subCat.url}/page/${page}`;
+    }
+
+    try {
+      await delay(REQUEST_DELAY_MS);
+      const html = await fetchHtml(url);
+      const tours = parseSubCategoryPage(html, subCat.url, mainCatId, subCat.matchedSubCategory?.id);
+
+      let newTours = 0;
+      for (const tour of tours) {
+        if (!seen.has(tour.url) && allTours.length < maxTours) {
+          seen.add(tour.url);
+          allTours.push(tour);
+          newTours++;
+        }
+      }
+
+      // If no new tours were found, stop paginating
+      if (newTours === 0) {
+        hasMore = false;
+      } else {
+        page++;
+      }
+
+      // Safety limit: don't paginate more than 20 pages
+      if (page > 20) {
+        hasMore = false;
+      }
+    } catch (e) {
+      console.error(`Failed to scrape page ${page} of ${subCat.url}:`, e);
+      hasMore = false;
+    }
+  }
+
+  return allTours;
+}
+
 export async function scrapeAllTours(options?: {
   maxToursPerSub?: number;
   skipDetails?: boolean;
@@ -691,14 +742,52 @@ export async function scrapeAllTours(options?: {
     try {
       const html = await fetchHtml(url);
       const subList = parseMainCategoryPage(html, url);
+
+      // If no sub-categories found, try to get tours directly from the main category page
+      if (subList.length === 0) {
+        console.log(`No sub-categories found for ${mc.name}, trying to get tours directly...`);
+        try {
+          const directTours = parseSubCategoryPage(html, url, mc.id, `direct-${mc.id}`);
+          for (const tItem of directTours.slice(0, maxPerSub)) {
+            counter++;
+            try {
+              let details: ScrapedTourDetails = {
+                title: tItem.title,
+                inclusions: [],
+                exclusions: [],
+                itineraryItems: [],
+              };
+              if (!skipDetails) {
+                await delay(REQUEST_DELAY_MS);
+                details = await scrapeTourDetails(tItem.url);
+                withDetails++;
+              }
+              const tour = tourFromDetails(counter, mc.id, `direct-${mc.id}`, tItem, details);
+              allTours.push(tour);
+            } catch (e) {
+              allTours.push(
+                tourFromDetails(counter, mc.id, `direct-${mc.id}`, tItem, {
+                  title: tItem.title,
+                  inclusions: [],
+                  exclusions: [],
+                  itineraryItems: [],
+                  priceUSD: tItem.priceUSD,
+                })
+              );
+            }
+          }
+        } catch (e) {
+          console.error(`Failed to get direct tours for ${mc.name}:`, e);
+        }
+      }
+
       for (const sc of subList) {
         subCount++;
         const subCatId = sc.matchedSubCategory?.id || `scraped-${sc.slug}`;
         try {
-          await delay(REQUEST_DELAY_MS);
-          const tourList = await scrapeSubCategoryPage(sc, mc.id, sc.url);
-          const take = tourList.slice(0, maxPerSub);
-          for (const tItem of take) {
+          // Use pagination to get all tours from sub-category
+          const tourList = await scrapeSubCategoryPagesWithPagination(sc, mc.id, maxPerSub);
+          for (const tItem of tourList) {
             counter++;
             try {
               let details: ScrapedTourDetails = {

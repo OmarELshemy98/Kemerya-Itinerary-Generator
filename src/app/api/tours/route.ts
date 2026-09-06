@@ -6,11 +6,25 @@ import { MAIN_CATEGORIES, SUB_CATEGORIES } from "@/data/tours";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+// Scrape cache is valid for 6 hours (more frequent updates)
+const SCRAPE_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
+// Track if a scrape is currently in progress to avoid duplicate scrapes
+let scrapeInProgress = false;
 
 async function triggerBackgroundScrape() {
+  if (scrapeInProgress) {
+    console.log("Scrape already in progress, skipping...");
+    return;
+  }
+
+  scrapeInProgress = true;
   try {
+    console.log("Starting background scrape of kemeryatours.com...");
+    const startTime = Date.now();
+    
     const result = await scrapeAllTours({ maxToursPerSub: 100 });
+    
     await writeCache({
       tours: result.tours,
       scrapedAt: result.scrapedAt,
@@ -19,8 +33,13 @@ async function triggerBackgroundScrape() {
       mainCategories: MAIN_CATEGORIES,
       subCategories: SUB_CATEGORIES,
     });
+
+    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`Scrape completed in ${duration}s: ${result.tours.length} tours from ${result.stats.subCategories} sub-categories`);
   } catch (e) {
     console.error("Background scrape failed:", e);
+  } finally {
+    scrapeInProgress = false;
   }
 }
 
@@ -29,13 +48,15 @@ export async function GET() {
     const cache = await readCache();
     const now = Date.now();
     const scrapedAtTime = cache?.scrapedAt ? new Date(cache.scrapedAt).getTime() : 0;
-    const isStale = !scrapedAtTime || now - scrapedAtTime > TWENTY_FOUR_HOURS_MS;
+    const isStale = !scrapedAtTime || now - scrapedAtTime > SCRAPE_CACHE_TTL_MS;
     const isEmpty = !cache || !cache.tours || cache.tours.length === 0;
 
-    if (isEmpty || isStale) {
-      setTimeout(() => {
+    // Trigger background scrape if cache is stale or empty
+    if ((isEmpty || isStale) && !scrapeInProgress) {
+      // Use setImmediate to avoid blocking the response
+      setImmediate(() => {
         triggerBackgroundScrape();
-      }, 0);
+      });
     }
 
     if (cache && cache.tours && cache.tours.length > 0) {
@@ -47,9 +68,11 @@ export async function GET() {
         tours: cache.tours,
         mainCategories: cache.mainCategories?.length ? cache.mainCategories : MAIN_CATEGORIES,
         subCategories: cache.subCategories?.length ? cache.subCategories : SUB_CATEGORIES,
+        refreshing: (isEmpty || isStale) && scrapeInProgress,
       });
     }
 
+    // No cache available - trigger scrape and return fallback
     return NextResponse.json({
       ok: true,
       source: "fallback",
@@ -63,6 +86,7 @@ export async function GET() {
       tours: [],
       mainCategories: MAIN_CATEGORIES,
       subCategories: SUB_CATEGORIES,
+      refreshing: true,
     });
   } catch (e: any) {
     return NextResponse.json(

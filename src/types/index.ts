@@ -126,6 +126,7 @@ export interface Profile {
   id: string;
   full_name: string;
   email: string;
+  phone_number?: string;
   role: UserRole;
   is_active: boolean;
   created_at: string;
@@ -137,12 +138,36 @@ export interface CreateUserRequest {
   email: string;
   password: string;
   full_name: string;
+  phone_number?: string;
   role: UserRole;
 }
 
 export interface UpdateUserRequest {
   full_name?: string;
+  phone_number?: string;
   role?: UserRole;
   is_active?: boolean;
+}
+
+export interface Itinerary {
+  id: string;
+  user_id: string;
+  user_email?: string;
+  user_name?: string;
+  tour_id?: string;
+  tour_title?: string;
+  is_custom_tour: boolean;
+  custom_tour_title?: string;
+  client_name?: string;
+  client_email?: string;
+  client_phone?: string;
+  travelers_adults: number;
+  travelers_children: number;
+  travelers_infants: number;
+  total_price: number;
+  currency: string;
+  start_date: string;
+  end_date: string;
+  created_at: string;
 }
 

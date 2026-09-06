@@ -7,13 +7,13 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatCurrency(
   amount: number,
-  currency: "EUR" | "USD" = "USD"
+  currency: string = "USD"
 ): string {
   const symbols: Record<string, string> = {
     EUR: "€",
     USD: "$",
   };
-  return `${symbols[currency] || ""}${amount.toLocaleString("en-US", {
+  return `${symbols[currency] || currency}${amount.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
