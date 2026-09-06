@@ -86,7 +86,7 @@ export interface ItineraryPDFData {
 export interface CompanyInfo {
   name: string;
   tagline: string;
-  logo?: string;
+  logo: string;
   address: string;
   phone: string;
   email: string;
