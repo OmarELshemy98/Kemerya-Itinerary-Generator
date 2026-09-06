@@ -106,7 +106,7 @@ function LoginForm() {
           <div className="mb-8 flex flex-col items-center text-center">
             <div className="relative mb-6">
               <div className="absolute -inset-4 rounded-3xl bg-[#C9A962]/10 blur-2xl" />
-              <div className="relative h-20 w-56 overflow-hidden rounded-2xl bg-white p-2 shadow-2xl ring-1 ring-[#C9A962]/25">
+              <div className="relative h-[160px] w-[160px] overflow-hidden rounded-2xl  p-2 shadow-2xl ring-1 ring-[#C9A962]/25">
                 <Image
                   src="/logo-kemerya.png"
                   alt="Kemerya Tours"
@@ -270,7 +270,11 @@ function LoginForm() {
             <p className="mt-1 text-[10px] tracking-wide text-slate-600">
               Protected by enterprise-grade security · © {new Date().getFullYear()}
             </p>
+            <span className="font-medium tracking-[0.22em] uppercase text-slate-400">
+               Created By <a href="https://omarelshemy.vercel.app" target="_blank" rel="noopener noreferrer">Omar Elshemy</a>
+              </span>
           </div>
+          
         </div>
       </div>
     </div>
