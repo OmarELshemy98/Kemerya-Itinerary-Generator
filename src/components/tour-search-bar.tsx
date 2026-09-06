@@ -41,7 +41,7 @@ export function TourSearchBar({
   }, []);
 
   React.useEffect(() => {
-    if (query.trim().length >= 2) {
+    if (query.trim().length >= 1) {
       const data = searchTours(query);
       setResults(data);
       setSelectedIndex(0);
@@ -182,7 +182,7 @@ export function TourSearchBar({
         </div>
       )}
 
-      {isOpen && query.trim().length >= 2 && results.length === 0 && (
+      {isOpen && query.trim().length >= 1 && results.length === 0 && (
         <div className="absolute z-50 mt-2 w-full rounded-xl border border-slate-200 bg-white p-6 text-center shadow-2xl">
           <Search className="mx-auto mb-2 h-8 w-8 text-slate-300" />
           <p className="text-sm font-medium text-slate-700">No tours found</p>
@@ -194,3 +194,5 @@ export function TourSearchBar({
     </div>
   );
 }
+
+
