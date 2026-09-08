@@ -41,18 +41,21 @@ async function requireSuperAdminApi() {
   const metadataRole = user.app_metadata?.role || user.user_metadata?.role;
   
   if (metadataRole === "super_admin") {
-    // إنشاء profile لو مش موجود
+    // إنشاء profile لو مش موجود - استخدام serviceSupabase لتجاوز الـ RLS
     if (!profile) {
-      const { error: createError } = await supabase.from("profiles").insert({
-        id: user.id,
-        email: user.email || "",
-        full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
-        role: "super_admin",
-        is_active: true,
-      });
+      const serviceSupabase = getServiceSupabase();
+      if (serviceSupabase) {
+        const { error: createError } = await serviceSupabase.from("profiles").insert({
+          id: user.id,
+          email: user.email || "",
+          full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
+          role: "super_admin",
+          is_active: true,
+        });
 
-      if (createError) {
-        console.error("Failed to auto-create profile:", createError);
+        if (createError) {
+          console.error("Failed to auto-create profile:", createError);
+        }
       }
     }
 
@@ -172,7 +175,8 @@ export async function POST(request: Request) {
     const userId = authData.user.id;
     const userEmail = authData.user.email || email;
 
-    const { error: profileError } = await supabase.from("profiles").insert({
+    // استخدام serviceSupabase لتجاوز الـ RLS
+    const { error: profileError } = await serviceSupabase.from("profiles").insert({
       id: userId,
       full_name,
       email: userEmail,
