@@ -60,19 +60,49 @@ export async function middleware(request: NextRequest) {
     
     if (isAdminRoute || isUsersPage) {
       try {
+        // أولاً: حاول جلب الـ profile من قاعدة البيانات
         const { data: profile } = await supabase
           .from("profiles")
           .select("role, is_active")
           .eq("id", session.user.id)
           .maybeSingle();
 
-        if (!profile || !profile.is_active || profile.role !== "super_admin") {
+        let isSuperAdmin = false;
+
+        // لو الـ profile موجود ونشط و role = super_admin
+        if (profile && profile.is_active && profile.role === "super_admin") {
+          isSuperAdmin = true;
+        } else {
+          // لو الـ profile مش موجود، جرب الـ metadata من الـ JWT
+          const metadataRole = session.user.app_metadata?.role || session.user.user_metadata?.role;
+          if (metadataRole === "super_admin") {
+            isSuperAdmin = true;
+            
+            // إنشاء profile لو مش موجود
+            if (!profile) {
+              try {
+                await supabase.from("profiles").insert({
+                  id: session.user.id,
+                  email: session.user.email || "",
+                  full_name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "User",
+                  role: "super_admin",
+                  is_active: true,
+                });
+              } catch (err) {
+                console.error("Failed to auto-create profile in middleware:", err);
+              }
+            }
+          }
+        }
+
+        if (!isSuperAdmin) {
           if (pathname.startsWith("/api/admin")) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
           }
           return NextResponse.redirect(new URL("/dashboard", request.url));
         }
-      } catch {
+      } catch (error) {
+        console.error("Middleware error:", error);
         return NextResponse.redirect(new URL("/dashboard", request.url));
       }
     }

@@ -19,25 +19,47 @@ async function requireSuperAdminApi() {
     return { allowed: false, status: 401, message: "Authentication required" };
   }
 
+  // أولاً: حاول جلب الـ profile من قاعدة البيانات
   const { data: profile, error: profileError } = await serverSupabase
     .from("profiles")
     .select("role, is_active")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profileError || !profile) {
-    return { allowed: false, status: 403, message: "Profile not found" };
+  // لو الـ profile موجود، استخدمه
+  if (profile && !profileError) {
+    if (!profile.is_active) {
+      return { allowed: false, status: 403, message: "Account is deactivated" };
+    }
+
+    if (profile.role === "super_admin") {
+      return { allowed: true, user };
+    }
   }
 
-  if (!profile.is_active) {
-    return { allowed: false, status: 403, message: "Account is deactivated" };
+  // لو الـ profile مش موجود أو الـ role مش super_admin، جرب الـ metadata من الـ JWT
+  const metadataRole = user.app_metadata?.role || user.user_metadata?.role;
+  
+  if (metadataRole === "super_admin") {
+    // إنشاء profile لو مش موجود
+    if (!profile) {
+      const { error: createError } = await supabase.from("profiles").insert({
+        id: user.id,
+        email: user.email || "",
+        full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
+        role: "super_admin",
+        is_active: true,
+      });
+
+      if (createError) {
+        console.error("Failed to auto-create profile:", createError);
+      }
+    }
+
+    return { allowed: true, user };
   }
 
-  if (profile.role !== "super_admin") {
-    return { allowed: false, status: 403, message: "Super Admin access required" };
-  }
-
-  return { allowed: true, user };
+  return { allowed: false, status: 403, message: "Super Admin access required" };
 }
 
 export async function GET() {
