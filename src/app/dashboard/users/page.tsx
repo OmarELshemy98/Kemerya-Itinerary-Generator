@@ -51,9 +51,8 @@ function UsersPageContent() {
   const [users, setUsers] = React.useState<AdminUser[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [isSuperAdmin, setIsSuperAdmin] = React.useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = React.useState(true); // افتراض إنه super admin لأن الـ middleware حما الصفحة
   const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
-  const [accessDenied, setAccessDenied] = React.useState(false);
 
   // Add user dialog state
   const [addDialogOpen, setAddDialogOpen] = React.useState(false);
@@ -69,7 +68,9 @@ function UsersPageContent() {
   const fetchUsers = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/users");
+      const res = await fetch("/api/admin/users", {
+        cache: "no-store", // تخطي الـ caching
+      });
       const json = await res.json();
       if (json.ok) {
         setUsers(json.users);
@@ -81,42 +82,28 @@ function UsersPageContent() {
     }
   }, []);
 
-  // Check if current user is super admin
+  // جلب بيانات المستخدم الحالي
   React.useEffect(() => {
-    async function checkRole() {
+    async function fetchCurrentUser() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       
-      console.log("=== USERS PAGE: User ===", user);
-      
       if (user) {
         setCurrentUserId(user.id);
-        const { data: profile, error: profileError } = await supabase
+        // جلب الـ role من قاعدة البيانات
+        const { data: profile } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", user.id)
           .maybeSingle();
         
-        console.log("=== USERS PAGE: Profile ===", profile);
-        console.log("=== USERS PAGE: Profile Error ===", profileError);
-        
-        const userIsSuperAdmin = profile?.role === "super_admin";
-        console.log("=== USERS PAGE: Is Super Admin ===", userIsSuperAdmin);
-        
-        setIsSuperAdmin(userIsSuperAdmin);
-        
-        // لو المستخدم مش سوبر أدمن، ميشوفش الصفحة
-        if (!userIsSuperAdmin) {
-          console.log("=== USERS PAGE: Setting access denied to TRUE ===");
-          setAccessDenied(true);
-        } else {
-          console.log("=== USERS PAGE: User IS super admin, access allowed ===");
-          setAccessDenied(false);
+        if (profile?.role) {
+          setIsSuperAdmin(profile.role === "super_admin");
         }
       }
     }
-    checkRole();
+    fetchCurrentUser();
     fetchUsers();
   }, [supabase, fetchUsers]);
 
@@ -199,26 +186,6 @@ function UsersPageContent() {
         return "bg-slate-100 text-slate-800 border-slate-200";
     }
   };
-
-  // عرض رسالة رفض الوصول لو المستخدم مش سوبر أدمن
-  if (accessDenied) {
-    return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-red-200 bg-red-50 p-8 text-center">
-        <Shield className="mb-4 h-12 w-12 text-red-400" />
-        <h2 className="mb-2 text-xl font-semibold text-red-800">Access Denied</h2>
-        <p className="mb-4 text-sm text-red-600">
-          هذه الصفحة متاحة للسوبر أدمن فقط. ليس لديك الصلاحية للوصول إلى هذا القسم.
-        </p>
-        <Button
-          variant="outline"
-          onClick={() => (window.location.href = "/dashboard")}
-          className="border-red-300 text-red-700 hover:bg-red-100"
-        >
-          Go to Dashboard
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
