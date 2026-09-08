@@ -68,15 +68,21 @@ function UsersPageContent() {
   const fetchUsers = React.useCallback(async () => {
     setLoading(true);
     try {
+      console.log("=== FETCH USERS: Starting ===");
       const res = await fetch("/api/admin/users", {
         cache: "no-store", // تخطي الـ caching
       });
+      console.log("=== FETCH USERS: Response status ===", res.status);
       const json = await res.json();
+      console.log("=== FETCH USERS: Response JSON ===", json);
       if (json.ok) {
+        console.log("=== FETCH USERS: Users count ===", json.users?.length);
         setUsers(json.users);
+      } else {
+        console.error("=== FETCH USERS: API error ===", json.error);
       }
     } catch (e) {
-      console.error("Failed to fetch users:", e);
+      console.error("=== FETCH USERS: Fetch error ===", e);
     } finally {
       setLoading(false);
     }

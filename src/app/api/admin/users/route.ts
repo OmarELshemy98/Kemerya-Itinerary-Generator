@@ -75,12 +75,17 @@ export async function GET() {
       );
     }
 
-    const { data, error } = await supabase
+    // استخدام serviceSupabase لتجاوز الـ RLS وجلب كل المستخدمين
+    const serviceSupabase = getServiceSupabase();
+    const client = serviceSupabase || supabase;
+    
+    const { data, error } = await client
       .from("profiles")
       .select("*")
       .order("created_at", { ascending: false });
 
     if (error) {
+      console.error("GET /api/admin/users error:", error);
       return NextResponse.json(
         { ok: false, error: `Database error: ${error.message}` },
         { status: 500 }
@@ -96,8 +101,18 @@ export async function GET() {
       created_at: row.created_at || new Date().toISOString(),
     }));
 
-    return NextResponse.json({ ok: true, users });
+    // إرجاع النتيجة مع headers لمنع الـ caching
+    return NextResponse.json(
+      { ok: true, users },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+          "Pragma": "no-cache",
+        },
+      }
+    );
   } catch (e: any) {
+    console.error("GET /api/admin/users exception:", e);
     return NextResponse.json(
       { ok: false, error: String(e?.message || e) },
       { status: 500 }
