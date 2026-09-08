@@ -54,9 +54,11 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
-    // حماية مسارات السوبر أدمن
+    // حماية مسارات السوبر أدمن (صفحة المستخدمين و APIs الأدمن)
     const isAdminRoute = pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
-    if (isAdminRoute) {
+    const isUsersPage = pathname.startsWith("/dashboard/users");
+    
+    if (isAdminRoute || isUsersPage) {
       try {
         const { data: profile } = await supabase
           .from("profiles")

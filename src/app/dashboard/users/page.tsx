@@ -53,6 +53,7 @@ function UsersPageContent() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isSuperAdmin, setIsSuperAdmin] = React.useState(false);
   const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
+  const [accessDenied, setAccessDenied] = React.useState(false);
 
   // Add user dialog state
   const [addDialogOpen, setAddDialogOpen] = React.useState(false);
@@ -93,7 +94,14 @@ function UsersPageContent() {
           .select("role")
           .eq("id", user.id)
           .maybeSingle();
-        setIsSuperAdmin(profile?.role === "super_admin");
+        
+        const userIsSuperAdmin = profile?.role === "super_admin";
+        setIsSuperAdmin(userIsSuperAdmin);
+        
+        // لو المستخدم مش سوبر أدمن، ميشوفش الصفحة
+        if (!userIsSuperAdmin) {
+          setAccessDenied(true);
+        }
       }
     }
     checkRole();
@@ -179,6 +187,26 @@ function UsersPageContent() {
         return "bg-slate-100 text-slate-800 border-slate-200";
     }
   };
+
+  // عرض رسالة رفض الوصول لو المستخدم مش سوبر أدمن
+  if (accessDenied) {
+    return (
+      <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-red-200 bg-red-50 p-8 text-center">
+        <Shield className="mb-4 h-12 w-12 text-red-400" />
+        <h2 className="mb-2 text-xl font-semibold text-red-800">Access Denied</h2>
+        <p className="mb-4 text-sm text-red-600">
+          هذه الصفحة متاحة للسوبر أدمن فقط. ليس لديك الصلاحية للوصول إلى هذا القسم.
+        </p>
+        <Button
+          variant="outline"
+          onClick={() => (window.location.href = "/dashboard")}
+          className="border-red-300 text-red-700 hover:bg-red-100"
+        >
+          Go to Dashboard
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

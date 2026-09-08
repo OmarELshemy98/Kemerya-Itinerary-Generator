@@ -50,7 +50,8 @@ export function SideMenu({ userRole, collapsed, onToggle, mobileOpen, onMobileCl
       },
     ];
 
-    if (userRole === "super_admin" || userRole === "admin") {
+    // قسم الـ Users متاح للسوبر أدمن فقط
+    if (userRole === "super_admin") {
       items.push({
         id: "users",
         label: "Users",
