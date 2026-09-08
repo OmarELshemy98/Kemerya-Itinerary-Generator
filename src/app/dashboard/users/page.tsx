@@ -42,6 +42,9 @@ import {
   Phone,
   Mail,
   Calendar,
+  Pencil,
+  Trash2,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AdminUser, UserRole } from "@/types";
@@ -63,6 +66,21 @@ function UsersPageContent() {
   const [newRole, setNewRole] = React.useState<UserRole>("viewer");
   const [addingUser, setAddingUser] = React.useState(false);
   const [addError, setAddError] = React.useState<string | null>(null);
+
+  // Edit user dialog state
+  const [editDialogOpen, setEditDialogOpen] = React.useState(false);
+  const [editingUser, setEditingUser] = React.useState<AdminUser | null>(null);
+  const [editFullName, setEditFullName] = React.useState("");
+  const [editRole, setEditRole] = React.useState<UserRole>("viewer");
+  const [editIsActive, setEditIsActive] = React.useState(true);
+  const [editPassword, setEditPassword] = React.useState("");
+  const [editingUser_, setEditingUser_] = React.useState(false);
+  const [editError, setEditError] = React.useState<string | null>(null);
+
+  // Delete user dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [deletingUser, setDeletingUser] = React.useState<AdminUser | null>(null);
+  const [deletingUser__, setDeletingUser__] = React.useState(false);
 
   // Fetch users
   const fetchUsers = React.useCallback(async () => {
@@ -190,6 +208,85 @@ function UsersPageContent() {
         return "bg-blue-100 text-blue-800 border-blue-200";
       default:
         return "bg-slate-100 text-slate-800 border-slate-200";
+    }
+  };
+
+  // Edit user handler
+  const handleEditUser = (user: AdminUser) => {
+    setEditingUser(user);
+    setEditFullName(user.full_name);
+    setEditRole(user.role);
+    setEditIsActive(user.is_active);
+    setEditPassword("");
+    setEditError(null);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+    setEditingUser_(true);
+    setEditError(null);
+
+    try {
+      const body: any = {
+        full_name: editFullName,
+        role: editRole,
+        is_active: editIsActive,
+      };
+      if (editPassword && editPassword.length >= 6) {
+        body.password = editPassword;
+      }
+
+      const res = await fetch(`/api/admin/users/${editingUser.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok || !json.ok) {
+        setEditError(json.error || "Failed to update user");
+        setEditingUser_(false);
+        return;
+      }
+
+      setEditDialogOpen(false);
+      await fetchUsers();
+    } catch (e: any) {
+      setEditError(e?.message || "An error occurred");
+    } finally {
+      setEditingUser_(false);
+    }
+  };
+
+  // Delete user handler
+  const handleDeleteUser = (user: AdminUser) => {
+    setDeletingUser(user);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingUser) return;
+    setDeletingUser__(true);
+
+    try {
+      const res = await fetch(`/api/admin/users/${deletingUser.id}`, {
+        method: "DELETE",
+      });
+
+      const json = await res.json();
+
+      if (!res.ok && !json.ok) {
+        console.error("Failed to delete user:", json.error);
+      }
+
+      setDeleteDialogOpen(false);
+      await fetchUsers();
+    } catch (e: any) {
+      console.error("Delete error:", e);
+    } finally {
+      setDeletingUser__(false);
     }
   };
 
@@ -336,12 +433,13 @@ function UsersPageContent() {
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Created</TableHead>
+              <TableHead className="w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center">
+                <TableCell colSpan={7} className="h-32 text-center">
                   <div className="flex items-center justify-center gap-2">
                     <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
                     <span className="text-sm text-slate-500">Loading users...</span>
@@ -350,7 +448,7 @@ function UsersPageContent() {
               </TableRow>
             ) : filteredUsers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center">
+                <TableCell colSpan={7} className="h-32 text-center">
                   <p className="text-sm text-slate-500">
                     {searchQuery ? "No users match your search" : "No users found"}
                   </p>
@@ -425,12 +523,175 @@ function UsersPageContent() {
                       {new Date(user.created_at).toLocaleDateString()}
                     </div>
                   </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleEditUser(user)}
+                        title="Edit user"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      {user.id !== currentUserId && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleDeleteUser(user)}
+                          title="Delete user"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
+
+      {/* Edit User Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user details and permissions.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {editError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {editError}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input value={editingUser?.email || ""} disabled className="bg-slate-50" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_full_name">Full Name</Label>
+              <Input
+                id="edit_full_name"
+                value={editFullName}
+                onChange={(e) => setEditFullName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_role">Role</Label>
+              <Select
+                value={editRole}
+                onValueChange={(v) => setEditRole(v as UserRole)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="viewer">Viewer</SelectItem>
+                  <SelectItem value="operator">Operator</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="super_admin">Super Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_status">Status</Label>
+              <Select
+                value={editIsActive ? "active" : "inactive"}
+                onValueChange={(v) => setEditIsActive(v === "active")}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_password">New Password (optional)</Label>
+              <Input
+                id="edit_password"
+                type="password"
+                placeholder="Leave blank to keep current"
+                value={editPassword}
+                onChange={(e) => setEditPassword(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditDialogOpen(false)}
+              disabled={editingUser_}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateUser}
+              disabled={editingUser_ || !editFullName}
+            >
+              {editingUser_ ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete User</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this user? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deletingUser && (
+            <div className="py-4">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="font-medium text-slate-900">{deletingUser.full_name}</p>
+                <p className="text-sm text-slate-500">{deletingUser.email}</p>
+                <p className="text-xs text-slate-400 mt-1">Role: {deletingUser.role.replace("_", " ")}</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deletingUser__}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deletingUser__}
+            >
+              {deletingUser__ ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete User"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
