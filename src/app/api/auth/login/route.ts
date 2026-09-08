@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getServiceSupabase } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,6 +49,21 @@ export async function POST(request: Request) {
         { error: "Your account has been deactivated. Please contact an administrator." },
         { status: 403 }
       );
+    }
+
+    // Log login activity
+    const serviceSupabase = getServiceSupabase();
+    if (serviceSupabase) {
+      const ipAddress = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || null;
+      const userAgent = request.headers.get("user-agent") || null;
+
+      await serviceSupabase.from("audit_log").insert({
+        user_id: data.user.id,
+        action: "login",
+        details: { email },
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      });
     }
 
     return NextResponse.json(

@@ -46,6 +46,7 @@ import {
   Trash2,
   X,
   FileText,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AdminUser, UserRole } from "@/types";
@@ -61,6 +62,16 @@ interface ItineraryData {
   currency: string;
   start_date: string;
   end_date: string;
+  created_at: string;
+}
+
+interface ActivityData {
+  id: string;
+  user_id: string;
+  action: string;
+  details: Record<string, any>;
+  ip_address: string | null;
+  user_agent: string | null;
   created_at: string;
 }
 
@@ -102,6 +113,12 @@ function UsersPageContent() {
   const [viewingUser, setViewingUser] = React.useState<AdminUser | null>(null);
   const [userItineraries, setUserItineraries] = React.useState<ItineraryData[]>([]);
   const [loadingItineraries, setLoadingItineraries] = React.useState(false);
+
+  // View activity state
+  const [activityDialogOpen, setActivityDialogOpen] = React.useState(false);
+  const [viewingActivityUser, setViewingActivityUser] = React.useState<AdminUser | null>(null);
+  const [userActivities, setUserActivities] = React.useState<ActivityData[]>([]);
+  const [loadingActivities, setLoadingActivities] = React.useState(false);
 
   // Fetch users
   const fetchUsers = React.useCallback(async () => {
@@ -338,6 +355,29 @@ function UsersPageContent() {
     }
   };
 
+  // View activity handler
+  const handleViewActivity = async (user: AdminUser) => {
+    setViewingActivityUser(user);
+    setActivityDialogOpen(true);
+    setLoadingActivities(true);
+
+    try {
+      const res = await fetch(`/api/audit/user/${user.id}`, { cache: "no-store" });
+      const json = await res.json();
+
+      if (json.ok && json.activities) {
+        setUserActivities(json.activities);
+      } else {
+        setUserActivities([]);
+      }
+    } catch (e) {
+      console.error("Failed to fetch activities:", e);
+      setUserActivities([]);
+    } finally {
+      setLoadingActivities(false);
+    }
+  };
+
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -348,6 +388,37 @@ function UsersPageContent() {
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "—";
     return new Date(dateStr).toLocaleDateString();
+  };
+
+  const formatDateTime = (dateStr: string) => {
+    if (!dateStr) return "—";
+    return new Date(dateStr).toLocaleString();
+  };
+
+  const getActivityIcon = (action: string) => {
+    switch (action) {
+      case "login":
+        return <span className="text-green-600">🔑</span>;
+      case "logout":
+        return <span className="text-slate-600">🚪</span>;
+      case "create_itinerary":
+        return <span className="text-blue-600">📋</span>;
+      default:
+        return <span className="text-slate-400">📌</span>;
+    }
+  };
+
+  const getActivityLabel = (action: string) => {
+    switch (action) {
+      case "login":
+        return "Login";
+      case "logout":
+        return "Logout";
+      case "create_itinerary":
+        return "Created Itinerary";
+      default:
+        return action;
+    }
   };
 
   return (
@@ -585,6 +656,15 @@ function UsersPageContent() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                        onClick={() => handleViewActivity(user)}
+                        title="View activity"
+                      >
+                        <Activity className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -833,6 +913,85 @@ function UsersPageContent() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setItinerariesDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Activity Dialog */}
+      <Dialog open={activityDialogOpen} onOpenChange={setActivityDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Activity for {viewingActivityUser?.full_name}
+            </DialogTitle>
+            <DialogDescription>
+              Login history and all activities on the dashboard.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {loadingActivities ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+                <span className="ml-2 text-sm text-slate-500">Loading activities...</span>
+              </div>
+            ) : userActivities.length === 0 ? (
+              <div className="text-center py-8">
+                <Activity className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-sm text-slate-500">No activities found for this user.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {userActivities.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3"
+                  >
+                    <div className="mt-0.5">
+                      {getActivityIcon(activity.action)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-slate-900">
+                          {getActivityLabel(activity.action)}
+                        </p>
+                        <span className="text-xs text-slate-400">
+                          {formatDateTime(activity.created_at)}
+                        </span>
+                      </div>
+                      {activity.details && Object.keys(activity.details).length > 0 && (
+                        <div className="mt-1 text-xs text-slate-500">
+                          {activity.details.email && (
+                            <span className="mr-3">Email: {activity.details.email}</span>
+                          )}
+                          {activity.details.tour_title && (
+                            <span className="mr-3">Tour: {activity.details.tour_title}</span>
+                          )}
+                          {activity.details.client_name && (
+                            <span className="mr-3">Client: {activity.details.client_name}</span>
+                          )}
+                          {activity.details.total_price && (
+                            <span className="mr-3">
+                              Price: {formatCurrency(activity.details.total_price, activity.details.currency)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {activity.ip_address && (
+                        <p className="text-xs text-slate-400 mt-1">
+                          IP: {activity.ip_address}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setActivityDialogOpen(false)}>
               Close
             </Button>
           </DialogFooter>

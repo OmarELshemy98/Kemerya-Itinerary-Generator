@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabase, getServiceSupabase } from "@/lib/supabase";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import type { BookingConfig, Tour } from "@/types";
 
@@ -185,6 +185,22 @@ export async function POST(request: Request) {
         { ok: false, error: `Database error: ${error.message}` },
         { status: 500 }
       );
+    }
+
+    // Log itinerary creation
+    const serviceSupabase = getServiceSupabase();
+    if (serviceSupabase) {
+      await serviceSupabase.from("audit_log").insert({
+        user_id: userId,
+        action: "create_itinerary",
+        details: {
+          itinerary_id: data.id,
+          tour_title: tour?.title || booking.customTourTitle,
+          client_name: booking.clientName,
+          total_price: booking.totalPrice,
+          currency: booking.currency,
+        },
+      });
     }
 
     return NextResponse.json({ ok: true, itinerary: data });
