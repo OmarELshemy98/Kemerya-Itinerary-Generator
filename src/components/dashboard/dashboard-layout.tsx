@@ -29,6 +29,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           data: { user },
         } = await supabase.auth.getUser();
 
+        console.log("=== DEBUG: User ===", user);
+
         // لو المستخدم مش مسجل دخول، وجهه لصفحة تسجيل الدخول
         if (!user) {
           router.replace("/login");
@@ -37,16 +39,30 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         setIsAuthenticated(true);
 
-        const { data: profile } = await supabase
+        // جلب الـ role من قاعدة البيانات مباشرة بدون أي caching
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", user.id)
           .maybeSingle();
 
+        console.log("=== DEBUG: Profile ===", profile);
+        console.log("=== DEBUG: Profile Error ===", profileError);
+
         if (profile?.role) {
+          console.log("=== DEBUG: Setting role to ===", profile.role);
           setUserRole(profile.role as UserRole);
+        } else {
+          console.log("=== DEBUG: No role found, checking user metadata ===");
+          // لو مفيش profile، جرب من الـ user metadata
+          const metadataRole = user.user_metadata?.role;
+          if (metadataRole) {
+            console.log("=== DEBUG: Role from metadata ===", metadataRole);
+            setUserRole(metadataRole as UserRole);
+          }
         }
       } catch (error) {
+        console.error("=== DEBUG: Error fetching user ===", error);
         // في حالة أي خطأ، وجهه لصفحة تسجيل الدخول
         router.replace("/login");
       } finally {
@@ -107,6 +123,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <ToursDataProvider>
       <div className="min-h-screen bg-slate-50">
+        {/* Debug Banner - احذفه بعد ما المشكلة تتحل */}
+        <div className="fixed bottom-4 right-4 z-50 rounded-lg bg-black/80 px-4 py-2 text-sm text-white shadow-lg">
+          <div>Role: <span className="font-bold text-yellow-400">{userRole}</span></div>
+          <div>Is Super Admin: <span className={userRole === "super_admin" ? "text-green-400" : "text-red-400"}>{userRole === "super_admin" ? "YES" : "NO"}</span></div>
+        </div>
+        
         <SideMenu
           userRole={userRole}
           collapsed={collapsed}
