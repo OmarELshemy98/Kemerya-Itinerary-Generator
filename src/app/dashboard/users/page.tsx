@@ -763,14 +763,17 @@ function UsersPageContent() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit_password">New Password (optional)</Label>
+              <Label htmlFor="edit_password">Reset Password (optional)</Label>
               <Input
                 id="edit_password"
                 type="password"
-                placeholder="Leave blank to keep current"
+                placeholder="Enter new password to reset"
                 value={editPassword}
                 onChange={(e) => setEditPassword(e.target.value)}
               />
+              <p className="text-xs text-slate-400">
+                ⚠️ Current password cannot be displayed (encrypted). Enter a new password to reset it.
+              </p>
             </div>
           </div>
           <DialogFooter>
