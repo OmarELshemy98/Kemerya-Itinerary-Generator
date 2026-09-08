@@ -350,8 +350,95 @@ export function parseTourDetailsPage(html: string): ScrapedTourDetails {
     )
   ) as string[];
 
-  // Parse day-by-day itinerary
+  // ---------- Targeted extraction (matches the live Kemerya tour page markup) ----------
+  const itinerarySection = $("#itinerary");
+  const includedSection = $("#included");
+  const pricesSection = $("#prices");
+
+  const targetedInclusions: string[] = [];
+  const targetedExclusions: string[] = [];
+  const targetedTables: { personsLabel: string; priceUSD: number }[] = [];
+
+  const readTablesInto = (
+    root: any,
+    out: { personsLabel: string; priceUSD: number }[]
+  ) => {
+    root.find("table").each((_i: number, tbl: any) => {
+      $(tbl)
+        .find("tr")
+        .each((_j: number, tr: any) => {
+          const cellsEls = $(tr)
+            .find("td, th")
+            .map((_, c) => cleanText($(c).text()))
+            .toArray();
+          const cells = cellsEls as unknown as string[];
+          if (cells.length < 2) return;
+          const pCell = cells.find((c) => /\$/.test(c));
+          if (!pCell) return;
+          const personsCell =
+            cells.find((c) => c !== pCell && /(person|group|single|double|twin|suite|people)/i.test(c)) ||
+            cells.find((c) => c !== pCell);
+          const p = extractPriceUSD(pCell);
+          if (!p || !personsCell) return;
+          out.push({ personsLabel: personsCell, priceUSD: p });
+        });
+    });
+  };
+
+  if (includedSection.length > 0) {
+    includedSection.find(".td-inc-box").each((_, box) => {
+      const boxTitle = cleanText($(box).find(".td-inc-title h3, h3").first().text());
+      const boxClass = $(box).attr("class") || "";
+      const isExcluded =
+        /excluded/i.test(boxClass) || /not\s*included|excluded/i.test(boxTitle);
+      const isIncluded = /included/i.test(boxClass) && !isExcluded;
+      if (!isIncluded && !isExcluded) return;
+      const raw = $(box)
+        .find("li")
+        .map((_, li) => cleanText($(li).text()))
+        .toArray() as unknown as string[];
+      const items = raw.filter((t) => t.length > 1);
+      if (isExcluded) targetedExclusions.push(...items);
+      else targetedInclusions.push(...items);
+    });
+  }
+
   const dayItinerary: ScrapedDayItinerary[] = [];
+  if (itinerarySection.length > 0) {
+    const tlItems = itinerarySection.find(".timeline-item");
+    tlItems.each((_, item) => {
+      const head = $(item).find(".timeline-head").first();
+      const label = cleanText(head.find("strong").first().text());
+      const h3 = cleanText(head.find("h3").first().text());
+      const lm = label.match(/day\s*(\d+)/i);
+      const dayNum = lm ? parseInt(lm[1], 10) : dayItinerary.length + 1;
+      const titleParts = [label, h3].filter(Boolean);
+      const title = titleParts.length ? titleParts.join(": ") : `Day ${dayNum}`;
+      const body = $(item).find(".timeline-body").first();
+      const bodyRoot = body.length > 0 ? body : $(item);
+      let items = (
+        bodyRoot
+          .find("li")
+          .map((_, li) => cleanText($(li).text()))
+          .toArray() as unknown as string[]
+      ).filter((t) => t.length > 1);
+      if (items.length === 0) {
+        items = (
+          bodyRoot
+            .find("p")
+            .map((_, p) => cleanText($(p).text()))
+            .toArray() as unknown as string[]
+        ).filter((t) => t.length > 1);
+      }
+      dayItinerary.push({ day: dayNum, title, items });
+    });
+  }
+
+  if (pricesSection.length > 0) readTablesInto(pricesSection, targetedTables);
+
+  const hasTimelineDays = dayItinerary.length > 0;
+
+  // ---------- Generic fallback scan (pages without structured sections) ----------
   const lists: { prevHeading: string | null; items: string[] }[] = [];
   
   let currentDayNumber: number | null = null;
@@ -359,12 +446,17 @@ export function parseTourDetailsPage(html: string): ScrapedTourDetails {
   let currentDayItems: string[] = [];
   
   // Find all headings and lists in order
-  $("main").find("h1, h2, h3, h4, h5, h6, ul, ol").each((_, el) => {
+  const genericScanRoot = itinerarySection.length > 0
+    ? itinerarySection
+    : $("main").length > 0
+    ? $("main")
+    : $("body");
+  genericScanRoot.find("h1, h2, h3, h4, h5, h6, ul, ol").each((_, el) => {
     const tagName = (el as any).tagName?.toLowerCase() || "";
     
     if (/^h[1-6]$/i.test(tagName)) {
       // Save previous day if exists
-      if (currentDayNumber !== null && currentDayItems.length > 0) {
+      if (!hasTimelineDays && currentDayNumber !== null && currentDayItems.length > 0) {
         dayItinerary.push({
           day: currentDayNumber,
           title: currentDayTitle || `Day ${currentDayNumber}`,
@@ -431,7 +523,7 @@ export function parseTourDetailsPage(html: string): ScrapedTourDetails {
   });
   
   // Save last day if exists
-  if (currentDayNumber !== null && currentDayItems.length > 0) {
+  if (!hasTimelineDays && currentDayNumber !== null && currentDayItems.length > 0) {
     dayItinerary.push({
       day: currentDayNumber,
       title: currentDayTitle || `Day ${currentDayNumber}`,
@@ -497,25 +589,15 @@ export function parseTourDetailsPage(html: string): ScrapedTourDetails {
     if (longLst) itineraryItems = longLst.items.slice();
   }
 
-  const tables: { personsLabel: string; priceUSD: number }[] = [];
-  $("main table").each((_, tbl) => {
-    $(tbl)
-      .find("tr")
-      .each((_, tr) => {
-        const cellsEls = $(tr)
-          .find("td, th")
-          .map((_, c) => cleanText($(c).text()))
-          .toArray();
-        const cells = cellsEls as unknown as string[];
-        if (cells.length < 2) return;
-        const pCell = cells.find((c) => /\$/.test(c));
-        if (!pCell) return;
-        const personsCell = cells.find((c) => c !== pCell && /(person|group|single|double|twin|suite|people)/i.test(c)) || cells.find((c) => c !== pCell);
-        const p = extractPriceUSD(pCell);
-        if (!p || !personsCell) return;
-        tables.push({ personsLabel: personsCell, priceUSD: p });
-      });
-  });
+  // Structured sections win over heuristic guesses
+  if (targetedInclusions.length > 0) inclusions = targetedInclusions;
+  if (targetedExclusions.length > 0) exclusions = targetedExclusions;
+
+  const tables: { personsLabel: string; priceUSD: number }[] = [...targetedTables];
+  if (tables.length === 0) {
+    const tableRoot = $("main").length > 0 ? $("main") : $("body");
+    readTablesInto(tableRoot, tables);
+  }
 
   const sectionText = (id: string) => {
     const root = $(`#${id}, [name="${id}"]`).first();
@@ -657,18 +739,14 @@ function tourFromDetails(
 
   const itinerary: ItineraryDay[] = [];
   
-  // Use day itinerary if available
+  // Use the day-by-day itinerary exactly as it appears on the website
   if (details.dayItinerary.length > 0) {
     for (const dayData of details.dayItinerary) {
       itinerary.push({
         day: dayData.day,
         title: dayData.title,
         description: dayData.items.join("\n"),
-        highlights: dayData.items.slice(0, 4).map((s) =>
-          s.length > 80 ? s.slice(0, 77) + "..." : s
-        ),
-        meals: dayData.day < details.dayItinerary.length ? ["Breakfast", "Lunch"] as any : ["Breakfast", "Lunch", "Dinner"] as any,
-        accommodation: dayData.day < details.dayItinerary.length ? "4-Star Hotel" : undefined,
+        highlights: dayData.items.slice(0, 4),
       });
     }
   } else {
@@ -682,10 +760,7 @@ function tourFromDetails(
           day: 1,
           title: actualTitle,
           description: itineraryList.join("\n"),
-          highlights: itineraryList.slice(0, 4).map((s) =>
-            s.length > 80 ? s.slice(0, 77) + "..." : s
-          ),
-          meals: ["Lunch"] as any,
+          highlights: itineraryList.slice(0, 4),
         });
       } else {
         const perDay = Math.ceil(itineraryList.length / days);
@@ -696,8 +771,6 @@ function tourFromDetails(
             title: `Day ${d}`,
             description: slice.join("\n"),
             highlights: slice.slice(0, 4),
-            meals: ["Breakfast", "Lunch"] as any,
-            accommodation: d < days ? "4-Star Hotel" : undefined,
           });
         }
       }

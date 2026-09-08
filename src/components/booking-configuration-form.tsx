@@ -176,24 +176,37 @@ export function BookingConfigurationForm({
     setValue("isCustomTour", isCustomMode);
   }, [isCustomMode, setValue]);
 
+  const adults = watch("adults");
+  const children = watch("children");
+  const infants = watch("infants");
+
   React.useEffect(() => {
     if (selectedTour && !isCustomMode) {
-      const end = new Date(watch("startDate"));
+      // Dates
+      const start = watch("startDate") || todayISO();
+      const end = new Date(start);
       end.setDate(end.getDate() + (selectedTour.durationDays || 0));
-      setValue(
-        "totalPrice",
+      setValue("endDate", end.toISOString().split("T")[0]);
+
+      // Pricing: use the exact website tier for this group size
+      // (per-person price for N travelers × total travelers).
+      const travelers = Math.max(
+        (watch("adults") || 0) + (watch("children") || 0) + (watch("infants") || 0),
+        1
+      );
+      const tierPrice = pickPricePerPerson(selectedTour.pricesTable, travelers);
+      const fallbackPerPax =
         selectedTour.basePriceUSD ??
-          (selectedTour.basePriceEUR != null
-            ? Math.round(selectedTour.basePriceEUR / 0.92)
-            : 0)
-      );
-      setValue(
-        "endDate",
-        end.toISOString().split("T")[0]
-      );
+        (selectedTour.basePriceEUR != null
+          ? Math.round(selectedTour.basePriceEUR / 0.92)
+          : 0);
+      const perPax = tierPrice > 0 ? tierPrice : fallbackPerPax;
+      if (perPax > 0) {
+        setValue("totalPrice", Math.round(perPax * travelers * 100) / 100);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTour, isCustomMode]);
+  }, [selectedTour, isCustomMode, adults, children, infants]);
 
   const {
     fields: itineraryFields,
@@ -204,9 +217,6 @@ export function BookingConfigurationForm({
     name: "customItinerary",
   });
 
-  const adults = watch("adults");
-  const children = watch("children");
-  const infants = watch("infants");
   const currency = watch("currency");
   const totalPrice = watch("totalPrice");
   const startDate = watch("startDate");
