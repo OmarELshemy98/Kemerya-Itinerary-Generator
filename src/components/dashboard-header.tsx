@@ -47,17 +47,30 @@ export function DashboardHeader() {
           data: { user },
         } = await supabase.auth.getUser();
 
+        console.log("=== HEADER: User ===", user);
+
         if (user) {
           setUserEmail(user.email ?? null);
 
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from("profiles")
             .select("role")
             .eq("id", user.id)
             .maybeSingle();
 
+          console.log("=== HEADER: Profile ===", profile);
+          console.log("=== HEADER: Profile Error ===", profileError);
+
           if (profile?.role) {
+            console.log("=== HEADER: Setting role to ===", profile.role);
             setUserRole(profile.role as UserRole);
+          } else {
+            // لو مفيش profile، جرب من الـ user metadata
+            const metadataRole = user.user_metadata?.role;
+            if (metadataRole) {
+              console.log("=== HEADER: Role from metadata ===", metadataRole);
+              setUserRole(metadataRole as UserRole);
+            }
           }
         }
       } finally {

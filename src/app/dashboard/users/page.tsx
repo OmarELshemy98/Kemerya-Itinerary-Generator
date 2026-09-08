@@ -87,20 +87,32 @@ function UsersPageContent() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      
+      console.log("=== USERS PAGE: User ===", user);
+      
       if (user) {
         setCurrentUserId(user.id);
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", user.id)
           .maybeSingle();
         
+        console.log("=== USERS PAGE: Profile ===", profile);
+        console.log("=== USERS PAGE: Profile Error ===", profileError);
+        
         const userIsSuperAdmin = profile?.role === "super_admin";
+        console.log("=== USERS PAGE: Is Super Admin ===", userIsSuperAdmin);
+        
         setIsSuperAdmin(userIsSuperAdmin);
         
         // لو المستخدم مش سوبر أدمن، ميشوفش الصفحة
         if (!userIsSuperAdmin) {
+          console.log("=== USERS PAGE: Setting access denied to TRUE ===");
           setAccessDenied(true);
+        } else {
+          console.log("=== USERS PAGE: User IS super admin, access allowed ===");
+          setAccessDenied(false);
         }
       }
     }
