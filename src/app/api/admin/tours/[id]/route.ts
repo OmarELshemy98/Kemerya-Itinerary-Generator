@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { createClient as createServerClient } from "@/lib/supabase/server";
+import { upsertTourInFileCache, removeTourFromFileCache } from "@/lib/tour-cache";
 import type { Tour, ItineraryDay } from "@/types";
 
 export const runtime = "nodejs";
@@ -237,6 +238,9 @@ export async function PATCH(
     }
 
     const tour = rowToTour(data[0]);
+    // Mirror the edit into the local file cache immediately so the change is
+    // visible on the very next /api/tours read (no waiting for a scrape).
+    await upsertTourInFileCache(tour);
     return NextResponse.json({ ok: true, tour });
   } catch (e: any) {
     return NextResponse.json(
@@ -269,6 +273,10 @@ export async function DELETE(
         { status: 500 }
       );
     }
+
+    // Remove from the local file cache immediately so the deleted tour does
+    // not re-appear via the file/DB merge on the next read.
+    await removeTourFromFileCache(id);
 
     return NextResponse.json({ ok: true, deleted: { id } });
   } catch (e: any) {

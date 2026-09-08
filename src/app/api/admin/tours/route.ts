@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { createClient as createServerClient } from "@/lib/supabase/server";
+import { upsertTourInFileCache } from "@/lib/tour-cache";
 import type { Tour, ItineraryDay } from "@/types";
 
 export const runtime = "nodejs";
@@ -208,6 +209,9 @@ export async function POST(request: Request) {
     }
 
     const tour = data && data[0] ? rowToTour(data[0]) : null;
+    // Mirror into the local file cache immediately so the new tour shows up
+    // on the very next /api/tours read (no waiting for the next scrape).
+    if (tour) await upsertTourInFileCache(tour);
     return NextResponse.json({ ok: true, tour });
   } catch (e: any) {
     return NextResponse.json(

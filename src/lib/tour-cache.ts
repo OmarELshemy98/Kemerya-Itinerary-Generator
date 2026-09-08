@@ -269,16 +269,24 @@ export async function writeCache(data: WriteCacheInput): Promise<void> {
 
   const existingToursRes = await supabase
     .from("cached_tours")
-    .select("id, is_manual, base_price_usd, title");
+    .select("*");
   const existingRows: any[] = existingToursRes.data || [];
 
   // Manual tours (created by admins) must never be overwritten or deleted.
   // Anything not produced by the scraper (id not starting with "tour-web-")
   // or explicitly flagged is_manual is treated as manual.
   const manualIds = new Set<string>();
+  // Website tours that were manually edited AFTER the last scrape
+  // (updated_at > scraped_at) must also never be overwritten by a re-scrape,
+  // otherwise admin edits would silently revert up to 6 hours later.
+  const manuallyEditedIds = new Set<string>();
   for (const r of existingRows) {
     if (r.is_manual || !String(r.id).startsWith("tour-web-")) {
       manualIds.add(r.id);
+    } else {
+      const updatedAt = r.updated_at ? new Date(r.updated_at).getTime() : 0;
+      const scrapedAt = r.scraped_at ? new Date(r.scraped_at).getTime() : 0;
+      if (updatedAt > scrapedAt) manuallyEditedIds.add(r.id);
     }
   }
 
@@ -286,7 +294,9 @@ export async function writeCache(data: WriteCacheInput): Promise<void> {
   const priceAudit: { id: string; oldPrice: any; newPrice: any }[] = [];
   const oldPriceById = new Map(existingRows.map((r) => [r.id, r.base_price_usd]));
 
-  const incoming = data.tours.filter((t) => !manualIds.has(t.id));
+  const incoming = data.tours.filter(
+    (t) => !manualIds.has(t.id) && !manuallyEditedIds.has(t.id)
+  );
   for (const t of incoming) {
     const old = oldPriceById.get(t.id);
     if (old != null && t.basePriceUSD != null && Number(old) !== Number(t.basePriceUSD)) {
@@ -294,16 +304,20 @@ export async function writeCache(data: WriteCacheInput): Promise<void> {
     }
   }
 
-  // Merge with manual tours for the file mirror
+  // Merge with manual tours for the file mirror.
+  // Manually-edited website tours keep their DB (edited) version, NOT the
+  // freshly scraped one, so admin edits survive every re-scrape.
   const manualTours: Tour[] = [];
   const fileData = await readFileCache();
-  for (const t of fileData?.tours || []) {
-    if (manualIds.has(t.id)) manualTours.push(t);
+  for (const r of existingRows) {
+    if (manuallyEditedIds.has(r.id) && !manualTours.some((t) => t.id === r.id)) {
+      manualTours.push(rowToTour(r));
+    }
   }
-  for (const id of manualIds) {
-    if (manualTours.some((t) => t.id === id)) continue;
-    if (fileData?.tours.some((t) => t.id === id)) continue;
-    // manual tour exists in DB but not file — fetch minimal row later (skip; DB is source of truth)
+  for (const t of fileData?.tours || []) {
+    if (manualIds.has(t.id) && !manualTours.some((x) => x.id === t.id)) {
+      manualTours.push(t);
+    }
   }
 
   const mergedFileTours = [...incoming, ...manualTours];
@@ -357,7 +371,13 @@ export async function writeCache(data: WriteCacheInput): Promise<void> {
   if (data.replaceWebsiteTours !== false && incoming.length > 0) {
     const incomingIds = new Set(incoming.map((t) => t.id));
     const staleWebsiteIds = existingRows
-      .filter((r) => String(r.id).startsWith("tour-web-") && !incomingIds.has(r.id))
+      .filter(
+        (r) =>
+          String(r.id).startsWith("tour-web-") &&
+          !incomingIds.has(r.id) &&
+          !manualIds.has(r.id) &&
+          !manuallyEditedIds.has(r.id)
+      )
       .map((r) => r.id);
     for (let i = 0; i < staleWebsiteIds.length; i += 500) {
       const batch = staleWebsiteIds.slice(i, i + 500);
@@ -392,6 +412,44 @@ export async function writeCache(data: WriteCacheInput): Promise<void> {
     { onConflict: "key" }
   );
   if (!skipErr(upsertMetaErr)) console.error("upsert cache_meta error:", upsertMetaErr);
+}
+
+/**
+ * Immediately mirror an admin-created/edited tour into the local file cache so
+ * the change is visible on the next read without waiting for a full scrape.
+ * (On serverless platforms the file write is best-effort; Supabase remains
+ * the source of truth there.)
+ */
+export async function upsertTourInFileCache(tour: Tour): Promise<void> {
+  try {
+    const data = await readFileCache();
+    const tours = (data?.tours || []).filter((t) => t.id !== tour.id);
+    tours.push(tour);
+    await writeFileCacheFile({
+      tours,
+      mainCategories: data?.mainCategories || [],
+      subCategories: data?.subCategories || [],
+      scrapedAt: data?.scrapedAt || new Date().toISOString(),
+      source: data?.source || "cache",
+      stats: data?.stats,
+    });
+  } catch (e) {
+    console.error("upsertTourInFileCache error:", e);
+  }
+}
+
+/** Immediately remove a deleted tour from the local file cache so it does not
+ * "resurrect" via the file/DB merge on the next read. */
+export async function removeTourFromFileCache(id: string): Promise<void> {
+  try {
+    const data = await readFileCache();
+    if (!data) return;
+    const tours = data.tours.filter((t) => t.id !== id);
+    if (tours.length === data.tours.length) return;
+    await writeFileCacheFile({ ...data, tours });
+  } catch (e) {
+    console.error("removeTourFromFileCache error:", e);
+  }
 }
 
 export async function clearCache(): Promise<void> {

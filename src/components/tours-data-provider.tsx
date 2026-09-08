@@ -141,11 +141,11 @@ export function ToursDataProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Continuous auto-sync: poll the catalog every 5 minutes so any price or
+  // Continuous auto-sync: poll the catalog every 60 seconds so any price or
   // content change on kemeryatours.com (picked up by the server's background
   // scrape) reaches the UI without a manual refresh. Only poll when the tab
   // is visible to avoid unnecessary requests.
-  const POLL_INTERVAL_MS = 5 * 60 * 1000;
+  const POLL_INTERVAL_MS = 60 * 1000;
   React.useEffect(() => {
     const interval = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState === "visible") {

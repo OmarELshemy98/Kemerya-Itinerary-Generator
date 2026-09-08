@@ -6,10 +6,10 @@ import { MAIN_CATEGORIES, SUB_CATEGORIES } from "@/data/tours";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Scrape cache is valid for 2 hours — keeps prices/content continuously fresh.
-// A cron job (see /api/cron/refresh + vercel.json) also refreshes every 6 hours
-// regardless of traffic, so the catalog is always up to date.
-const SCRAPE_CACHE_TTL_MS = 2 * 60 * 60 * 1000;
+// Scrape cache is valid for 15 minutes — keeps prices/content continuously
+// fresh. A cron job (see /api/cron/refresh + vercel.json) also refreshes
+// hourly regardless of traffic, so the catalog is always up to date.
+const SCRAPE_CACHE_TTL_MS = 15 * 60 * 1000;
 
 // Track if a scrape is currently in progress to avoid duplicate scrapes
 let scrapeInProgress = false;
@@ -65,8 +65,11 @@ export async function GET() {
     const isStale = !scrapedAtTime || now - scrapedAtTime > SCRAPE_CACHE_TTL_MS;
     const isEmpty = !cache || !cache.tours || cache.tours.length === 0;
 
-    // Trigger background scrape if cache is stale or empty
-    if ((isEmpty || isStale) && !scrapeInProgress) {
+    // Trigger background scrape if cache is stale or empty.
+    // "refreshing" tells the client that fresh data is on its way, so it can
+    // re-poll quickly instead of waiting for the next full poll interval.
+    const refreshing = isEmpty || isStale;
+    if (refreshing && !scrapeInProgress) {
       // Use setImmediate to avoid blocking the response
       setImmediate(() => {
         triggerBackgroundScrape();
@@ -82,7 +85,7 @@ export async function GET() {
         tours: cache.tours,
         mainCategories: cache.mainCategories?.length ? cache.mainCategories : MAIN_CATEGORIES,
         subCategories: cache.subCategories?.length ? cache.subCategories : SUB_CATEGORIES,
-        refreshing: (isEmpty || isStale) && scrapeInProgress,
+        refreshing,
       });
     }
 
