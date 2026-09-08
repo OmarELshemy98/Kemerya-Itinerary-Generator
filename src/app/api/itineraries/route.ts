@@ -59,13 +59,10 @@ export async function GET() {
 
     const isAdmin = profile?.role === "super_admin" || profile?.role === "admin";
 
-    // Build query
+    // Build query - simple select without join
     let query = supabase
       .from("itineraries")
-      .select(`
-        *,
-        profiles:user_id ( full_name, email )
-      `)
+      .select("*")
       .order("created_at", { ascending: false });
 
     // Non-admin users can only see their own itineraries
@@ -80,18 +77,28 @@ export async function GET() {
       if (error.message?.includes("does not exist") || error.code === "42P01") {
         return NextResponse.json({ ok: true, itineraries: [] });
       }
+      console.error("GET /api/itineraries error:", error);
       return NextResponse.json(
         { ok: false, error: `Database error: ${error.message}` },
         { status: 500 }
       );
     }
 
+    // Get user info for each itinerary
+    const userIds = [...new Set((data || []).map((row: any) => row.user_id))];
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", userIds);
+
+    const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+
     // Transform data to include user info
     const itineraries = (data || []).map((row: any) => ({
       id: row.id,
       user_id: row.user_id,
-      user_email: row.profiles?.email || null,
-      user_name: row.profiles?.full_name || null,
+      user_email: profileMap.get(row.user_id)?.email || null,
+      user_name: profileMap.get(row.user_id)?.full_name || null,
       tour_id: row.tour_id,
       tour_title: row.tour_title,
       is_custom_tour: row.is_custom_tour,
@@ -187,20 +194,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // Log itinerary creation
+    // Log itinerary creation (don't fail if audit_log table doesn't exist)
     const serviceSupabase = getServiceSupabase();
     if (serviceSupabase) {
-      await serviceSupabase.from("audit_log").insert({
-        user_id: userId,
-        action: "create_itinerary",
-        details: {
-          itinerary_id: data.id,
-          tour_title: tour?.title || booking.customTourTitle,
-          client_name: booking.clientName,
-          total_price: booking.totalPrice,
-          currency: booking.currency,
-        },
-      });
+      try {
+        await serviceSupabase.from("audit_log").insert({
+          user_id: userId,
+          action: "create_itinerary",
+          details: {
+            itinerary_id: data.id,
+            tour_title: tour?.title || booking.customTourTitle,
+            client_name: booking.clientName,
+            total_price: booking.totalPrice,
+            currency: booking.currency,
+          },
+        });
+      } catch (auditError) {
+        console.error("Failed to log audit:", auditError);
+      }
     }
 
     return NextResponse.json({ ok: true, itinerary: data });
