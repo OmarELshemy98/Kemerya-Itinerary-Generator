@@ -30,6 +30,7 @@ export async function middleware(request: NextRequest) {
 
   const isAuthRoute = pathname === "/login";
   const isPublicApi = pathname.startsWith("/api/auth/") || pathname.startsWith("/api/tours");
+  const isDashboardRoute = pathname.startsWith("/dashboard");
 
   // الحالة الأولى: لو المستخدم مش مسجل دخول
   if (!session?.user) {
@@ -37,9 +38,12 @@ export async function middleware(request: NextRequest) {
     if (isAuthRoute || isPublicApi) {
       return response;
     }
-    // طرده لصفحة تسجيل الدخول لو حاول يفتح أي مسار تاني (بما في ذلك الصفحة الرئيسية)
-    if (pathname === "/" || !isStaticFile(pathname)) {
-      return NextResponse.redirect(new URL("/login", request.url));
+    // طرده لصفحة تسجيل الدخول لو حاول يفتح أي مسار تاني (بما في ذلك الصفحة الرئيسية والـ dashboard)
+    if (pathname === "/" || isDashboardRoute || !isStaticFile(pathname)) {
+      const loginUrl = new URL("/login", request.url);
+      // إضافة الـ redirect URL كـ parameter عشان نرجع ليه بعد تسجيل الدخول
+      loginUrl.searchParams.set("next", pathname);
+      return NextResponse.redirect(loginUrl);
     }
   }
 
