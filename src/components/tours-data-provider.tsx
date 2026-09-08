@@ -90,7 +90,7 @@ export function ToursDataProvider({
           loading: false,
           lastRefreshed: new Date(),
           error: isEmpty
-            ? "Tours are being synced from kemeryatours.com — categories are available, tours will appear shortly. You can also press 'Sync Now'."
+            ? "Tours are being synced automatically from kemeryatours.com — they will appear in a moment."
             : null,
         });
         return;

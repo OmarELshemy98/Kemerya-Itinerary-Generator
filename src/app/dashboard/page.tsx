@@ -122,8 +122,7 @@ function DashboardInner() {
                 </p>
               </div>
             </div>
-            <div className="relative z-10">
-              <TourSearchBar
+            <div className="relative z-20"><TourSearchBar
                 onTourSelect={handleTourSelect}
                 placeholder="Search for any tour by title (e.g. 'Pyramids', 'Nile Cruise', 'Luxor', 'Siwa', 'Hurghada'...)"
               />

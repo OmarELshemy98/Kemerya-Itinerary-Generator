@@ -3,17 +3,15 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
-  RefreshCw,
-  Globe2,
   LogOut,
   UserCircle2,
   ChevronDown,
   Loader2,
   CheckCircle2,
+  RefreshCw,
 } from "lucide-react";
 import { KEMERYA_COMPANY_INFO } from "@/data/company";
 import { useToursData } from "@/components/tours-data-provider";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -23,7 +21,6 @@ export function DashboardHeader() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [scrapeConfirm, setScrapeConfirm] = React.useState(false);
   const [userMenuOpen, setUserMenuOpen] = React.useState(false);
   const [userEmail, setUserEmail] = React.useState<string | null>(null);
   const [userRole, setUserRole] = React.useState<UserRole>("viewer");
@@ -35,8 +32,6 @@ export function DashboardHeader() {
     source,
     scrapedAt,
     loading,
-    refresh,
-    triggerFullScrape,
     stats,
   } = useToursData();
 
@@ -90,14 +85,6 @@ export function DashboardHeader() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const handleFullScrape = async (opts?: {
-    maxToursPerSub?: number;
-    skipDetails?: boolean;
-  }) => {
-    setScrapeConfirm(false);
-    await triggerFullScrape(opts);
-  };
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -153,62 +140,24 @@ export function DashboardHeader() {
           </div>
         </div>
 
-        {/* Right: Actions & User */}
+        {/* Right: Auto-sync status & User */}
         <div className="flex items-center gap-2">
-          {/* Sync Buttons */}
-          {!scrapeConfirm ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setScrapeConfirm(true)}
-              disabled={loading}
-              className="h-8 text-xs border-slate-200 text-slate-600 hover:bg-slate-50"
-            >
-              <Globe2 className="mr-1.5 h-3.5 w-3.5" />
-              Sync Tours
-            </Button>
-          ) : (
-            <div className="flex items-center gap-1">
-              <Button
-                size="sm"
-                onClick={() => handleFullScrape({ skipDetails: false, maxToursPerSub: 20 })}
-                disabled={loading}
-                className="h-8 text-xs bg-[#C9A962] hover:bg-[#b8944d] text-white"
-              >
-                <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", loading && "animate-spin")} />
-                {loading ? "Scraping…" : "Full Sync"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleFullScrape({ skipDetails: true, maxToursPerSub: 30 })}
-                disabled={loading}
-                className="h-8 text-xs border-slate-200 text-slate-600 hover:bg-slate-50"
-              >
-                Quick Sync
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setScrapeConfirm(false)}
-                disabled={loading}
-                className="h-8 px-2 text-xs text-slate-500"
-              >
-                Cancel
-              </Button>
-            </div>
-          )}
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refresh()}
-            disabled={loading}
-            className="h-8 text-xs border-slate-200 text-slate-600 hover:bg-slate-50"
+          {/* Auto-sync indicator (no manual sync/reload buttons — the catalog
+              refreshes itself automatically in the background) */}
+          <div
+            className="flex h-8 items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 text-xs text-slate-500"
+            title="The catalog syncs automatically with kemeryatours.com"
           >
-            <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", loading && "animate-spin")} />
-            Reload
-          </Button>
+            <RefreshCw
+              className={cn("h-3.5 w-3.5 text-emerald-600", loading && "animate-spin")}
+            />
+            <span className="hidden font-medium text-slate-700 sm:inline">Auto-sync</span>
+            {scrapedAt && (
+              <span className="hidden opacity-70 md:inline">
+                · {new Date(scrapedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+          </div>
 
           {/* Divider */}
           <div className="h-6 w-px bg-slate-200 mx-1" />
