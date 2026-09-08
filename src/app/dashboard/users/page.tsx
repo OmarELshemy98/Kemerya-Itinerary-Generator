@@ -45,9 +45,24 @@ import {
   Pencil,
   Trash2,
   X,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AdminUser, UserRole } from "@/types";
+
+interface ItineraryData {
+  id: string;
+  user_id: string;
+  tour_title: string | null;
+  custom_tour_title: string | null;
+  is_custom_tour: boolean;
+  client_name: string | null;
+  total_price: number;
+  currency: string;
+  start_date: string;
+  end_date: string;
+  created_at: string;
+}
 
 function UsersPageContent() {
   const supabase = createClient();
@@ -81,6 +96,12 @@ function UsersPageContent() {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [deletingUser, setDeletingUser] = React.useState<AdminUser | null>(null);
   const [deletingUser__, setDeletingUser__] = React.useState(false);
+
+  // View itineraries state
+  const [itinerariesDialogOpen, setItinerariesDialogOpen] = React.useState(false);
+  const [viewingUser, setViewingUser] = React.useState<AdminUser | null>(null);
+  const [userItineraries, setUserItineraries] = React.useState<ItineraryData[]>([]);
+  const [loadingItineraries, setLoadingItineraries] = React.useState(false);
 
   // Fetch users
   const fetchUsers = React.useCallback(async () => {
@@ -288,6 +309,45 @@ function UsersPageContent() {
     } finally {
       setDeletingUser__(false);
     }
+  };
+
+  // View itineraries handler
+  const handleViewItineraries = async (user: AdminUser) => {
+    setViewingUser(user);
+    setItinerariesDialogOpen(true);
+    setLoadingItineraries(true);
+
+    try {
+      // Fetch all itineraries and filter by user
+      const res = await fetch("/api/itineraries", { cache: "no-store" });
+      const json = await res.json();
+
+      if (json.ok && json.itineraries) {
+        const filtered = json.itineraries.filter(
+          (i: any) => i.user_id === user.id
+        );
+        setUserItineraries(filtered);
+      } else {
+        setUserItineraries([]);
+      }
+    } catch (e) {
+      console.error("Failed to fetch itineraries:", e);
+      setUserItineraries([]);
+    } finally {
+      setLoadingItineraries(false);
+    }
+  };
+
+  const formatCurrency = (amount: number, currency: string) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency || "USD",
+    }).format(amount || 0);
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return "—";
+    return new Date(dateStr).toLocaleDateString();
   };
 
   return (
@@ -528,6 +588,15 @@ function UsersPageContent() {
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        onClick={() => handleViewItineraries(user)}
+                        title="View itineraries"
+                      >
+                        <FileText className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="h-8 w-8"
                         onClick={() => handleEditUser(user)}
                         title="Edit user"
@@ -688,6 +757,83 @@ function UsersPageContent() {
               ) : (
                 "Delete User"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Itineraries Dialog */}
+      <Dialog open={itinerariesDialogOpen} onOpenChange={setItinerariesDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Itineraries for {viewingUser?.full_name}
+            </DialogTitle>
+            <DialogDescription>
+              All itineraries created by this user.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {loadingItineraries ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+                <span className="ml-2 text-sm text-slate-500">Loading itineraries...</span>
+              </div>
+            ) : userItineraries.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-sm text-slate-500">No itineraries found for this user.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {userItineraries.map((itinerary) => (
+                  <div
+                    key={itinerary.id}
+                    className="rounded-lg border border-slate-200 bg-slate-50 p-4"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="text-sm font-semibold text-slate-900">
+                            {itinerary.is_custom_tour
+                              ? itinerary.custom_tour_title || "Custom Tour"
+                              : itinerary.tour_title || "Unknown Tour"}
+                          </h4>
+                          {itinerary.is_custom_tour && (
+                            <Badge variant="outline" className="text-[10px] text-purple-600 border-purple-200 bg-purple-50">
+                              Custom
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 mt-2">
+                          <div>
+                            <span className="font-medium">Client:</span>{" "}
+                            {itinerary.client_name || "—"}
+                          </div>
+                          <div>
+                            <span className="font-medium">Price:</span>{" "}
+                            {formatCurrency(itinerary.total_price, itinerary.currency)}
+                          </div>
+                          <div>
+                            <span className="font-medium">Dates:</span>{" "}
+                            {formatDate(itinerary.start_date)} → {formatDate(itinerary.end_date)}
+                          </div>
+                          <div>
+                            <span className="font-medium">Created:</span>{" "}
+                            {formatDate(itinerary.created_at)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setItinerariesDialogOpen(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
