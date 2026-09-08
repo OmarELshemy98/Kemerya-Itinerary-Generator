@@ -98,11 +98,33 @@ export async function POST(request: Request) {
       });
     }
 
-    const fallbackPassword = process.env.SUPER_ADMIN_SEED_PASSWORD || "Omar@1998";
+    // Password must come strictly from the environment — never hardcode a
+    // default. If DEFAULT_ADMIN_PASSWORD (or the legacy SUPER_ADMIN_SEED_PASSWORD)
+    // is not configured, seeding a new user is refused.
+    const adminPassword =
+      process.env.DEFAULT_ADMIN_PASSWORD || process.env.SUPER_ADMIN_SEED_PASSWORD;
+
+    if (!adminPassword) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "DEFAULT_ADMIN_PASSWORD is not configured. Set this environment variable (a strong password for the seeded admin account) and try again. Hardcoded fallback passwords are not allowed.",
+        },
+        { status: 503 }
+      );
+    }
+
+    if (adminPassword.length < 6) {
+      return NextResponse.json(
+        { ok: false, error: "DEFAULT_ADMIN_PASSWORD must be at least 6 characters." },
+        { status: 503 }
+      );
+    }
 
     const { data: authData, error: authError } = await serviceSupabase.auth.admin.createUser({
       email: SUPER_ADMIN_EMAIL,
-      password: fallbackPassword,
+      password: adminPassword,
       email_confirm: true,
     });
 
@@ -151,7 +173,11 @@ export async function POST(request: Request) {
         role: SUPER_ADMIN_ROLE,
         created_at: authData.user.created_at || new Date().toISOString(),
       },
-      note: `Default password used: ${process.env.SUPER_ADMIN_SEED_PASSWORD ? "(from SUPER_ADMIN_SEED_PASSWORD env)" : "Omar@1998 — change this via the users page immediately"}`,
+      note: `Password used for the seeded admin account: ${
+        process.env.DEFAULT_ADMIN_PASSWORD
+          ? "(from DEFAULT_ADMIN_PASSWORD env)"
+          : "(from legacy SUPER_ADMIN_SEED_PASSWORD env) — migrate to DEFAULT_ADMIN_PASSWORD"
+      }. Change this password via the users page immediately.`,
     });
   } catch (e: any) {
     return NextResponse.json(
@@ -180,7 +206,9 @@ export async function GET() {
       ok: true,
       superAdmins: data || [],
       hasServiceRole: Boolean(getServiceSupabase()),
-      seedPasswordConfigured: Boolean(process.env.SUPER_ADMIN_SEED_PASSWORD),
+      seedPasswordConfigured: Boolean(
+        process.env.DEFAULT_ADMIN_PASSWORD || process.env.SUPER_ADMIN_SEED_PASSWORD
+      ),
       toSeed: !(data && data.length > 0),
     });
   } catch (e: any) {

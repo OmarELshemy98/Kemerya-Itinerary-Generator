@@ -52,14 +52,14 @@ export interface CachedData {
 function tourToRow(t: Tour, scrapedAt: string) {
   return {
     id: t.id,
-    main_cat_id: t.mainCategoryId,
-    sub_cat_id: t.subCategoryId,
+    main_category_id: t.mainCategoryId,
+    sub_category_id: t.subCategoryId,
     title: t.title,
     slug: t.slug,
     duration_days: t.durationDays,
     duration_nights: t.durationNights ?? null,
-    short_desc: t.shortDescription ?? null,
-    long_desc: t.longDescription ?? null,
+    short_description: t.shortDescription ?? null,
+    long_description: t.longDescription ?? null,
     image: t.image ?? null,
     base_price_usd: t.basePriceUSD ?? null,
     base_price_eur: t.basePriceEUR ?? null,
@@ -78,14 +78,14 @@ function tourToRow(t: Tour, scrapedAt: string) {
 function rowToTour(row: any): Tour {
   return {
     id: row.id,
-    mainCategoryId: row.main_cat_id,
-    subCategoryId: row.sub_cat_id,
+    mainCategoryId: row.main_category_id ?? row.main_cat_id,
+    subCategoryId: row.sub_category_id ?? row.sub_cat_id,
     title: row.title,
     slug: row.slug,
     durationDays: row.duration_days,
     durationNights: row.duration_nights ?? undefined,
-    shortDescription: row.short_desc ?? undefined,
-    longDescription: row.long_desc ?? undefined,
+    shortDescription: row.short_description ?? row.short_desc ?? undefined,
+    longDescription: row.long_description ?? row.long_desc ?? undefined,
     image: row.image ?? undefined,
     basePriceUSD: row.base_price_usd != null ? Number(row.base_price_usd) : undefined,
     basePriceEUR: row.base_price_eur != null ? Number(row.base_price_eur) : undefined,
@@ -131,7 +131,7 @@ function rowToMainCat(row: any): MainCategory {
 function subCatToRow(s: SubCategory, scrapedAt: string) {
   return {
     id: s.id,
-    main_cat_id: s.mainCategoryId,
+    main_category_id: s.mainCategoryId,
     name: s.name,
     slug: s.slug,
     description: s.description ?? null,
@@ -144,7 +144,7 @@ function subCatToRow(s: SubCategory, scrapedAt: string) {
 function rowToSubCat(row: any): SubCategory {
   return {
     id: row.id,
-    mainCategoryId: row.main_cat_id,
+    mainCategoryId: row.main_category_id ?? row.main_cat_id,
     name: row.name,
     slug: row.slug,
     description: row.description ?? undefined,

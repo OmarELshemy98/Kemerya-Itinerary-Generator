@@ -99,8 +99,8 @@ function DashboardInner() {
     <div className="space-y-6">
       {/* Section: Hero Search */}
       <section className="mb-8">
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-white to-[#C9A962]/5 p-6 shadow-sm sm:p-8">
-          <div className="absolute right-0 top-0 h-64 w-64 translate-x-1/3 -translate-y-1/3 rounded-full bg-[#C9A962]/10 blur-3xl" />
+        <div className="relative rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-white to-[#C9A962]/5 p-6 shadow-sm sm:p-8">
+          <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl"><div className="absolute right-0 top-0 h-64 w-64 translate-x-1/3 -translate-y-1/3 rounded-full bg-[#C9A962]/10 blur-3xl" /></div>
           <div className="relative">
             <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>

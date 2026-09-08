@@ -360,9 +360,14 @@ export function ToursDataProvider({
       const matched = state.tours.filter(
         (t) =>
           t.title.toLowerCase().includes(q) ||
+          t.slug.toLowerCase().includes(q) ||
           t.shortDescription?.toLowerCase().includes(q) ||
           t.longDescription?.toLowerCase().includes(q) ||
-          t.slug.toLowerCase().includes(q) ||
+          t.itinerary?.some(
+            (day) =>
+              day.title?.toLowerCase().includes(q) ||
+              day.description?.toLowerCase().includes(q)
+          ) ||
           t.tags?.some((tag) => tag.toLowerCase().includes(q))
       );
       // Also match against the parent sub-category / main-category names

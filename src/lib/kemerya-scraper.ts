@@ -1009,6 +1009,19 @@ export async function scrapeAllTours(options?: {
     }
   }
 
+  // Disambiguate duplicate IDs: the same tour title can legitimately appear
+  // under two different sub-categories on kemeryatours.com. The slug-based
+  // stable ID would collapse them into one row, losing the 120th tour.
+  // Give each occurrence after the first a sub-category-suffixed ID.
+  const seenIds = new Set<string>();
+  for (const t of allTours) {
+    if (seenIds.has(t.id)) {
+      t.id = `${t.id}-${toSlug(t.subCategoryId || "dup")}`;
+      if (seenIds.has(t.id)) t.id = `${t.id}-${Date.now()}`;
+    }
+    seenIds.add(t.id);
+  }
+
   return {
     tours: allTours,
     source: "website",
