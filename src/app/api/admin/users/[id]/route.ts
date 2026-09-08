@@ -19,25 +19,32 @@ async function requireSuperAdminApi() {
     return { allowed: false, status: 401, message: "Authentication required" };
   }
 
+  // أولاً: حاول جلب الـ profile من قاعدة البيانات
   const { data: profile, error: profileError } = await serverSupabase
     .from("profiles")
     .select("role, is_active")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profileError || !profile) {
-    return { allowed: false, status: 403, message: "Profile not found" };
+  // لو الـ profile موجود، استخدمه
+  if (profile && !profileError) {
+    if (!profile.is_active) {
+      return { allowed: false, status: 403, message: "Account is deactivated" };
+    }
+
+    if (profile.role === "super_admin") {
+      return { allowed: true, user };
+    }
   }
 
-  if (!profile.is_active) {
-    return { allowed: false, status: 403, message: "Account is deactivated" };
+  // لو الـ profile مش موجود أو الـ role مش super_admin، جرب الـ metadata من الـ JWT
+  const metadataRole = user.app_metadata?.role || user.user_metadata?.role;
+  
+  if (metadataRole === "super_admin") {
+    return { allowed: true, user };
   }
 
-  if (profile.role !== "super_admin") {
-    return { allowed: false, status: 403, message: "Super Admin access required" };
-  }
-
-  return { allowed: true, user };
+  return { allowed: false, status: 403, message: "Super Admin access required" };
 }
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -112,9 +119,49 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (is_active !== undefined) updates.is_active = Boolean(is_active);
 
     let row: any = null;
+    const serviceSupabase = getServiceSupabase();
 
-    if (Object.keys(updates).length > 0) {
-      const { data, error } = await supabase
+    // استخدام serviceSupabase لتجاوز الـ RLS
+    const client = serviceSupabase || supabase;
+
+    // تحقق من وجود المستخدم أولاً
+    const { data: existingUser } = await client
+      .from("profiles")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!existingUser) {
+      // لو المستخدم مش موجود في profiles، أنشئه
+      if (serviceSupabase) {
+        // جلب بيانات المستخدم من auth
+        const { data: authUser } = await serviceSupabase.auth.admin.getUserById(id);
+        
+        const { data: newProfile, error: createError } = await serviceSupabase
+          .from("profiles")
+          .insert({
+            id: id,
+            email: authUser?.user?.email || "",
+            full_name: full_name || authUser?.user?.user_metadata?.full_name || "User",
+            role: role || "viewer",
+            is_active: is_active !== undefined ? Boolean(is_active) : true,
+          })
+          .select("*")
+          .single();
+
+        if (createError) {
+          return NextResponse.json(
+            { ok: false, error: `Failed to create profile: ${createError.message}` },
+            { status: 500 }
+          );
+        }
+        row = newProfile;
+      } else {
+        return NextResponse.json({ ok: false, error: "User not found" }, { status: 404 });
+      }
+    } else if (Object.keys(updates).length > 0) {
+      // تحديث المستخدم الموجود
+      const { data, error } = await client
         .from("profiles")
         .update(updates)
         .eq("id", id)
@@ -133,23 +180,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       }
       row = data[0];
     } else {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", id)
-        .limit(1);
-
-      if (error) {
-        return NextResponse.json(
-          { ok: false, error: `Database error: ${error.message}` },
-          { status: 500 }
-        );
-      }
-
-      if (!data || data.length === 0) {
-        return NextResponse.json({ ok: false, error: "User not found" }, { status: 404 });
-      }
-      row = data[0];
+      row = existingUser;
     }
 
     const user: AdminUser = {
