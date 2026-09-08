@@ -141,6 +141,28 @@ export function ToursDataProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Continuous auto-sync: poll the catalog every 5 minutes so any price or
+  // content change on kemeryatours.com (picked up by the server's background
+  // scrape) reaches the UI without a manual refresh. Only poll when the tab
+  // is visible to avoid unnecessary requests.
+  const POLL_INTERVAL_MS = 5 * 60 * 1000;
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        refresh();
+      }
+    }, POLL_INTERVAL_MS);
+    // Also refresh when the tab becomes visible again after being away
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [refresh]);
+
   const addCategory = React.useCallback(
     async (payload: Partial<MainCategory> & { name: string }) => {
       try {

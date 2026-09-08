@@ -6,8 +6,10 @@ import { MAIN_CATEGORIES, SUB_CATEGORIES } from "@/data/tours";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Scrape cache is valid for 6 hours (more frequent updates)
-const SCRAPE_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+// Scrape cache is valid for 2 hours — keeps prices/content continuously fresh.
+// A cron job (see /api/cron/refresh + vercel.json) also refreshes every 6 hours
+// regardless of traffic, so the catalog is always up to date.
+const SCRAPE_CACHE_TTL_MS = 2 * 60 * 60 * 1000;
 
 // Track if a scrape is currently in progress to avoid duplicate scrapes
 let scrapeInProgress = false;
@@ -24,14 +26,26 @@ async function triggerBackgroundScrape() {
     const startTime = Date.now();
     
     const result = await scrapeAllTours({ maxToursPerSub: 100 });
-    
+
+    // Merge baseline + discovered categories so new ones appear automatically
+    const mainCatMap = new Map<string, any>();
+    for (const m of MAIN_CATEGORIES) mainCatMap.set(m.id, m);
+    for (const m of result.discoveredMainCategories || []) {
+      mainCatMap.set(m.id, { ...mainCatMap.get(m.id), ...m });
+    }
+    const subCatMap = new Map<string, any>();
+    for (const s of SUB_CATEGORIES) subCatMap.set(s.id, s);
+    for (const s of result.discoveredSubCategories || []) {
+      subCatMap.set(s.id, { ...subCatMap.get(s.id), ...s });
+    }
+
     await writeCache({
       tours: result.tours,
       scrapedAt: result.scrapedAt,
       source: result.source,
       stats: result.stats,
-      mainCategories: MAIN_CATEGORIES,
-      subCategories: SUB_CATEGORIES,
+      mainCategories: Array.from(mainCatMap.values()),
+      subCategories: Array.from(subCatMap.values()),
     });
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);

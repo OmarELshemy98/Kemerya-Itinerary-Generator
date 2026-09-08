@@ -6,31 +6,6 @@ import type { BookingConfig, Tour } from "@/types";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-interface ItineraryRow {
-  id: string;
-  user_id: string;
-  tour_id: string | null;
-  tour_title: string | null;
-  is_custom_tour: boolean;
-  custom_tour_title: string | null;
-  custom_tour_description: string | null;
-  client_name: string | null;
-  client_email: string | null;
-  client_phone: string | null;
-  client_whatsapp: string | null;
-  travelers_adults: number;
-  travelers_children: number;
-  travelers_infants: number;
-  total_price: number;
-  currency: string;
-  price_per_person: number | null;
-  start_date: string;
-  end_date: string;
-  notes: string | null;
-  special_requests: string | null;
-  created_at: string;
-}
-
 async function getCurrentUserId(): Promise<string | null> {
   const serverSupabase = createServerClient();
   const {
@@ -59,8 +34,12 @@ export async function GET() {
 
     const isAdmin = profile?.role === "super_admin" || profile?.role === "admin";
 
+    // Use serviceSupabase to bypass RLS
+    const serviceSupabase = getServiceSupabase();
+    const client = serviceSupabase || supabase;
+
     // Build query - simple select without join
-    let query = supabase
+    let query = client
       .from("itineraries")
       .select("*")
       .order("created_at", { ascending: false });
@@ -86,7 +65,7 @@ export async function GET() {
 
     // Get user info for each itinerary
     const userIds = [...new Set((data || []).map((row: any) => row.user_id))];
-    const { data: profiles } = await supabase
+    const { data: profiles } = await client
       .from("profiles")
       .select("id, full_name, email")
       .in("id", userIds);
@@ -173,7 +152,11 @@ export async function POST(request: Request) {
       special_requests: booking.specialRequests || null,
     };
 
-    const { data, error } = await supabase
+    // Use serviceSupabase to bypass RLS
+    const serviceSupabase = getServiceSupabase();
+    const client = serviceSupabase || supabase;
+
+    const { data, error } = await client
       .from("itineraries")
       .insert(itineraryData)
       .select()
@@ -188,6 +171,7 @@ export async function POST(request: Request) {
           itinerary: { id: booking.id, ...itineraryData, created_at: new Date().toISOString() },
         });
       }
+      console.error("POST /api/itineraries error:", error);
       return NextResponse.json(
         { ok: false, error: `Database error: ${error.message}` },
         { status: 500 }
@@ -195,7 +179,6 @@ export async function POST(request: Request) {
     }
 
     // Log itinerary creation (don't fail if audit_log table doesn't exist)
-    const serviceSupabase = getServiceSupabase();
     if (serviceSupabase) {
       try {
         await serviceSupabase.from("audit_log").insert({

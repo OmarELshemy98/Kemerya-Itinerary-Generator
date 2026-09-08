@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { scrapeAllTours } from "@/lib/kemerya-scraper";
 import { writeCache } from "@/lib/tour-cache";
 import { MAIN_CATEGORIES, SUB_CATEGORIES } from "@/data/tours";
+import type { MainCategory, SubCategory } from "@/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 export async function POST(req: Request) {
   try {
@@ -18,19 +20,41 @@ export async function POST(req: Request) {
     const skipDetails = Boolean(body?.skipDetails);
     const result = await scrapeAllTours({ maxToursPerSub, skipDetails });
 
+    // Merge hardcoded baseline categories with the ones discovered live from
+    // the website, so any new category/sub-category added on kemeryatours.com
+    // automatically appears in the app (100% dynamic catalog).
+    const mainCatMap = new Map<string, MainCategory>();
+    for (const m of MAIN_CATEGORIES) mainCatMap.set(m.id, m);
+    for (const m of result.discoveredMainCategories || []) {
+      mainCatMap.set(m.id, { ...mainCatMap.get(m.id), ...m });
+    }
+
+    const subCatMap = new Map<string, SubCategory>();
+    for (const s of SUB_CATEGORIES) subCatMap.set(s.id, s);
+    for (const s of result.discoveredSubCategories || []) {
+      subCatMap.set(s.id, { ...subCatMap.get(s.id), ...s });
+    }
+
+    const mergedMainCategories = Array.from(mainCatMap.values());
+    const mergedSubCategories = Array.from(subCatMap.values());
+
     await writeCache({
       tours: result.tours,
       scrapedAt: result.scrapedAt,
       source: result.source,
       stats: result.stats,
-      mainCategories: MAIN_CATEGORIES,
-      subCategories: SUB_CATEGORIES,
+      mainCategories: mergedMainCategories,
+      subCategories: mergedSubCategories,
     });
 
     return NextResponse.json({
       ok: true,
       stats: result.stats,
       scrapedAt: result.scrapedAt,
+      discovered: {
+        mainCategories: result.discoveredMainCategories?.length || 0,
+        subCategories: result.discoveredSubCategories?.length || 0,
+      },
       sampleTitles: result.tours.slice(0, 10).map((t) => t.title),
     });
   } catch (e: any) {

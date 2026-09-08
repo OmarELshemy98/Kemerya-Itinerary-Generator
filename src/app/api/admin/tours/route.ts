@@ -188,6 +188,7 @@ export async function POST(request: Request) {
         itinerary: safeJsonArray(itinerary, []),
         tags: safeJsonArray(tags, []),
         is_popular: Boolean(isPopular),
+        is_manual: true,
         has_details: Boolean(
           (Array.isArray(itinerary) && itinerary.length > 0) ||
             (longDescription && longDescription.trim())

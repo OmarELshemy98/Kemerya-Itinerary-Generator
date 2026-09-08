@@ -709,8 +709,13 @@ function tourFromDetails(
   if (basePriceUSD && basePriceUSD < 60) tags.push("Budget Friendly");
   if (days >= 5) tags.push("Multi-Day");
 
+  // Deterministic, stable ID derived from the tour slug so that re-scrapes
+  // keep the same ID even if the tour's position/order changes on the site.
+  // This makes merge/upsert sync reliable and keeps price history consistent.
+  const stableId = `tour-web-${toSlug(actualTitle) || toSlug(listItem.slug) || String(counter).padStart(3, "0")}`;
+
   return {
-    id: `tour-web-${String(counter).padStart(3, "0")}`,
+    id: stableId,
     subCategoryId: subCatId,
     mainCategoryId: mainCatId,
     title: actualTitle,
@@ -742,6 +747,8 @@ export interface FullScrapeResult {
   tours: Tour[];
   source: "website";
   scrapedAt: string;
+  discoveredMainCategories: MainCategory[];
+  discoveredSubCategories: SubCategory[];
   stats: {
     mainCategories: number;
     subCategories: number;
@@ -805,6 +812,8 @@ export async function scrapeAllTours(options?: {
   const maxPerSub = options?.maxToursPerSub ?? 100;
   const skipDetails = options?.skipDetails ?? false;
   const allTours: Tour[] = [];
+  const discoveredMainCats = new Map<string, MainCategory>();
+  const discoveredSubCats = new Map<string, SubCategory>();
   let counter = 0;
   let subCount = 0;
   let withDetails = 0;
@@ -815,6 +824,17 @@ export async function scrapeAllTours(options?: {
     try {
       const html = await fetchHtml(url);
       const subList = parseMainCategoryPage(html, url);
+
+      // Register the main category as discovered (fully dynamic catalog)
+      if (!discoveredMainCats.has(mc.id)) {
+        discoveredMainCats.set(mc.id, {
+          id: mc.id,
+          name: mc.name,
+          slug: mc.slug,
+          description: mc.description,
+          icon: mc.icon,
+        });
+      }
 
       if (subList.length === 0) {
         console.log(`No sub-categories found for ${mc.name}, trying to get tours directly...`);
@@ -858,6 +878,17 @@ export async function scrapeAllTours(options?: {
       for (const sc of subList) {
         subCount++;
         const subCatId = sc.matchedSubCategory?.id || `scraped-${sc.slug}`;
+
+        // Register discovered sub-category so new ones on the site appear automatically
+        if (!discoveredSubCats.has(subCatId)) {
+          discoveredSubCats.set(subCatId, {
+            id: subCatId,
+            mainCategoryId: mc.id,
+            name: sc.matchedSubCategory?.name || sc.name,
+            slug: sc.matchedSubCategory?.slug || sc.slug,
+            description: sc.description,
+          });
+        }
         try {
           const tourList = await scrapeSubCategoryPagesWithPagination(sc, mc.id, maxPerSub);
           for (const tItem of tourList) {
@@ -909,9 +940,11 @@ export async function scrapeAllTours(options?: {
     tours: allTours,
     source: "website",
     scrapedAt: new Date().toISOString(),
+    discoveredMainCategories: Array.from(discoveredMainCats.values()),
+    discoveredSubCategories: Array.from(discoveredSubCats.values()),
     stats: {
-      mainCategories: MAIN_CATEGORIES.length,
-      subCategories: subCount,
+      mainCategories: Math.max(MAIN_CATEGORIES.length, discoveredMainCats.size),
+      subCategories: Math.max(subCount, discoveredSubCats.size),
       toursTotal: allTours.length,
       withDetails,
     },
