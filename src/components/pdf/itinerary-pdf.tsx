@@ -21,15 +21,45 @@ import {
 
 Font.registerHyphenationCallback((word) => [word]);
 
+Font.register({
+  family: "Cinzel",
+  fonts: [
+    {
+      src: "https://cdn.jsdelivr.net/npm/@fontsource/cinzel@5/files/cinzel-latin-400-normal.woff",
+    },
+    {
+      src: "https://cdn.jsdelivr.net/npm/@fontsource/cinzel@5/files/cinzel-latin-700-normal.woff",
+      fontWeight: 700,
+    },
+  ],
+});
+
+Font.register({
+  family: "Lora",
+  fonts: [
+    {
+      src: "https://cdn.jsdelivr.net/npm/@fontsource/lora@5/files/lora-latin-400-normal.woff",
+    },
+    {
+      src: "https://cdn.jsdelivr.net/npm/@fontsource/lora@5/files/lora-latin-400-italic.woff",
+      fontStyle: "italic",
+    },
+    {
+      src: "https://cdn.jsdelivr.net/npm/@fontsource/lora@5/files/lora-latin-700-normal.woff",
+      fontWeight: 700,
+    },
+  ],
+});
+
 const BRAND_COLORS = {
-  navy: "#0F172A",
-  gold: "#C9A962",
-  dark: "#1E293B",
+  navy: "#1E3A8A", // Lapis Lazuli - Headers & Badges
+  gold: "#C5A059", // Muted Gold - Borders & Accents
+  dark: "#2C1E16", // Dark Espresso - Primary Text
   lightGold: "#E8D7B1",
-  bg: "#FAF7F0",
-  text: "#1E293B",
+  bg: "#EEDC9A", // Papyrus
+  text: "#2C1E16", // Dark Espresso - Primary Text
   muted: "#64748B",
-  border: "#E2E8F0",
+  border: "#C5A059", // Muted Gold - Borders & Accents
   inclusionsBg: "#F0FDF4",
   inclusionsText: "#166534",
   exclusionsBg: "#FEF2F2",
@@ -42,19 +72,87 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     paddingBottom: 60,
     paddingHorizontal: 40,
-    fontFamily: "Helvetica",
+    fontFamily: "Lora",
+  },
+  // --- Royal frame wrapper (page border) ---
+  pageFrame: {
+    flexGrow: 1,
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: BRAND_COLORS.gold,
+    position: "relative",
+    overflow: "hidden",
+    padding: 14,
+  },
+  // --- Papyrus texture overlay ---
+  papyrusTexture: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0.5,
+  },
+  textureLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: BRAND_COLORS.gold,
+    opacity: 0.14,
+  },
+  textureFiber: {
+    position: "absolute",
+    width: "160%",
+    height: 26,
+    backgroundColor: "#D9B96A",
+    opacity: 0.05,
+  },
+  // --- Ankh watermark (centered) ---
+  watermarkAnkh: {
+    position: "absolute",
+    top: "42%",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    opacity: 0.05,
+  },
+  ankhLoop: {
+    width: 70,
+    height: 78,
+    borderWidth: 10,
+    borderStyle: "solid",
+    borderColor: BRAND_COLORS.dark,
+    borderRadius: 999,
+  },
+  ankhCrossbar: {
+    width: 96,
+    height: 10,
+    backgroundColor: BRAND_COLORS.dark,
+    marginTop: -2,
+  },
+  ankhStem: {
+    width: 10,
+    height: 84,
+    backgroundColor: BRAND_COLORS.dark,
   },
   logoImg: {
     height: 55,
     width: 220,
     objectFit: "contain",
     marginBottom: 8,
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: BRAND_COLORS.gold,
   },
   logoImgSmall: {
     height: 40,
     width: 160,
     objectFit: "contain",
     marginBottom: 6,
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: BRAND_COLORS.gold,
   },
   header: {
     flexDirection: "row",
@@ -73,6 +171,7 @@ const styles = StyleSheet.create({
   brandName: {
     fontSize: 26,
     fontWeight: "bold",
+    fontFamily: "Cinzel",
     color: BRAND_COLORS.navy,
     letterSpacing: 1.2,
   },
@@ -98,7 +197,7 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.navy,
     padding: 28,
     marginBottom: 24,
-    borderRadius: 6,
+    borderRadius: 0,
     position: "relative",
     overflow: "hidden",
   },
@@ -114,6 +213,7 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 22,
     fontWeight: "bold",
+    fontFamily: "Cinzel",
     marginBottom: 8,
     lineHeight: 1.25,
   },
@@ -166,7 +266,7 @@ const styles = StyleSheet.create({
   sectionNumber: {
     width: 28,
     height: 28,
-    borderRadius: 6,
+    borderRadius: 0,
     backgroundColor: BRAND_COLORS.gold,
     color: "white",
     textAlign: "center",
@@ -179,6 +279,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
     color: BRAND_COLORS.navy,
+    fontFamily: "Cinzel",
     letterSpacing: 0.3,
   },
   sectionUnderline: {
@@ -195,7 +296,7 @@ const styles = StyleSheet.create({
     width: "48%",
     flexDirection: "row",
     padding: 12,
-    borderRadius: 5,
+    borderRadius: 0,
     backgroundColor: "white",
     borderWidth: 1,
     borderColor: BRAND_COLORS.border,
@@ -217,7 +318,7 @@ const styles = StyleSheet.create({
     height: "100%",
     backgroundColor: BRAND_COLORS.gold,
     marginRight: 10,
-    borderRadius: 2,
+    borderRadius: 0,
   },
   summaryItemTextWrap: {
     flex: 1,
@@ -225,7 +326,7 @@ const styles = StyleSheet.create({
   },
   dayCard: {
     backgroundColor: "white",
-    borderRadius: 6,
+    borderRadius: 0,
     marginBottom: 14,
     borderWidth: 1,
     borderColor: BRAND_COLORS.border,
@@ -242,19 +343,21 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.gold,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 4,
+    borderRadius: 0,
     marginRight: 12,
   },
   dayBadgeText: {
     color: "white",
     fontSize: 9,
     fontWeight: "bold",
+    fontFamily: "Cinzel",
     letterSpacing: 0.5,
   },
   dayTitle: {
     color: "white",
     fontSize: 12,
     fontWeight: "bold",
+    fontFamily: "Cinzel",
     flex: 1,
   },
   dayContent: {
@@ -263,6 +366,7 @@ const styles = StyleSheet.create({
   dayDescription: {
     fontSize: 10,
     color: BRAND_COLORS.text,
+    fontFamily: "Lora",
     lineHeight: 1.7,
     marginBottom: 10,
     textAlign: "justify",
@@ -279,7 +383,7 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.bg,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 4,
+    borderRadius: 0,
   },
   metaLabel: {
     fontSize: 7.5,
@@ -302,14 +406,14 @@ const styles = StyleSheet.create({
   },
   inclusionsCard: {
     backgroundColor: BRAND_COLORS.inclusionsBg,
-    borderRadius: 6,
+    borderRadius: 0,
     padding: 16,
     borderWidth: 1,
     borderColor: "#BBF7D0",
   },
   exclusionsCard: {
     backgroundColor: BRAND_COLORS.exclusionsBg,
-    borderRadius: 6,
+    borderRadius: 0,
     padding: 16,
     borderWidth: 1,
     borderColor: "#FECACA",
@@ -336,7 +440,7 @@ const styles = StyleSheet.create({
   listItemBulletIncl: {
     width: 14,
     height: 14,
-    borderRadius: 7,
+    borderRadius: 0,
     backgroundColor: "#16A34A",
     color: "white",
     fontSize: 9,
@@ -348,7 +452,7 @@ const styles = StyleSheet.create({
   listItemBulletExcl: {
     width: 14,
     height: 14,
-    borderRadius: 7,
+    borderRadius: 0,
     backgroundColor: "#DC2626",
     color: "white",
     fontSize: 9,
@@ -370,7 +474,7 @@ const styles = StyleSheet.create({
   },
   pricingTable: {
     backgroundColor: "white",
-    borderRadius: 6,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: BRAND_COLORS.border,
     overflow: "hidden",
@@ -419,7 +523,7 @@ const styles = StyleSheet.create({
   },
   termsBlock: {
     backgroundColor: "white",
-    borderRadius: 6,
+    borderRadius: 0,
     padding: 16,
     borderWidth: 1,
     borderColor: BRAND_COLORS.border,
@@ -441,7 +545,7 @@ const styles = StyleSheet.create({
   },
   notesBlock: {
     backgroundColor: "#FFFBEB",
-    borderRadius: 6,
+    borderRadius: 0,
     padding: 14,
     borderWidth: 1,
     borderColor: "#FDE68A",
@@ -458,7 +562,17 @@ const styles = StyleSheet.create({
   notesText: {
     fontSize: 9.5,
     color: "#78350F",
+    fontFamily: "Lora",
     lineHeight: 1.6,
+  },
+  // Drop cap for the first Tour Overview paragraph
+  dropCap: {
+    fontSize: 28,
+    fontWeight: "bold",
+    fontFamily: "Cinzel",
+    color: BRAND_COLORS.gold,
+    lineHeight: 1,
+    marginRight: 3,
   },
   footer: {
     position: "absolute",
@@ -483,7 +597,7 @@ const styles = StyleSheet.create({
   },
   operationsCard: {
     backgroundColor: BRAND_COLORS.navy,
-    borderRadius: 6,
+    borderRadius: 0,
     padding: 18,
     marginTop: 16,
     color: "white",
@@ -498,7 +612,7 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.gold,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 4,
+    borderRadius: 0,
   },
   opsBadgeText: {
     color: BRAND_COLORS.navy,
@@ -537,7 +651,7 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.gold,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 0,
     alignSelf: "flex-start",
     marginBottom: 10,
   },
@@ -596,6 +710,70 @@ const styles = StyleSheet.create({
     lineHeight: 1.6,
   },
 });
+
+/**
+ * RoyalPage — shared page chrome for every page of the PDF:
+ * papyrus background, gold royal frame, papyrus texture overlay,
+ * and a centered, highly transparent Ankh watermark.
+ */
+function RoyalPage({ children }: { children: React.ReactNode }) {
+  return (
+    <Page size="A4" style={styles.page}>
+      <View style={styles.pageFrame}>
+        {/* Papyrus texture overlay */}
+        <View style={styles.papyrusTexture} fixed>
+          <View
+            style={[styles.textureLine, { top: "12%" }]}
+          />
+          <View
+            style={[styles.textureLine, { top: "27%", opacity: 0.1 }]}
+          />
+          <View
+            style={[styles.textureLine, { top: "44%", opacity: 0.12 }]}
+          />
+          <View
+            style={[styles.textureLine, { top: "61%", opacity: 0.1 }]}
+          />
+          <View
+            style={[styles.textureLine, { top: "78%", opacity: 0.14 }]}
+          />
+          <View
+            style={[styles.textureLine, { top: "91%", opacity: 0.09 }]}
+          />
+          <View
+            style={[
+              styles.textureFiber,
+              { top: "18%", left: "-30%", transform: "rotate(35deg)" },
+            ]}
+          />
+          <View
+            style={[
+              styles.textureFiber,
+              { top: "55%", left: "-20%", transform: "rotate(-25deg)" },
+            ]}
+          />
+          <View
+            style={[
+              styles.textureFiber,
+              { top: "84%", left: "-35%", transform: "rotate(15deg)" },
+            ]}
+          />
+        </View>
+
+        {/* Centered Ankh watermark (5% opacity) */}
+        <View style={styles.watermarkAnkh} fixed>
+          <View style={styles.ankhLoop} />
+          <View style={styles.ankhCrossbar} />
+          <View style={styles.ankhStem} />
+        </View>
+
+        {children}
+      </View>
+    </Page>
+  );
+}
+
+
 
 function buildItineraryList(
   tour: Tour | null,
@@ -688,7 +866,7 @@ export function ItineraryPDF({
 
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
-      <Page size="A4" style={styles.page}>
+      <RoyalPage>
         <View style={styles.watermark}>KEMERYA</View>
 
         {/* HEADER */}
@@ -809,11 +987,19 @@ export function ItineraryPDF({
               <Text style={styles.sectionTitle}>Tour Overview</Text>
               <View style={styles.sectionUnderline} />
             </View>
-            {tour.overview.map((para, i) => (
-              <Text key={i} style={{ ...styles.notesText, marginBottom: 6 }}>
-                {para}
-              </Text>
-            ))}
+            {tour.overview.map((para, i) =>
+              i === 0 && para.length > 0 ? (
+                <Text key={i} style={{ ...styles.notesText, marginBottom: 6 }}>
+                  {/* Drop cap on the first paragraph */}
+                  <Text style={styles.dropCap}>{para.charAt(0)}</Text>
+                  {para.slice(1)}
+                </Text>
+              ) : (
+                <Text key={i} style={{ ...styles.notesText, marginBottom: 6 }}>
+                  {para}
+                </Text>
+              )
+            )}
             {(tour.location || tour.group || tour.language || tour.durationLabel) && (
               <View style={{ ...styles.summaryGrid, marginTop: 8 }}>
                 {tour.durationLabel && (
@@ -860,12 +1046,12 @@ export function ItineraryPDF({
           </Text>
           <Text style={styles.footerPage}>Page 1</Text>
         </View>
-      </Page>
+      </RoyalPage>
 
       {/* =============================================== */}
       {/* PAGE 2 - ITINERARY DAYS 1-3                    */}
       {/* =============================================== */}
-      <Page size="A4" style={styles.page}>
+      <RoyalPage>
         <View style={styles.watermark}>KEMERYA</View>
 
         <View style={styles.header}>
@@ -915,11 +1101,11 @@ export function ItineraryPDF({
           </Text>
           <Text style={styles.footerPage}>Page 2</Text>
         </View>
-      </Page>
+      </RoyalPage>
 
       {/* PAGE 3 - REMAINING ITINERARY DAYS */}
       {itinerary.length > 3 && (
-        <Page size="A4" style={styles.page}>
+        <RoyalPage>
           <View style={styles.watermark}>KEMERYA</View>
 
           <View style={styles.header}>
@@ -958,11 +1144,11 @@ export function ItineraryPDF({
             </Text>
             <Text style={styles.footerPage}>Page 3</Text>
           </View>
-        </Page>
+        </RoyalPage>
       )}
 
       {/* PAGE 4 - INCLUSIONS, EXCLUSIONS, PRICING, CONTACTS */}
-      <Page size="A4" style={styles.page}>
+      <RoyalPage>
         <View style={styles.watermark}>KEMERYA</View>
 
         <View style={styles.header}>
@@ -1168,7 +1354,7 @@ export function ItineraryPDF({
             Page {itinerary.length > 3 ? "4" : "3"}
           </Text>
         </View>
-      </Page>
+      </RoyalPage>
     </Document>
   );
 }
