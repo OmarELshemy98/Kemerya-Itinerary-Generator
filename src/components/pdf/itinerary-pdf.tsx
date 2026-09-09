@@ -75,56 +75,26 @@ const TERMS_ITEMS = [
 
 const styles = StyleSheet.create({
   page: {
-    backgroundColor: BRAND_COLORS.bg,
-    paddingTop: 40,
-    paddingBottom: 60,
-    paddingHorizontal: 40,
+    backgroundColor: "transparent",
+    paddingTop: 110,
+    paddingBottom: 90,
+    paddingHorizontal: 60,
     fontFamily: "Lora",
   },
-  // --- Royal frame wrapper (page border) ---
-  pageFrame: {
-    flexGrow: 1,
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: BRAND_COLORS.gold,
-    position: "relative",
-    overflow: "hidden",
-    padding: 14,
-  },
-  // --- Ankh watermark (centered, faint gold foil stamp) ---
-  watermarkAnkh: {
+  pageBackground: {
     position: "absolute",
-    top: "42%",
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    opacity: 0.04,
-  },
-  ankhLoop: {
-    width: 70,
-    height: 78,
-    borderWidth: 10,
-    borderStyle: "solid",
-    borderColor: BRAND_COLORS.gold,
-    borderRadius: 999,
-  },
-  ankhCrossbar: {
-    width: 96,
-    height: 10,
-    backgroundColor: BRAND_COLORS.gold,
-    marginTop: -2,
-  },
-  ankhStem: {
-    width: 10,
-    height: 84,
-    backgroundColor: BRAND_COLORS.gold,
+    minWidth: "100%",
+    minHeight: "100%",
+    height: "100%",
+    width: "100%",
+    zIndex: -1,
   },
   // --- Terms & Policy ---
   termsSection: {
     marginTop: 4,
   },
   termsCard: {
-    backgroundColor: "white",
+    backgroundColor: "transparent",
     borderWidth: 1,
     borderStyle: "solid",
     borderColor: BRAND_COLORS.border,
@@ -156,7 +126,7 @@ const styles = StyleSheet.create({
   },
   // --- Leave a Review block ---
   reviewCard: {
-    backgroundColor: "white",
+    backgroundColor: "transparent",
     borderWidth: 1,
     borderStyle: "solid",
     borderColor: BRAND_COLORS.gold,
@@ -374,7 +344,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     padding: 14,
     borderRadius: 0,
-    backgroundColor: "white",
+    backgroundColor: "transparent",
     borderWidth: 1,
     borderColor: BRAND_COLORS.border,
   },
@@ -402,7 +372,7 @@ const styles = StyleSheet.create({
     flexDirection: "column",
   },
   dayCard: {
-    backgroundColor: "white",
+    backgroundColor: "transparent",
     borderRadius: 0,
     marginBottom: 14,
     borderWidth: 1,
@@ -412,7 +382,7 @@ const styles = StyleSheet.create({
   dayHeader: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "white",
+    backgroundColor: "transparent",
     borderBottomWidth: 1,
     borderBottomStyle: "solid",
     borderBottomColor: BRAND_COLORS.border,
@@ -483,7 +453,7 @@ const styles = StyleSheet.create({
     width: "50%",
   },
   inclusionsCard: {
-    backgroundColor: "white",
+    backgroundColor: "transparent",
     borderRadius: 0,
     padding: 20,
     borderWidth: 1,
@@ -491,7 +461,7 @@ const styles = StyleSheet.create({
     borderColor: BRAND_COLORS.gold,
   },
   exclusionsCard: {
-    backgroundColor: "white",
+    backgroundColor: "transparent",
     borderRadius: 0,
     padding: 20,
     borderWidth: 1,
@@ -553,7 +523,7 @@ const styles = StyleSheet.create({
     color: BRAND_COLORS.exclusionsText,
   },
   pricingTable: {
-    backgroundColor: "white",
+    backgroundColor: "transparent",
     borderRadius: 0,
     borderWidth: 1,
     borderColor: BRAND_COLORS.border,
@@ -565,9 +535,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: BRAND_COLORS.border,
+    backgroundColor: "transparent",
   },
   pricingRowLast: {
-    backgroundColor: BRAND_COLORS.bg,
+    backgroundColor: "transparent",
     borderBottomWidth: 0,
   },
   pricingCell: {
@@ -602,7 +573,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   termsBlock: {
-    backgroundColor: "white",
+    backgroundColor: "transparent",
     borderRadius: 0,
     padding: 16,
     borderWidth: 1,
@@ -624,7 +595,7 @@ const styles = StyleSheet.create({
     textAlign: "justify",
   },
   notesBlock: {
-    backgroundColor: "white",
+    backgroundColor: "transparent",
     borderRadius: 0,
     padding: 18,
     borderWidth: 1,
@@ -676,7 +647,7 @@ const styles = StyleSheet.create({
     color: BRAND_COLORS.muted,
   },
   operationsCard: {
-    backgroundColor: "white",
+    backgroundColor: "transparent",
     borderRadius: 0,
     padding: 24,
     marginTop: 16,
@@ -744,27 +715,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     textTransform: "uppercase",
   },
-  watermark: {
-    position: "absolute",
-    right: -40,
-    bottom: 60,
-    opacity: 0.04,
-    fontSize: 140,
-    fontFamily: "Cinzel Decorative",
-    fontWeight: "bold",
-    color: BRAND_COLORS.gold,
-    letterSpacing: -2,
-    transform: "rotate(-45deg)",
-    lineHeight: 140,
-  },
-  // Watermark text style (replaces <View> string child — invalid in react-pdf)
-  watermarkText: {
-    fontFamily: "Cinzel Decorative",
-    fontWeight: "bold",
-    color: BRAND_COLORS.gold,
-    letterSpacing: -2,
-    lineHeight: 140,
-  },
   pageNumber: {
     fontSize: 8,
     color: BRAND_COLORS.muted,
@@ -776,33 +726,26 @@ const styles = StyleSheet.create({
 });
 
 /**
- * RoyalPage — shared page chrome for every page of the PDF:
- * papyrus background, gold royal frame, papyrus texture overlay,
- * and a centered, highly transparent Ankh watermark.
- */
-/**
- * RoyalPage — shared page chrome for every page of the PDF:
- * Premium Ivory background, gold royal frame, and a centered,
- * faint gold-foil Ankh watermark.
+ * RoyalPage — shared page chrome for every inner page of the PDF:
+ * Uses the inner-pages background image as the full-page backdrop.
  */
 function RoyalPage({ children }: { children: React.ReactNode }) {
   return (
     <Page size="A4" style={styles.page}>
-      <View style={styles.pageFrame}>
-        {/* Centered Ankh watermark (gold foil, 4% opacity) */}
-        <View style={styles.watermarkAnkh} fixed>
-          <View style={styles.ankhLoop} />
-          <View style={styles.ankhCrossbar} />
-          <View style={styles.ankhStem} />
-        </View>
-
-        {children}
-      </View>
+      <Image fixed src="/images/itinerary/inner-pages.webp" style={styles.pageBackground} />
+      {children}
     </Page>
   );
 }
 
-
+function CoverPage({ children }: { children: React.ReactNode }) {
+  return (
+    <Page size="A4" style={styles.page}>
+      <Image fixed src="/images/itinerary/cover-main-image.webp" style={styles.pageBackground} />
+      {children}
+    </Page>
+  );
+}
 
 function buildItineraryList(
   tour: Tour | null,
@@ -903,9 +846,7 @@ export function ItineraryPDF({
 
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
-      <RoyalPage>
-        <Text style={styles.watermarkText}>KEMERYA</Text>
-
+      <CoverPage>
         {/* HEADER */}
         <View style={styles.header}>
           <View style={styles.brandBlock}>
@@ -1089,13 +1030,12 @@ export function ItineraryPDF({
           </Text>
           <Text style={styles.footerPage}>Page 1</Text>
         </View>
-      </RoyalPage>
+      </CoverPage>
 
       {/* =============================================== */}
       {/* PAGE 2 - ITINERARY DAYS 1-3                    */}
       {/* =============================================== */}
       <RoyalPage>
-        <View style={styles.watermark}>KEMERYA</View>
 
         <View style={styles.header}>
           <View style={styles.brandBlock}>
@@ -1149,7 +1089,6 @@ export function ItineraryPDF({
       {/* PAGE 3 - REMAINING ITINERARY DAYS */}
       {itinerary.length > 3 && (
         <RoyalPage>
-          <View style={styles.watermark}>KEMERYA</View>
 
           <View style={styles.header}>
             <View style={styles.brandBlock}>
@@ -1192,7 +1131,6 @@ export function ItineraryPDF({
 
       {/* PAGE 4 - INCLUSIONS, EXCLUSIONS, PRICING, CONTACTS */}
       <RoyalPage>
-        <View style={styles.watermark}>KEMERYA</View>
 
         <View style={styles.header}>
           <View style={styles.brandBlock}>
@@ -1411,7 +1349,6 @@ export function ItineraryPDF({
 
       {/* PAGE 5 - TERMS & POLICY + LEAVE A REVIEW */}
       <RoyalPage>
-        <View style={styles.watermark}>KEMERYA</View>
 
         <View style={styles.header}>
           <View style={styles.brandBlock}>
