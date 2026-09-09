@@ -76,18 +76,38 @@ const TERMS_ITEMS = [
 const styles = StyleSheet.create({
   coverPage: {
     backgroundColor: "transparent",
-    paddingTop: 180,
-    paddingBottom: 120,
-    paddingLeft: 220,
-    paddingRight: 50,
     fontFamily: "Lora",
   },
   innerPage: {
     backgroundColor: "transparent",
-    paddingTop: 190,
-    paddingBottom: 160,
-    paddingHorizontal: 70,
     fontFamily: "Lora",
+  },
+  coverContent: {
+    marginTop: 200,
+    marginLeft: 240,
+    marginRight: 40,
+    flex: 1,
+  },
+  innerContent: {
+    marginTop: 220,
+    marginBottom: 100,
+    marginHorizontal: 60,
+    flex: 1,
+  },
+  bookingRefBadge: {
+    backgroundColor: BRAND_COLORS.gold,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 4,
+    alignSelf: "flex-start",
+    marginBottom: 20,
+  },
+  bookingRefText: {
+    color: "white",
+    fontSize: 11,
+    fontFamily: "Cinzel",
+    fontWeight: 700,
+    letterSpacing: 1,
   },
   pageBackground: {
     position: "absolute",
@@ -745,7 +765,9 @@ function RoyalPage({ children }: { children: React.ReactNode }) {
         src={typeof window !== 'undefined' ? `${window.location.origin}/images/itinerary/inner-pages.png` : 'http://localhost:3000/images/itinerary/inner-pages.png'}
         style={styles.pageBackground}
       />
-      {children}
+      <View style={styles.innerContent}>
+        {children}
+      </View>
     </Page>
   );
 }
@@ -758,7 +780,9 @@ function CoverPage({ children }: { children: React.ReactNode }) {
         src={typeof window !== 'undefined' ? `${window.location.origin}/images/itinerary/cover-main-image.png` : 'http://localhost:3000/images/itinerary/cover-main-image.png'}
         style={styles.pageBackground}
       />
-      {children}
+      <View style={styles.coverContent}>
+        {children}
+      </View>
     </Page>
   );
 }
@@ -863,12 +887,9 @@ export function ItineraryPDF({
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
       <CoverPage>
-        {/* HEADER - Dynamic Info Only */}
-        <View style={styles.header}>
-          <View style={styles.headerContact}>
-            <Text>Booking Reference: {bookingRef}</Text>
-            <Text>{formatDateShort(booking.startDate)} → {formatDateShort(booking.endDate)}</Text>
-          </View>
+        {/* Minimalist Booking Ref Badge - Floating above Tour Title */}
+        <View style={styles.bookingRefBadge}>
+          <Text style={styles.bookingRefText}>Ref: {bookingRef}</Text>
         </View>
 
         {/* HERO */}
@@ -1028,9 +1049,6 @@ export function ItineraryPDF({
 
         {/* FOOTER PAGE 1 */}
         <View style={styles.footer}>
-          <Text style={styles.footerBrand}>
-            © {new Date().getFullYear()} {companyInfo.name} · All Rights Reserved
-          </Text>
           <Text style={styles.footerPage}>Page 1</Text>
         </View>
       </CoverPage>
@@ -1039,24 +1057,6 @@ export function ItineraryPDF({
       {/* PAGE 2 - ITINERARY DAYS 1-3                    */}
       {/* =============================================== */}
       <RoyalPage>
-
-        <View style={styles.header}>
-          <View style={styles.brandBlock}>
-            {companyInfo.logo ? (
-              // eslint-disable-next-line jsx-a11y/alt-text
-              <Image src={companyInfo.logo} style={styles.logoImgSmall} />
-            ) : (
-              <Text style={{ ...styles.brandName, fontSize: 18 }}>{companyInfo.name}</Text>
-            )}
-            <Text style={styles.brandTagline}>{tourTitle}</Text>
-            <View style={styles.brandLine} />
-          </View>
-          <View style={styles.headerContact}>
-            <Text>Ref: #{bookingRef}</Text>
-            <Text>{formatDateShort(booking.startDate)} → {formatDateShort(booking.endDate)}</Text>
-            <Text>Itinerary · Day-by-Day</Text>
-          </View>
-        </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -1082,9 +1082,6 @@ export function ItineraryPDF({
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerBrand}>
-            © {new Date().getFullYear()} {companyInfo.name}
-          </Text>
           <Text style={styles.footerPage}>Page 2</Text>
         </View>
       </RoyalPage>
@@ -1092,24 +1089,6 @@ export function ItineraryPDF({
       {/* PAGE 3 - REMAINING ITINERARY DAYS */}
       {itinerary.length > 3 && (
         <RoyalPage>
-
-          <View style={styles.header}>
-            <View style={styles.brandBlock}>
-              {companyInfo.logo ? (
-                // eslint-disable-next-line jsx-a11y/alt-text
-                <Image src={companyInfo.logo} style={styles.logoImgSmall} />
-              ) : (
-                <Text style={{ ...styles.brandName, fontSize: 18 }}>{companyInfo.name}</Text>
-              )}
-              <Text style={styles.brandTagline}>{tourTitle}</Text>
-              <View style={styles.brandLine} />
-            </View>
-            <View style={styles.headerContact}>
-              <Text>Ref: #{bookingRef}</Text>
-              <Text>{formatDateShort(booking.startDate)} → {formatDateShort(booking.endDate)}</Text>
-              <Text>Itinerary Continued...</Text>
-            </View>
-          </View>
 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -1124,9 +1103,6 @@ export function ItineraryPDF({
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerBrand}>
-              © {new Date().getFullYear()} {companyInfo.name}
-            </Text>
             <Text style={styles.footerPage}>Page 3</Text>
           </View>
         </RoyalPage>
@@ -1134,23 +1110,6 @@ export function ItineraryPDF({
 
       {/* PAGE 4 - INCLUSIONS, EXCLUSIONS, PRICING, CONTACTS */}
       <RoyalPage>
-
-        <View style={styles.header}>
-          <View style={styles.brandBlock}>
-            {companyInfo.logo ? (
-              // eslint-disable-next-line jsx-a11y/alt-text
-              <Image src={companyInfo.logo} style={styles.logoImgSmall} />
-            ) : (
-              <Text style={{ ...styles.brandName, fontSize: 18 }}>{companyInfo.name}</Text>
-            )}
-            <Text style={styles.brandTagline}>{tourTitle}</Text>
-            <View style={styles.brandLine} />
-          </View>
-          <View style={styles.headerContact}>
-            <Text>Ref: #{bookingRef}</Text>
-            <Text>Inclusions · Exclusions · Pricing · Contacts</Text>
-          </View>
-        </View>
 
         {/* 03 - INCLUSIONS / EXCLUSIONS */}
         <View style={styles.section}>
@@ -1341,9 +1300,6 @@ export function ItineraryPDF({
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerBrand}>
-            © {new Date().getFullYear()} {companyInfo.name} · All Rights Reserved
-          </Text>
           <Text style={styles.footerPage}>
             Page {itinerary.length > 3 ? "4" : "3"}
           </Text>
@@ -1352,23 +1308,6 @@ export function ItineraryPDF({
 
       {/* PAGE 5 - TERMS & POLICY + LEAVE A REVIEW */}
       <RoyalPage>
-
-        <View style={styles.header}>
-          <View style={styles.brandBlock}>
-            {companyInfo.logo ? (
-              // eslint-disable-next-line jsx-a11y/alt-text
-              <Image src={companyInfo.logo} style={styles.logoImgSmall} />
-            ) : (
-              <Text style={{ ...styles.brandName, fontSize: 18 }}>{companyInfo.name}</Text>
-            )}
-            <Text style={styles.brandTagline}>Terms & Policy</Text>
-            <View style={styles.brandLine} />
-          </View>
-          <View style={styles.headerContact}>
-            <Text>Ref: #{bookingRef}</Text>
-            <Text>{formatDateShort(booking.startDate)} → {formatDateShort(booking.endDate)}</Text>
-          </View>
-        </View>
 
         {/* 06 - TERMS & POLICY */}
         <View style={styles.section}>
@@ -1440,9 +1379,6 @@ export function ItineraryPDF({
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerBrand}>
-            © {new Date().getFullYear()} {companyInfo.name} · All Rights Reserved
-          </Text>
           <Text style={styles.footerPage}>
             Page {itinerary.length > 3 ? "5" : "4"}
           </Text>
