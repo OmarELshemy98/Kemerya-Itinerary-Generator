@@ -8,6 +8,11 @@ import path from "path";
 // cached_tours / cache_meta). If those tables don't exist (or RLS blocks them),
 // we transparently fall back to a JSON file on disk so the app keeps working.
 //
+// PRODUCTION GOTCHA (Vercel serverless): the bundled .tour-cache.json is FROZEN
+// at deploy time and can NEVER be refreshed via writeFile on serverless —
+// writes go to an ephemeral filesystem and vanish. So on the server we treat
+// Supabase as the source of truth and the file as a local-dev fallback only.
+//
 // IMPORTANT (dynamic sync strategy): instead of delete-all + reinsert, we MERGE:
 //  - Tours coming from the website are upserted (prices/content always refreshed)
 //  - Tours manually added by admins (ids starting with "tour_") are NEVER touched
@@ -88,7 +93,53 @@ function tourToRow(t: Tour, scrapedAt: string) {
   };
 }
 
-function rowToTour(row: any): Tour {
+/** Normalize any Supabase/PostgREST row to the snake_case shape we expect.
+ *  PostgREST + some clients lowercase or camelCase keys, and PostgREST
+ *  `select=*` may omit newly-added nullable columns on stale caches —
+ *  so we accept every known variant. */
+function normRow(r: any): any {
+  const row: any = { ...(r || {}) };
+  // 1) lowercase every key as an alias
+  for (const k of Object.keys(r || {})) {
+    const lk = k.toLowerCase();
+    if (!(lk in row)) row[lk] = (r as any)[k];
+  }
+  // 2) camelCase -> snake_case aliases for every field we read
+  const alias = (camel: string, snake: string) => {
+    if (row[camel] === undefined && row[snake] !== undefined) row[camel] = row[snake];
+    if (row[snake] === undefined && row[camel] !== undefined) row[snake] = row[camel];
+  };
+  alias("mainCategoryId", "main_category_id");
+  alias("mainCategoryId", "maincategoryid");
+  alias("mainCategoryId", "main_cat_id");
+  alias("mainCategoryId", "maincatid");
+  alias("mainCategoryId", "mainCatId");
+  alias("subCategoryId", "sub_category_id");
+  alias("subCategoryId", "subcategoryid");
+  alias("subCategoryId", "sub_cat_id");
+  alias("subCategoryId", "subcatid");
+  alias("subCategoryId", "subCatId");
+  alias("durationDays", "duration_days");
+  alias("durationNights", "duration_nights");
+  alias("durationLabel", "duration_label");
+  alias("shortDescription", "short_description");
+  alias("longDescription", "long_description");
+  alias("overviewHtml", "overview_html");
+  alias("meetingPoint", "meeting_point");
+  alias("meetingPointHtml", "meeting_point_html");
+  alias("meetingPointImages", "meeting_point_images");
+  alias("tripNotes", "trip_notes");
+  alias("galleryImages", "gallery_images");
+  alias("sourceUrl", "source_url");
+  alias("basePriceUSD", "base_price_usd");
+  alias("basePriceEUR", "base_price_eur");
+  alias("pricesTable", "prices_table");
+  alias("isPopular", "is_popular");
+  return row;
+}
+
+function rowToTour(input: any): Tour {
+  const row = normRow(input);
   return {
     id: row.id,
     mainCategoryId:
@@ -195,7 +246,8 @@ function subCatToRow(s: SubCategory, scrapedAt: string) {
   };
 }
 
-function rowToSubCat(row: any): SubCategory {
+function rowToSubCat(input: any): SubCategory {
+  const row = normRow(input);
   return {
     id: row.id,
     mainCategoryId:
@@ -228,51 +280,61 @@ export async function readCache(): Promise<CachedData | null> {
     const [mainRes, subRes, toursRes, metaRes] = await Promise.all([
       supabase.from("cached_main_categories").select("*"),
       supabase.from("cached_sub_categories").select("*"),
-      supabase.from("cached_tours").select("*"),
+      // Explicit column list (NOT select("*")): PostgREST caches the table
+      // shape per query string, and a stale postgrest schema cache can return
+      // "column X does not exist" OR silently drop columns. An explicit list
+      // forces the error to surface (so we fall back to file) instead of
+      // returning rows with missing ids.
+      supabase.from("cached_tours").select(
+        "id,title,slug,main_category_id,sub_category_id,duration_days,duration_nights,short_description,long_description,image,base_price_usd,base_price_eur,prices_table,highlights,inclusions,exclusions,itinerary,tags,is_popular"
+      ),
       supabase.from("cache_meta").select("*").limit(1).maybeSingle(),
     ]);
 
-    // Detect missing-table errors (PGRST205) and fall back to the file cache
-    const tablesMissing =
-      (mainRes.error && /PGRST205/i.test(mainRes.error.message || "")) ||
-      (subRes.error && /PGRST205/i.test(subRes.error.message || "")) ||
-      (toursRes.error && /PGRST205/i.test(toursRes.error.message || ""));
-
-    if (tablesMissing) {
+    // Any Supabase error (RLS, stale schema cache PGRST204, missing table
+    // PGRST205...) → fall back to the file cache instead of serving
+    // id-less rows that break the whole dashboard.
+    const supaErr =
+      mainRes.error || subRes.error || toursRes.error || metaRes.error;
+    if (supaErr) {
+      console.error(
+        "Supabase readCache error (falling back to file):",
+        (supaErr as any)?.message || supaErr
+      );
       return await readFileCache();
     }
 
     const mainCategories = (mainRes.data || []).map(rowToMainCat);
     const subCategories = (subRes.data || []).map(rowToSubCat);
-    const supabaseToursRaw = toursRes.data || [];
-    // PostgREST lowercases unquoted identifiers; if the client asked for
-    // camelCase variants the keys may come back lowercased (e.g.
-    // maincategoryid). Normalize keys before mapping so ids never resolve
-    // to undefined in production.
-    const supabaseTours = supabaseToursRaw.map((r: any) => {
-      const row: any = { ...r };
-      for (const k of Object.keys(r)) {
-        const lk = k.toLowerCase();
-        if (!(lk in row)) row[lk] = r[k];
-      }
-      // camelCase -> snake_case aliases (belt & suspenders)
-      if (row.mainCategoryId === undefined && row.maincategoryid !== undefined)
-        row.mainCategoryId = row.maincategoryid;
-      if (row.subCategoryId === undefined && row.subcategoryid !== undefined)
-        row.subCategoryId = row.subcategoryid;
-      return rowToTour(row);
-    });
+    // rowToTour/rowToSubCat already normalize every key variant via normRow()
+    const supabaseTours = (toursRes.data || []).map(rowToTour);
     const fileData = await readFileCache();
 
+    // Sanity guard: if Supabase rows are missing their ids (stale schema
+    // cache, RLS projection weirdness…), discard them entirely and serve the
+    // file snapshot instead of poisoning the dashboard with id-less tours.
+    const saneSupaTours = supabaseTours.filter(
+      (t) => t && t.id && t.mainCategoryId && t.subCategoryId
+    );
+    if (supabaseTours.length > 0 && saneSupaTours.length === 0 && fileData) {
+      console.error(
+        "Supabase tours missing ids — serving file cache instead"
+      );
+      return fileData;
+    }
+
     // Merge: Supabase rows + file cache (so tours only present in the file survive)
-    const tours = mergeTours(supabaseTours, fileData?.tours ?? null);
+    const tours = mergeTours(saneSupaTours, fileData?.tours ?? null);
 
     // Merge categories as well (manual categories live in DB, discovered in file)
     const mcById = new Map(mainCategories.map((m) => [m.id, m]));
     for (const m of fileData?.mainCategories || []) {
       if (!mcById.has(m.id)) mcById.set(m.id, m);
     }
-    const scById = new Map(subCategories.map((s) => [s.id, s]));
+    const saneSupaSubs = subCategories.filter(
+      (s) => s && s.id && (s as any).mainCategoryId
+    );
+    const scById = new Map(saneSupaSubs.map((s) => [s.id, s]));
     for (const s of fileData?.subCategories || []) {
       if (!scById.has(s.id)) scById.set(s.id, s);
     }
