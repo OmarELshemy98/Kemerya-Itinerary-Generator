@@ -74,11 +74,19 @@ const TERMS_ITEMS = [
 ];
 
 const styles = StyleSheet.create({
-  page: {
+  coverPage: {
     backgroundColor: "transparent",
-    paddingTop: 110,
-    paddingBottom: 90,
-    paddingHorizontal: 60,
+    paddingTop: 180,
+    paddingBottom: 120,
+    paddingLeft: 220,
+    paddingRight: 50,
+    fontFamily: "Lora",
+  },
+  innerPage: {
+    backgroundColor: "transparent",
+    paddingTop: 190,
+    paddingBottom: 160,
+    paddingHorizontal: 70,
     fontFamily: "Lora",
   },
   pageBackground: {
@@ -731,7 +739,7 @@ const styles = StyleSheet.create({
  */
 function RoyalPage({ children }: { children: React.ReactNode }) {
   return (
-    <Page size="A4" style={styles.page}>
+    <Page size="A4" style={styles.innerPage}>
       <Image
         fixed
         src={typeof window !== 'undefined' ? `${window.location.origin}/images/itinerary/inner-pages.png` : 'http://localhost:3000/images/itinerary/inner-pages.png'}
@@ -744,7 +752,7 @@ function RoyalPage({ children }: { children: React.ReactNode }) {
 
 function CoverPage({ children }: { children: React.ReactNode }) {
   return (
-    <Page size="A4" style={styles.page}>
+    <Page size="A4" style={styles.coverPage}>
       <Image
         fixed
         src={typeof window !== 'undefined' ? `${window.location.origin}/images/itinerary/cover-main-image.png` : 'http://localhost:3000/images/itinerary/cover-main-image.png'}
@@ -855,24 +863,11 @@ export function ItineraryPDF({
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
       <CoverPage>
-        {/* HEADER */}
+        {/* HEADER - Dynamic Info Only */}
         <View style={styles.header}>
-          <View style={styles.brandBlock}>
-            {companyInfo.logo ? (
-              // eslint-disable-next-line jsx-a11y/alt-text
-              <Image src={companyInfo.logo} style={styles.logoImg} />
-            ) : (
-              <>
-                <Text style={styles.brandName}>{companyInfo.name}</Text>
-                <Text style={styles.brandTagline}>{companyInfo.tagline}</Text>
-              </>
-            )}
-            <View style={styles.brandLine} />
-          </View>
           <View style={styles.headerContact}>
-            <Text>{companyInfo.address}</Text>
-            <Text>{companyInfo.phone} | {companyInfo.email}</Text>
-            <Text>{companyInfo.website} | WhatsApp: {companyInfo.whatsapp}</Text>
+            <Text>Booking Reference: {bookingRef}</Text>
+            <Text>{formatDateShort(booking.startDate)} → {formatDateShort(booking.endDate)}</Text>
           </View>
         </View>
 
