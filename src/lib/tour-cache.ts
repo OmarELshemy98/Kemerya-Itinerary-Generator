@@ -91,35 +91,60 @@ function tourToRow(t: Tour, scrapedAt: string) {
 function rowToTour(row: any): Tour {
   return {
     id: row.id,
-    mainCategoryId: row.main_category_id ?? row.main_cat_id,
-    subCategoryId: row.sub_category_id ?? row.sub_cat_id,
+    mainCategoryId:
+      row.mainCategoryId ??
+      row.main_category_id ??
+      row.main_cat_id ??
+      row.mainCatId ??
+      "",
+    subCategoryId:
+      row.subCategoryId ??
+      row.sub_category_id ??
+      row.sub_cat_id ??
+      row.subCatId ??
+      "",
     title: row.title,
     slug: row.slug,
-    durationDays: row.duration_days,
-    durationNights: row.duration_nights ?? undefined,
-    durationLabel: row.duration_label ?? undefined,
+    durationDays: row.durationDays ?? row.duration_days ?? 1,
+    durationNights: row.durationNights ?? row.duration_nights ?? undefined,
+    durationLabel: row.durationLabel ?? row.duration_label ?? undefined,
     location: row.location ?? undefined,
-    group: row.group_name ?? row.group ?? undefined,
+    group: row.group ?? row.group_name ?? undefined,
     language: row.language ?? undefined,
-    shortDescription: row.short_description ?? row.short_desc ?? undefined,
-    longDescription: row.long_description ?? row.long_desc ?? undefined,
-    overview: Array.isArray(row.overview) ? row.overview : undefined,
-    overviewHtml: row.overview_html ?? undefined,
-    meetingPoint: row.meeting_point ?? undefined,
-    meetingPointHtml: row.meeting_point_html ?? undefined,
-    meetingPointImages: Array.isArray(row.meeting_point_images)
-      ? row.meeting_point_images
-      : undefined,
-    tripNotes: Array.isArray(row.trip_notes) ? row.trip_notes : undefined,
+    shortDescription:
+      row.shortDescription ??
+      row.short_description ??
+      row.short_desc ??
+      undefined,
+    longDescription:
+      row.longDescription ??
+      row.long_description ??
+      row.long_desc ??
+      undefined,
+    overview:
+      row.overview && Array.isArray(row.overview) ? row.overview : undefined,
+    overviewHtml: row.overviewHtml ?? row.overview_html ?? undefined,
+    meetingPoint:
+      row.meetingPoint ?? row.meeting_point ?? undefined,
+    meetingPointHtml:
+      row.meetingPointHtml ?? row.meeting_point_html ?? undefined,
+    meetingPointImages:
+      row.meetingPointImages ?? row.meeting_point_images ?? undefined,
+    tripNotes: row.tripNotes ?? row.trip_notes ?? undefined,
     image: row.image ?? undefined,
-    galleryImages: Array.isArray(row.gallery_images)
-      ? row.gallery_images
-      : undefined,
-    sourceUrl: row.source_url ?? undefined,
-    basePriceUSD: row.base_price_usd != null ? Number(row.base_price_usd) : undefined,
-    basePriceEUR: row.base_price_eur != null ? Number(row.base_price_eur) : undefined,
-    pricesTable: Array.isArray(row.prices_table)
-      ? row.prices_table.map((r: any) => ({
+    galleryImages:
+      row.galleryImages ?? row.gallery_images ?? undefined,
+    sourceUrl: row.sourceUrl ?? row.source_url ?? undefined,
+    basePriceUSD:
+      row.basePriceUSD ?? row.base_price_usd != null
+        ? Number(row.basePriceUSD ?? row.base_price_usd)
+        : undefined,
+    basePriceEUR:
+      row.basePriceEUR ?? row.base_price_eur != null
+        ? Number(row.basePriceEUR ?? row.base_price_eur)
+        : undefined,
+    pricesTable: Array.isArray(row.pricesTable ?? row.prices_table)
+      ? (row.pricesTable ?? row.prices_table).map((r: any) => ({
           personsLabel: r.personsLabel,
           priceUSD: Number(r.priceUSD),
         }))
@@ -129,7 +154,7 @@ function rowToTour(row: any): Tour {
     exclusions: Array.isArray(row.exclusions) ? row.exclusions : [],
     itinerary: Array.isArray(row.itinerary) ? (row.itinerary as any) : [],
     tags: Array.isArray(row.tags) ? row.tags : undefined,
-    isPopular: Boolean(row.is_popular),
+    isPopular: Boolean(row.isPopular ?? row.is_popular),
   };
 }
 
@@ -173,7 +198,12 @@ function subCatToRow(s: SubCategory, scrapedAt: string) {
 function rowToSubCat(row: any): SubCategory {
   return {
     id: row.id,
-    mainCategoryId: row.main_category_id ?? row.main_cat_id,
+    mainCategoryId:
+      row.mainCategoryId ??
+      row.main_category_id ??
+      row.main_cat_id ??
+      row.mainCatId ??
+      "",
     name: row.name,
     slug: row.slug,
     description: row.description ?? undefined,
@@ -214,7 +244,24 @@ export async function readCache(): Promise<CachedData | null> {
 
     const mainCategories = (mainRes.data || []).map(rowToMainCat);
     const subCategories = (subRes.data || []).map(rowToSubCat);
-    const supabaseTours = (toursRes.data || []).map(rowToTour);
+    const supabaseToursRaw = toursRes.data || [];
+    // PostgREST lowercases unquoted identifiers; if the client asked for
+    // camelCase variants the keys may come back lowercased (e.g.
+    // maincategoryid). Normalize keys before mapping so ids never resolve
+    // to undefined in production.
+    const supabaseTours = supabaseToursRaw.map((r: any) => {
+      const row: any = { ...r };
+      for (const k of Object.keys(r)) {
+        const lk = k.toLowerCase();
+        if (!(lk in row)) row[lk] = r[k];
+      }
+      // camelCase -> snake_case aliases (belt & suspenders)
+      if (row.mainCategoryId === undefined && row.maincategoryid !== undefined)
+        row.mainCategoryId = row.maincategoryid;
+      if (row.subCategoryId === undefined && row.subcategoryid !== undefined)
+        row.subCategoryId = row.subcategoryid;
+      return rowToTour(row);
+    });
     const fileData = await readFileCache();
 
     // Merge: Supabase rows + file cache (so tours only present in the file survive)
@@ -245,15 +292,23 @@ export async function readCache(): Promise<CachedData | null> {
       : fileData?.scrapedAt ?? null;
     const source = metaAny?.value?.source || metaAny?.source || fileData?.source || "cache";
 
+    // Normalize sub-category mainCategoryId variants as well (same
+    // PostgREST-lowercasing hazard as tours).
+    const normSubCats = finalSubCats.map((s: any) => ({
+      ...s,
+      mainCategoryId:
+        s.mainCategoryId ?? s.main_category_id ?? s.maincategoryid ?? "",
+    }));
+
     const result: CachedData = {
       tours,
       mainCategories: finalMainCats.length ? finalMainCats : fileData?.mainCategories || [],
-      subCategories: finalSubCats.length ? finalSubCats : fileData?.subCategories || [],
+      subCategories: normSubCats.length ? normSubCats : fileData?.subCategories || [],
       scrapedAt,
       source,
       stats: {
         mainCategories: finalMainCats.length || fileData?.mainCategories.length || 0,
-        subCategories: finalSubCats.length || fileData?.subCategories.length || 0,
+        subCategories: normSubCats.length || fileData?.subCategories.length || 0,
         toursTotal: tours.length,
         withDetails: tours.filter(
           (t) => t.longDescription && t.itinerary && t.itinerary.length > 0
