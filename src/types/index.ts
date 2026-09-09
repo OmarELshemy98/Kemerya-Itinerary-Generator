@@ -24,6 +24,12 @@ export interface ItineraryDay {
   accommodation?: string;
 }
 
+export interface SpecialRequestItem {
+  id: string;
+  description: string;
+  price: number;
+}
+
 export interface TripNote {
   question: string;
   answer: string;
@@ -53,8 +59,6 @@ export interface Tour {
   meetingPoint?: string;
   meetingPointHtml?: string;
   meetingPointImages?: string[];
-  /** FAQ / trip notes section (.travel-faq) */
-  tripNotes?: TripNote[];
   image?: string;
   /** All gallery images from the hero slider */
   galleryImages?: string[];
@@ -65,11 +69,13 @@ export interface Tour {
   /** Per-person pricing tiers from the website, e.g. [{personsLabel: "1 Person", priceUSD: 132}, {personsLabel: "2 - 3 Persons", priceUSD: 86}, ...] */
   pricesTable?: { personsLabel: string; priceUSD: number }[];
   highlights?: string[];
-  inclusions: string[];
-  exclusions: string[];
+  inclusions?: string[];
+  exclusions?: string[];
+  tripNotes?: TripNote[];
   itinerary: ItineraryDay[];
   tags?: string[];
   isPopular?: boolean;
+  schedule?: string;
 }
 
 export type Currency = "EUR" | "USD";
@@ -101,6 +107,16 @@ export interface BookingConfig {
   clientWhatsapp?: string;
   notes?: string;
   specialRequests?: string;
+  specialRequestItems?: SpecialRequestItem[];
+  flightArrival?: string;
+  pickupTime?: string;
+  flightDeparture?: string;
+  tourEndTime?: string;
+  tourStartTime?: string;
+  inclusions?: string[];
+  exclusions?: string[];
+  includesAll?: boolean;
+  excludesAll?: boolean;
   createdAt: string;
 }
 
@@ -129,6 +145,7 @@ export interface CompanyInfo {
     name: string;
     website: string;
   };
+  invoiceLogo?: string;
   socialMedia?: {
     facebook?: string;
     instagram?: string;

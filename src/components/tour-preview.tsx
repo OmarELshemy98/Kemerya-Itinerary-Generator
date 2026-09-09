@@ -27,7 +27,7 @@ export function TourPreview({ tour }: { tour: Tour }) {
     { id: "meeting", label: "Meeting Point" },
     { id: "included", label: "Included / Excluded" },
     { id: "prices", label: "Prices" },
-    { id: "notes", label: `Trip Notes${tour.tripNotes?.length ? ` (${tour.tripNotes.length})` : ""}` },
+    { id: "notes", label: "Trip Notes" },
   ];
 
   return (
@@ -151,10 +151,10 @@ export function TourPreview({ tour }: { tour: Tour }) {
           )}
           {tab === "notes" && (
             <div className="space-y-3">
-              {tour.tripNotes?.length ? tour.tripNotes.map((n, i) => (
+              {tour.overview && tour.overview.length ? tour.overview.map((n, i) => (
                 <details key={i} className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
-                  <summary className="cursor-pointer text-[13px] font-semibold text-slate-900">{n.question}</summary>
-                  <p className="mt-1.5 text-[13px]">{n.answer}</p>
+                  <summary className="cursor-pointer text-[13px] font-semibold text-slate-900">{n}</summary>
+                  <p className="mt-1.5 text-[13px]">{n}</p>
                 </details>
               )) : <p className="text-slate-400">No trip notes available.</p>}
             </div>

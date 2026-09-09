@@ -99,6 +99,20 @@ const bookingSchema = z
     clientWhatsapp: z.string().optional().or(z.literal("")),
     notes: z.string().optional().or(z.literal("")),
     specialRequests: z.string().optional().or(z.literal("")),
+    /** Flight arrival details, e.g. "MS1001 arriving Cairo 14:30" */
+    flightArrival: z.string().optional().or(z.literal("")),
+    /** Tour pickup time, e.g. "08:00 AM at your hotel" */
+    pickupTime: z.string().optional().or(z.literal("")),
+    /** Estimated tour end time, e.g. "06:00 PM at your hotel" */
+    tourEndTime: z.string().optional().or(z.literal("")),
+    /** Line items for extra services/requests with their prices */
+    specialRequestItems: z.array(
+      z.object({
+        id: z.string(),
+        description: z.string().min(1, "Description required"),
+        price: z.coerce.number().min(0, "Price must be 0 or positive"),
+      })
+    ).optional(),
     customInclusions: z.array(z.string()).optional(),
     customExclusions: z.array(z.string()).optional(),
     customItinerary: z.array(z.object({
@@ -522,14 +536,14 @@ export function BookingConfigurationForm({
           </Section>
 
           {/* Inclusions & Exclusions for standard tours */}
-          {!isCustomMode && selectedTour && (selectedTour.inclusions.length > 0 || selectedTour.exclusions.length > 0) && (
+          {!isCustomMode && selectedTour && ((selectedTour.inclusions ?? []).length > 0 || (selectedTour.exclusions ?? []).length > 0) && (
             <Section icon={<Plus className="h-4 w-4" />} title="Inclusions & Exclusions">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {selectedTour.inclusions.length > 0 && (
+                {(selectedTour.inclusions ?? []).length > 0 && (
                   <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
                     <Label className="mb-2 block text-xs font-semibold text-emerald-800">Inclusions</Label>
                     <ul className="space-y-1">
-                      {selectedTour.inclusions.map((item, i) => (
+                      {(selectedTour.inclusions ?? []).map((item, i) => (
                         <li key={i} className="flex items-start gap-1.5 text-xs text-emerald-700">
                           <span className="mt-0.5 text-emerald-500">✓</span>
                           <span>{item}</span>
@@ -538,11 +552,11 @@ export function BookingConfigurationForm({
                     </ul>
                   </div>
                 )}
-                {selectedTour.exclusions.length > 0 && (
+                {(selectedTour.exclusions ?? []).length > 0 && (
                   <div className="rounded-lg border border-red-200 bg-red-50 p-3">
                     <Label className="mb-2 block text-xs font-semibold text-red-800">Exclusions</Label>
                     <ul className="space-y-1">
-                      {selectedTour.exclusions.map((item, i) => (
+                      {(selectedTour.exclusions ?? []).map((item, i) => (
                         <li key={i} className="flex items-start gap-1.5 text-xs text-red-700">
                           <span className="mt-0.5 text-red-500">✗</span>
                           <span>{item}</span>

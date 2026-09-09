@@ -5,6 +5,49 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Convert a tour description string into an array of bullet-point strings.
+ * Splits on sentence boundaries (". ", "?" or "!"), strips paragraph breaks,
+ * and removes leading bullet characters ("•", "-", "*") so the result is clean.
+ */
+export function parseDescriptionToBullets(description: string): string[] {
+  if (!description) return [];
+  // Normalize newlines/paragraphs into spaces
+  const flat = description
+    .replace(/\r\n/g, " ")
+    .replace(/\n/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!flat) return [];
+
+  // Step 1: split on sentence-ending punctuation (. ?) or !(!) to get sentence-like chunks
+  const raw = flat
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const bullets: string[] = [];
+  for (const chunk of raw) {
+    // If the chunk itself contains multiple sentences, split again on ". " and "! "
+    const subChunks = chunk
+      .split(/(?<=[.!?])\s+(?=[A-Z])/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    for (const sub of subChunks) {
+      // Strip leading bullet chars
+      const cleaned = sub.replace(/^[•\-\*\u2022\u25E6\u2043\u2219\s]+/, "").trim();
+      if (cleaned) bullets.push(cleaned);
+    }
+  }
+
+  // Fallback: if nothing useful came out, return the whole description as a single bullet
+  if (bullets.length === 0 && flat) {
+    bullets.push(flat);
+  }
+
+  return bullets;
+}
+
 export function formatCurrency(
   amount: number,
   currency: string = "USD"
