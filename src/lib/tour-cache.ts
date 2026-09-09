@@ -72,6 +72,19 @@ function tourToRow(t: Tour, scrapedAt: string) {
     is_popular: Boolean(t.isPopular),
     scraped_at: scrapedAt,
     updated_at: scrapedAt,
+    // New website-faithful fields (nullable columns, added via migration)
+    duration_label: (t as any).durationLabel ?? null,
+    location: (t as any).location ?? null,
+    group_name: (t as any).group ?? null,
+    language: (t as any).language ?? null,
+    overview: (t as any).overview ?? null,
+    overview_html: (t as any).overviewHtml ?? null,
+    meeting_point: (t as any).meetingPoint ?? null,
+    meeting_point_html: (t as any).meetingPointHtml ?? null,
+    meeting_point_images: (t as any).meetingPointImages ?? null,
+    trip_notes: (t as any).tripNotes ?? null,
+    gallery_images: (t as any).galleryImages ?? null,
+    source_url: (t as any).sourceUrl ?? null,
   };
 }
 
@@ -84,9 +97,25 @@ function rowToTour(row: any): Tour {
     slug: row.slug,
     durationDays: row.duration_days,
     durationNights: row.duration_nights ?? undefined,
+    durationLabel: row.duration_label ?? undefined,
+    location: row.location ?? undefined,
+    group: row.group_name ?? row.group ?? undefined,
+    language: row.language ?? undefined,
     shortDescription: row.short_description ?? row.short_desc ?? undefined,
     longDescription: row.long_description ?? row.long_desc ?? undefined,
+    overview: Array.isArray(row.overview) ? row.overview : undefined,
+    overviewHtml: row.overview_html ?? undefined,
+    meetingPoint: row.meeting_point ?? undefined,
+    meetingPointHtml: row.meeting_point_html ?? undefined,
+    meetingPointImages: Array.isArray(row.meeting_point_images)
+      ? row.meeting_point_images
+      : undefined,
+    tripNotes: Array.isArray(row.trip_notes) ? row.trip_notes : undefined,
     image: row.image ?? undefined,
+    galleryImages: Array.isArray(row.gallery_images)
+      ? row.gallery_images
+      : undefined,
+    sourceUrl: row.source_url ?? undefined,
     basePriceUSD: row.base_price_usd != null ? Number(row.base_price_usd) : undefined,
     basePriceEUR: row.base_price_eur != null ? Number(row.base_price_eur) : undefined,
     pricesTable: Array.isArray(row.prices_table)
@@ -356,13 +385,46 @@ export async function writeCache(data: WriteCacheInput): Promise<void> {
   }
 
   // ---- MERGE: upsert website tours (prices/content always refreshed) ----
+  // Tolerant of DBs where migration 00000006 hasn't been applied yet: if the
+  // upsert fails with "column does not exist" (PGRST204), retry with only the
+  // legacy columns so the scrape never breaks on older databases.
   if (tourRows.length > 0) {
+    const NEW_COLS = new Set([
+      "duration_label",
+      "location",
+      "group_name",
+      "language",
+      "overview",
+      "overview_html",
+      "meeting_point",
+      "meeting_point_html",
+      "meeting_point_images",
+      "trip_notes",
+      "gallery_images",
+      "source_url",
+    ]);
+    const stripNewCols = (rows: any[]) =>
+      rows.map((r) => {
+        const copy: any = { ...r };
+        for (const c of NEW_COLS) delete copy[c];
+        return copy;
+      });
+    let rowsToUpsert = tourRows;
     const batchSize = 500;
-    for (let i = 0; i < tourRows.length; i += batchSize) {
-      const batch = tourRows.slice(i, i + batchSize);
+    for (let i = 0; i < rowsToUpsert.length; i += batchSize) {
+      const batch = rowsToUpsert.slice(i, i + batchSize);
       const { error: upToursErr } = await supabase
         .from("cached_tours")
         .upsert(batch, { onConflict: "id" });
+      if (upToursErr && /column .* does not exist|PGRST204/i.test(upToursErr.message || "")) {
+        console.warn(
+          "cached_tours missing new website columns — retrying upsert with legacy columns only. Run migration 00000006 to enable full sync."
+        );
+        rowsToUpsert = stripNewCols(tourRows);
+        // Restart the loop with stripped rows
+        i = -batchSize;
+        continue;
+      }
       if (!skipErr(upToursErr)) console.error("upsert cached_tours batch error:", upToursErr);
     }
   }

@@ -827,6 +827,38 @@ export function ItineraryPDF({
           </View>
         </View>
 
+        {/* TOUR OVERVIEW — same text as the website #overview section */}
+        {!booking.isCustomTour && tour?.overview?.length ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionNumber}>02</View>
+              <Text style={styles.sectionTitle}>Tour Overview</Text>
+              <View style={styles.sectionUnderline} />
+            </View>
+            {tour.overview.map((para, i) => (
+              <Text key={i} style={{ ...styles.notesText, marginBottom: 6 }}>
+                {para}
+              </Text>
+            ))}
+            {(tour.location || tour.group || tour.language || tour.durationLabel) && (
+              <View style={{ ...styles.summaryGrid, marginTop: 8 }}>
+                {tour.durationLabel && (
+                  <SummaryCard label="Duration" value={tour.durationLabel} />
+                )}
+                {tour.location && (
+                  <SummaryCard label="Location" value={tour.location} />
+                )}
+                {tour.group && (
+                  <SummaryCard label="Group" value={tour.group} />
+                )}
+                {tour.language && (
+                  <SummaryCard label="Language" value={tour.language} />
+                )}
+              </View>
+            )}
+          </View>
+        ) : null}
+
         {/* NOTES IF ANY */}
         {(booking.notes || booking.specialRequests) && (
           <View style={styles.notesBlock}>

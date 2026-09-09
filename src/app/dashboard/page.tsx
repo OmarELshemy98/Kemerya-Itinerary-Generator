@@ -9,6 +9,7 @@ import { TourSearchBar } from "@/components/tour-search-bar";
 import { HierarchicalCategorySelector } from "@/components/hierarchical-category-selector";
 import { BookingConfigurationForm } from "@/components/booking-configuration-form";
 import { PDFPreviewDialog } from "@/components/pdf/pdf-preview-dialog";
+import { TourPreview } from "@/components/tour-preview";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -170,6 +171,19 @@ function DashboardInner() {
           selectedTourId={selectedTour?.id}
         />
       </section>
+
+      {/* Section: Tour preview — same data as kemeryatours.com */}
+      {selectedTour && !isCustomMode && (
+        <section className="mb-8">
+          <SectionHeader
+            icon={<FileText className="h-4 w-4" />}
+            step="Tour Details"
+            title="Tour Preview — as on the website"
+            subtitle="Overview, Itinerary, Meeting Point, Included / Excluded, Prices, Trip Notes"
+          />
+          <TourPreview tour={selectedTour} />
+        </section>
+      )}
 
       {/* Section: Booking Form */}
       <section id="booking-section" className="mb-8 scroll-mt-6">

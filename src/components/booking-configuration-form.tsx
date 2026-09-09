@@ -44,9 +44,10 @@ import { Badge } from "@/components/ui/badge";
 import { cn, calculateNights, formatCurrency } from "@/lib/utils";
 
 /** Helper: given a pricing table from the website, pick the per-person price for N travelers */
-function pickPricePerPerson(pricesTable: { personsLabel: string; priceUSD: number }[] | undefined, travelers: number): number {
+export function pickPricePerPerson(pricesTable: { personsLabel: string; priceUSD: number }[] | undefined, travelers: number): number {
   if (!pricesTable || pricesTable.length === 0) return 0;
-  // Try to find an exact range match, else use the last (largest group) tier
+  const n = Math.max(1, travelers);
+  // Try to find an exact range match, else fall back to the closest tier
   for (const tier of pricesTable) {
     const label = tier.personsLabel.toLowerCase();
     // Match patterns like "2 - 3 persons", "4-6 persons", "7 - 10 persons", "1 person"
@@ -54,16 +55,27 @@ function pickPricePerPerson(pricesTable: { personsLabel: string; priceUSD: numbe
     if (rangeMatch) {
       const lo = parseInt(rangeMatch[1], 10);
       const hi = parseInt(rangeMatch[2], 10);
-      if (travelers >= lo && travelers <= hi) return tier.priceUSD;
+      if (n >= lo && n <= hi) return tier.priceUSD;
     }
     const singleMatch = label.match(/^(\d+)\s*(?:person|people)/);
-    if (singleMatch && travelers === parseInt(singleMatch[1], 10)) return tier.priceUSD;
+    if (singleMatch && n === parseInt(singleMatch[1], 10)) return tier.priceUSD;
     // "10+ persons" style
     const plusMatch = label.match(/(\d+)\s*\+/);
-    if (plusMatch && travelers >= parseInt(plusMatch[1], 10)) return tier.priceUSD;
+    if (plusMatch && n >= parseInt(plusMatch[1], 10)) return tier.priceUSD;
   }
-  // Fallback: return the last tier (usually the best per-person price for large groups)
-  return pricesTable[pricesTable.length - 1].priceUSD;
+  // Fallback: nearest tier by lower bound (small groups -> first tier,
+  // oversized groups -> last tier) instead of always the cheapest tier.
+  let best = pricesTable[0].priceUSD;
+  let bestLo = -Infinity;
+  for (const tier of pricesTable) {
+    const nums = tier.personsLabel.match(/\d+/g)?.map(Number) ?? [0];
+    const lo = Math.min(...nums);
+    if (lo <= n && lo >= bestLo) {
+      bestLo = lo;
+      best = tier.priceUSD;
+    }
+  }
+  return best;
 }
 
 const bookingSchema = z

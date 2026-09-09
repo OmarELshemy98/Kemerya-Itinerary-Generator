@@ -24,6 +24,11 @@ export interface ItineraryDay {
   accommodation?: string;
 }
 
+export interface TripNote {
+  question: string;
+  answer: string;
+}
+
 export interface Tour {
   id: string;
   subCategoryId: string;
@@ -32,9 +37,29 @@ export interface Tour {
   slug: string;
   durationDays: number;
   durationNights?: number;
+  /** Raw duration label from the website hero, e.g. "Full Day", "8 hours", "1 Day" */
+  durationLabel?: string;
+  /** Location / group / language meta from the hero, e.g. "Cairo & Giza", "All Language" */
+  location?: string;
+  group?: string;
+  language?: string;
   shortDescription?: string;
   longDescription?: string;
+  /** Full overview paragraphs exactly as on the website (#overview-text) */
+  overview?: string[];
+  /** Overview HTML (paragraphs) preserved for faithful rendering */
+  overviewHtml?: string;
+  /** Meeting point section (#meeting_point .td-about) */
+  meetingPoint?: string;
+  meetingPointHtml?: string;
+  meetingPointImages?: string[];
+  /** FAQ / trip notes section (.travel-faq) */
+  tripNotes?: TripNote[];
   image?: string;
+  /** All gallery images from the hero slider */
+  galleryImages?: string[];
+  /** Canonical URL of the tour on kemeryatours.com */
+  sourceUrl?: string;
   basePriceEUR?: number;
   basePriceUSD?: number;
   /** Per-person pricing tiers from the website, e.g. [{personsLabel: "1 Person", priceUSD: 132}, {personsLabel: "2 - 3 Persons", priceUSD: 86}, ...] */

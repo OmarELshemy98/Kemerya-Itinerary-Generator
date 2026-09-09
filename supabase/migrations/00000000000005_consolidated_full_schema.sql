@@ -272,6 +272,25 @@ WHERE id NOT LIKE 'tour-web-%'
   AND (is_manual IS DISTINCT FROM TRUE);
 
 -- ============================================================================
+-- 12) WEBSITE-FAITHFUL FIELDS (overview / meeting point / trip notes / meta)
+-- Mirrors the kemeryatours.com tour page sections:
+--   #overview (#overview-text), #itinerary, #meeting_point (.td-about),
+--   #included (.td-inc-box), #prices (.price-table), .travel-faq
+-- Idempotent: safe to run multiple times.
+-- ============================================================================
+ALTER TABLE public.cached_tours ADD COLUMN IF NOT EXISTS duration_label TEXT;
+ALTER TABLE public.cached_tours ADD COLUMN IF NOT EXISTS location TEXT;
+ALTER TABLE public.cached_tours ADD COLUMN IF NOT EXISTS group_name TEXT;
+ALTER TABLE public.cached_tours ADD COLUMN IF NOT EXISTS language TEXT;
+ALTER TABLE public.cached_tours ADD COLUMN IF NOT EXISTS overview JSONB;
+ALTER TABLE public.cached_tours ADD COLUMN IF NOT EXISTS overview_html TEXT;
+ALTER TABLE public.cached_tours ADD COLUMN IF NOT EXISTS meeting_point TEXT;
+ALTER TABLE public.cached_tours ADD COLUMN IF NOT EXISTS meeting_point_html TEXT;
+ALTER TABLE public.cached_tours ADD COLUMN IF NOT EXISTS meeting_point_images JSONB;
+ALTER TABLE public.cached_tours ADD COLUMN IF NOT EXISTS trip_notes JSONB;
+ALTER TABLE public.cached_tours ADD COLUMN IF NOT EXISTS gallery_images JSONB;
+ALTER TABLE public.cached_tours ADD COLUMN IF NOT EXISTS source_url TEXT;
+-- ============================================================================
 -- DONE. Verification:
 --   SELECT count(*) FROM public.cached_tours;
 --   SELECT count(*) FROM public.cached_main_categories;

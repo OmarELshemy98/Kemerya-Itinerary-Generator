@@ -110,6 +110,15 @@ function matchExistingSubCategory(
   return slugLike;
 }
 
+function absUrl(href: string): string {
+  const h = (href || "").trim();
+  if (!h) return "";
+  if (h.startsWith("http")) return h;
+  if (h.startsWith("//")) return `https:${h}`;
+  if (h.startsWith("/")) return `${KEMERYA_BASE_URL}${h}`;
+  return h;
+}
+
 export interface ScrapedSubCategory {
   name: string;
   slug: string;
@@ -295,10 +304,19 @@ export interface ScrapedTourDetails {
   itineraryItems: string[];
   dayItinerary: ScrapedDayItinerary[];
   overviewText?: string;
+  /** Same overview split into clean paragraphs (website #overview-text) */
+  overviewParagraphs?: string[];
+  /** Raw inner HTML of #overview-text (paragraphs preserved) */
+  overviewHtml?: string;
   durationText?: string;
   locationText?: string;
   groupText?: string;
+  languageText?: string;
   meetingPoint?: string;
+  meetingPointHtml?: string;
+  meetingPointImages?: string[];
+  /** FAQ accordion (.travel-faq .faq-item) */
+  tripNotes?: { question: string; answer: string }[];
   mainImage?: string;
   gallery?: string[];
   durationDays?: number;
@@ -325,30 +343,47 @@ export function parseTourDetailsPage(html: string): ScrapedTourDetails {
     ? Math.min(...priceMatches)
     : undefined;
 
-  let durationText: string | undefined;
-  let locationText: string | undefined;
-  let groupText: string | undefined;
-  const metaBox = $("main").first().text() || bodyText;
-  const durM = metaBox.match(/Duration\s*([\s\S]{0,80}?)(?=Location|Group|Language|Price|\n{2,})/i);
-  if (durM) durationText = cleanText(durM[1]);
-  const locM = metaBox.match(/Location\s*([\s\S]{0,80}?)(?=Duration|Group|Language|Price|\n{2,})/i);
-  if (locM) locationText = cleanText(locM[1]);
-  const grpM = metaBox.match(/Group\s*([\s\S]{0,80}?)(?=Location|Duration|Language|Price|\n{2,})/i);
-  if (grpM) groupText = cleanText(grpM[1]);
+  // ---------- Hero meta (.td-quick: span label + strong value) ----------
+  // e.g. Price $56 / Duration Full Day / Group Cairo Day Tours /
+  //      Location Cairo & Giza / Language All Language
+  const heroMeta = (() => {
+    const meta: Record<string, string> = {};
+    $(".td-quick > div").each((_, el) => {
+      const label = cleanText($(el).find("span").first().text()).toLowerCase();
+      const value = cleanText($(el).find("strong").first().text());
+      if (label && value) meta[label] = value;
+    });
+    return meta;
+  })();
 
-  const mainImage =
-    $("main img").first().attr("src") ||
-    $("main img").first().attr("data-src");
-  const gallerySrcs = $("main img")
-    .map((_, i) => $(i).attr("src") || $(i).attr("data-src") || "")
+  let durationText: string | undefined = heroMeta["duration"];
+  let locationText: string | undefined = heroMeta["location"];
+  let groupText: string | undefined = heroMeta["group"];
+  let languageText: string | undefined = heroMeta["language"];
+  // Fallback to regex scan for older/variant markup
+  if (!durationText || !locationText || !groupText) {
+    const metaBox = $("main").first().text() || bodyText;
+    const durM = metaBox.match(/Duration\s*([\s\S]{0,80}?)(?=Location|Group|Language|Price|\n{2,})/i);
+    if (durM && !durationText) durationText = cleanText(durM[1]);
+    const locM = metaBox.match(/Location\s*([\s\S]{0,80}?)(?=Duration|Group|Language|Price|\n{2,})/i);
+    if (locM && !locationText) locationText = cleanText(locM[1]);
+    const grpM = metaBox.match(/Group\s*([\s\S]{0,80}?)(?=Location|Duration|Language|Price|\n{2,})/i);
+    if (grpM && !groupText) groupText = cleanText(grpM[1]);
+  }
+
+  // ---------- Gallery (.tour-gallery .tour-img — href = full-size webp) ----------
+  const gallerySrcs = $(".tour-gallery .tour-img, #lightgallery a")
+    .map((_, a) => $(a).attr("href") || $(a).find("img").attr("src") || "")
     .toArray();
   const gallery = Array.from(
     new Set(
       (gallerySrcs as unknown as string[])
-        .filter((s) => s && s.includes("storage/"))
+        .map((s) => absUrl(s || ""))
+        .filter((s) => s && s.startsWith("http"))
         .slice(0, 8)
     )
   ) as string[];
+  const mainImage = gallery[0];
 
   // ---------- Targeted extraction (matches the live Kemerya tour page markup) ----------
   const itinerarySection = $("#itinerary");
@@ -373,6 +408,8 @@ export function parseTourDetailsPage(html: string): ScrapedTourDetails {
             .toArray();
           const cells = cellsEls as unknown as string[];
           if (cells.length < 2) return;
+          // Header row guard: "Number of Persons | Price per person"
+          if (/number of persons/i.test(cells[0]) && /price/i.test(cells[1])) return;
           const pCell = cells.find((c) => /\$/.test(c));
           if (!pCell) return;
           const personsCell =
@@ -380,7 +417,9 @@ export function parseTourDetailsPage(html: string): ScrapedTourDetails {
             cells.find((c) => c !== pCell);
           const p = extractPriceUSD(pCell);
           if (!p || !personsCell) return;
-          out.push({ personsLabel: personsCell, priceUSD: p });
+          // Normalize labels like "2 -\n3 Persons" -> "2 - 3 Persons"
+          const label = personsCell.replace(/\s+/g, " ").replace(/(\d)\s*-\s*(\d)/, "$1 - $2").trim();
+          out.push({ personsLabel: label, priceUSD: p });
         });
     });
   };
@@ -599,34 +638,52 @@ export function parseTourDetailsPage(html: string): ScrapedTourDetails {
     readTablesInto(tableRoot, tables);
   }
 
-  const sectionText = (id: string) => {
-    const root = $(`#${id}, [name="${id}"]`).first();
-    if (!root.length) return "";
-    let parts: string[] = [];
-    let cur: any = (root[0] as any).nextSibling;
-    let guard = 0;
-    while (cur && guard < 25) {
-      guard++;
-      if (cur.type === "tag") {
-        const idAttr = cur.attribs?.id;
-        if (
-          idAttr &&
-          ["overview", "itinerary", "included", "prices", "notes", "meeting_point"].includes(
-            idAttr
-          ) &&
-          idAttr !== id
-        )
-          break;
-        const t = cleanText($(cur).clone().children().remove().end().text());
-        if (t.length > 10) parts.push(t.slice(0, 1500));
-      }
-      cur = cur.nextSibling;
-    }
-    return parts.join("\n").trim();
+  const within = (id: string) => {
+    // Sections are nested: <section id="overview"> ... <section id="itinerary">
+    // inside "overview", so plain .text() leaks child sections. Clone, strip
+    // nested <section> anchors, then read.
+    const root = $(`section#${id}, #${id}`).first();
+    if (!root.length) return { text: "", html: "", paragraphs: [] as string[] };
+    const clone = root.clone();
+    clone.find("section").remove();
+    const paragraphs = clone
+      .find("p")
+      .map((_, p) => cleanText($(p).text()))
+      .toArray() as unknown as string[];
+    const cleanParas = paragraphs.filter((t) => t.length > 5);
+    const html = (clone.find("#overview-text").first().html() ||
+      clone.find(".td-about").first().html() ||
+      cleanParas.map((p) => `<p>${p}</p>`).join("")) as string;
+    const text =
+      cleanParas.join("\n\n") ||
+      cleanText(clone.text()).slice(0, 6000);
+    return { text, html, paragraphs: cleanParas };
   };
 
-  const overviewText = sectionText("overview") || undefined;
-  const meetingPoint = sectionText("meeting_point") || undefined;
+  const overview = within("overview");
+  const meeting = within("meeting_point");
+  const overviewText = overview.text || undefined;
+  const overviewParagraphs = overview.paragraphs.length
+    ? overview.paragraphs
+    : undefined;
+  const overviewHtml = overview.html || undefined;
+  const meetingPoint = meeting.text || undefined;
+  const meetingPointHtml = meeting.html || undefined;
+  const meetingPointImages = (() => {
+    const root = $(`section#meeting_point, #meeting_point`).first();
+    if (!root.length) return undefined;
+    const imgs = root
+      .find("img")
+      .map((_, img) => absUrl($(img).attr("src") || ""))
+      .toArray() as unknown as string[];
+    const clean = Array.from(new Set(imgs.filter((u) => u.startsWith("http"))));
+    return clean.length ? clean : undefined;
+  })();
+
+  // FAQ / trip notes: this tour page has NO #notes section — the tab links
+  // to a missing anchor (global FAQ lives in the site footer instead).
+  // We keep tripNotes empty rather than scraping unrelated site-wide FAQs.
+  const tripNotes = undefined;
 
   let durationDays = durationText ? extractDaysFromText(durationText) : null;
   if (!durationDays) durationDays = extractDaysFromText(title);
@@ -661,10 +718,16 @@ export function parseTourDetailsPage(html: string): ScrapedTourDetails {
     itineraryItems,
     dayItinerary,
     overviewText,
+    overviewParagraphs,
+    overviewHtml,
     durationText,
     locationText,
     groupText,
+    languageText,
     meetingPoint,
+    meetingPointHtml,
+    meetingPointImages,
+    tripNotes,
     mainImage,
     gallery: gallery.length ? gallery : undefined,
     durationDays: durationDays ?? undefined,
@@ -795,6 +858,10 @@ function tourFromDetails(
     slug: toSlug(actualTitle) || listItem.slug,
     durationDays: days,
     durationNights: nights || undefined,
+    durationLabel: details.durationText,
+    location: details.locationText,
+    group: details.groupText,
+    language: details.languageText,
     shortDescription:
       details.overviewText?.slice(0, 200) ||
       listItem.shortDescription ||
@@ -803,7 +870,15 @@ function tourFromDetails(
       details.longDescription ||
       details.overviewText ||
       listItem.shortDescription,
+    overview: details.overviewParagraphs,
+    overviewHtml: details.overviewHtml,
+    meetingPoint: details.meetingPoint,
+    meetingPointHtml: details.meetingPointHtml,
+    meetingPointImages: details.meetingPointImages,
+    tripNotes: details.tripNotes,
     image: details.mainImage || listItem.image,
+    galleryImages: details.gallery,
+    sourceUrl: listItem.url,
     basePriceEUR: basePriceEUR || undefined,
     basePriceUSD: basePriceUSD || undefined,
     pricesTable: details.pricesTable,
