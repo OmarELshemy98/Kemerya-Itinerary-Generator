@@ -280,14 +280,12 @@ export async function readCache(): Promise<CachedData | null> {
     const [mainRes, subRes, toursRes, metaRes] = await Promise.all([
       supabase.from("cached_main_categories").select("*"),
       supabase.from("cached_sub_categories").select("*"),
-      // Explicit column list (NOT select("*")): PostgREST caches the table
-      // shape per query string, and a stale postgrest schema cache can return
-      // "column X does not exist" OR silently drop columns. An explicit list
-      // forces the error to surface (so we fall back to file) instead of
-      // returning rows with missing ids.
-      supabase.from("cached_tours").select(
-        "id,title,slug,main_category_id,sub_category_id,duration_days,duration_nights,short_description,long_description,image,base_price_usd,base_price_eur,prices_table,highlights,inclusions,exclusions,itinerary,tags,is_popular"
-      ),
+      // select("*") is intentional: it returns ALL real columns (including
+      // the website-faithful new fields after migration 00000006) and never
+      // triggers PGRST204 for a column PostgREST doesn't yield. If the DB can't
+      // serve valid rows (stale schema, RLS, dropped ids), the sanity guard
+      // below falls back to the committed file cache.
+      supabase.from("cached_tours").select("*"),
       supabase.from("cache_meta").select("*").limit(1).maybeSingle(),
     ]);
 
