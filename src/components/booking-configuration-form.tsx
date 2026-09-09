@@ -88,6 +88,9 @@ const bookingSchema = z
     infants: z.coerce.number().int().min(0).max(50),
     currency: z.enum(["EUR", "USD"]),
     totalPrice: z.coerce.number().min(0, "Price cannot be negative"),
+    // Optional manual per-person price — employee can type a number, or leave
+    // blank to fall back to the auto tier price. Blank/0 → omitted from PDF.
+    pricePerPerson: z.coerce.number().min(0).optional(),
     startDate: z.string().min(1, "Start date is required"),
     endDate: z.string().min(1, "End date is required"),
     clientName: z.string().min(2, "Client name required").optional().or(z.literal("")),
@@ -156,7 +159,7 @@ export function BookingConfigurationForm({
         isCustomTour: isCustomMode,
         customTourTitle: "",
         customTourDescription: "",
-        adults: 2,
+        adults: 1,
         children: 0,
         infants: 0,
         currency: "USD",
@@ -165,10 +168,15 @@ export function BookingConfigurationForm({
           (selectedTour?.basePriceEUR != null
             ? Math.round(selectedTour.basePriceEUR / 0.92)
             : 0),
+        pricePerPerson: undefined,
         startDate: todayISO(),
         endDate: (() => {
           const d = new Date();
-          d.setDate(d.getDate() + (selectedTour?.durationDays || 3));
+          // A tour of N days overnights (N - 1) times: one-day tours are
+          // start = end (same day). Default to today for single-day tours.
+          d.setDate(
+            d.getDate() + Math.max(0, (selectedTour?.durationDays || 0) - 1)
+          );
           return d.toISOString().split("T")[0];
         })(),
         clientName: "",
@@ -191,21 +199,33 @@ export function BookingConfigurationForm({
   const adults = watch("adults");
   const children = watch("children");
   const infants = watch("infants");
+  const manualPerPerson = watch("pricePerPerson");
+  const startDateSel = watch("startDate");
 
   React.useEffect(() => {
     if (selectedTour && !isCustomMode) {
-      // Dates
-      const start = watch("startDate") || todayISO();
+      // Dates: N days → end = start + (N - 1) so a single-day tour is
+      // start = end (same day, 0 overnights).
+      const start = startDateSel || todayISO();
       const end = new Date(start);
-      end.setDate(end.getDate() + (selectedTour.durationDays || 0));
+      end.setDate(
+        end.getDate() + Math.max(0, (selectedTour.durationDays || 0) - 1)
+      );
       setValue("endDate", end.toISOString().split("T")[0]);
 
-      // Pricing: use the exact website tier for this group size
-      // (per-person price for N travelers × total travelers).
+      // Pricing: if employee entered a manual per-person price, honor it;
+      // otherwise use the exact website tier for this group size.
       const travelers = Math.max(
-        (watch("adults") || 0) + (watch("children") || 0) + (watch("infants") || 0),
+        (adults || 0) + (children || 0) + (infants || 0),
         1
       );
+      if (manualPerPerson && manualPerPerson > 0) {
+        setValue(
+          "totalPrice",
+          Math.round(manualPerPerson * travelers * 100) / 100
+        );
+        return;
+      }
       const tierPrice = pickPricePerPerson(selectedTour.pricesTable, travelers);
       const fallbackPerPax =
         selectedTour.basePriceUSD ??
@@ -218,7 +238,7 @@ export function BookingConfigurationForm({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTour, isCustomMode, adults, children, infants]);
+  }, [selectedTour, isCustomMode, adults, children, infants, manualPerPerson, startDateSel]);
 
   const {
     fields: itineraryFields,
@@ -241,7 +261,6 @@ export function BookingConfigurationForm({
   const nights =
     startDate && endDate ? calculateNights(new Date(startDate), new Date(endDate)) : 0;
 
-  const perPerson = totalTravelers > 0 ? totalPrice / totalTravelers : 0;
 
   const handleFormSubmit = (values: BookingFormValues) => {
     const config: BookingConfig = {
@@ -260,7 +279,12 @@ export function BookingConfigurationForm({
       },
       currency: values.currency as Currency,
       totalPrice: values.totalPrice,
-      pricePerPerson: totalTravelers > 0 ? values.totalPrice / totalTravelers : 0,
+      // Only send a per-person price if the employee entered one; otherwise
+      // leave it out so it never shows in the PDF / summary.
+      pricePerPerson:
+        values.pricePerPerson && values.pricePerPerson > 0
+          ? values.pricePerPerson
+          : undefined,
       startDate: values.startDate,
       endDate: values.endDate,
       clientName: values.clientName || undefined,
@@ -453,10 +477,18 @@ export function BookingConfigurationForm({
                   </p>
                 )}
               </div>
-              <div className="flex flex-col items-start justify-center rounded-lg bg-slate-50 p-3">
-                <p className="text-xs text-slate-500">Price per Person</p>
-                <p className="text-xl font-bold text-slate-900">
-                  {formatCurrency(perPerson, currency)}
+              <div>
+                <Label>Price per Person ({currency})</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  {...register("pricePerPerson", { valueAsNumber: true })}
+                  className="mt-1.5"
+                  placeholder="Auto (from tier)"
+                />
+                <p className="mt-1 text-[10px] text-slate-400">
+                  Leave empty to use the website tier per-person price.
                 </p>
               </div>
             </div>
@@ -563,18 +595,6 @@ export function BookingConfigurationForm({
                           className="mt-1"
                         />
                       </div>
-                      {day.highlights && day.highlights.length > 0 && (
-                        <div>
-                          <Label className="text-xs">Highlights</Label>
-                          <div className="mt-1 flex flex-wrap gap-1.5">
-                            {day.highlights.map((h, hi) => (
-                              <Badge key={hi} variant="outline" className="text-[10px]">
-                                {h}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                       {day.accommodation && (
                         <div>
                           <Label className="text-xs">Accommodation</Label>

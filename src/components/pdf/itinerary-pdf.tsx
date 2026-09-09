@@ -267,32 +267,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textAlign: "justify",
   },
-  dayHighlightsTitle: {
-    fontSize: 9,
-    fontWeight: "bold",
-    color: BRAND_COLORS.gold,
-    marginBottom: 6,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  highlightsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginBottom: 10,
-  },
-  highlightPill: {
-    backgroundColor: BRAND_COLORS.bg,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: BRAND_COLORS.border,
-  },
-  highlightText: {
-    fontSize: 8.5,
-    color: BRAND_COLORS.dark,
-  },
   metaRow: {
     flexDirection: "row",
     gap: 12,
@@ -1222,18 +1196,6 @@ function DayCard({ day }: { day: ItineraryDay }) {
       </View>
       <View style={styles.dayContent}>
         <Text style={styles.dayDescription}>{day.description}</Text>
-        {day.highlights && day.highlights.length > 0 && (
-          <>
-            <Text style={styles.dayHighlightsTitle}>Highlights</Text>
-            <View style={styles.highlightsRow}>
-              {day.highlights.map((h, i) => (
-                <View key={i} style={styles.highlightPill}>
-                  <Text style={styles.highlightText}>• {h}</Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
         {(day.meals || day.accommodation) && (
           <View style={styles.metaRow}>
             {day.accommodation && (
