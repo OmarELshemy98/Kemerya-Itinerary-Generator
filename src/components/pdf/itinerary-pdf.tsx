@@ -819,6 +819,10 @@ function getInclusions(
   tour: Tour | null,
   booking: BookingConfig
 ): string[] {
+  // Employee-edited inclusions take priority (standard mode)
+  if (booking.inclusions?.length) {
+    return booking.inclusions;
+  }
   if (booking.isCustomTour && booking.customInclusions?.length) {
     return booking.customInclusions;
   }
@@ -829,6 +833,10 @@ function getExclusions(
   tour: Tour | null,
   booking: BookingConfig
 ): string[] {
+  // Employee-edited exclusions take priority (standard mode)
+  if (booking.exclusions?.length) {
+    return booking.exclusions;
+  }
   if (booking.isCustomTour && booking.customExclusions?.length) {
     return booking.customExclusions;
   }
@@ -969,6 +977,18 @@ export function ItineraryPDF({
             )}
             {booking.clientWhatsapp && (
               <SummaryCard label="Client WhatsApp" value={booking.clientWhatsapp} />
+            )}
+            {booking.meetingPoint && (
+              <SummaryCard label="Meeting Point" value={booking.meetingPoint} />
+            )}
+            {booking.flightArrival && (
+              <SummaryCard
+                label="Airport Arrival / Tour Start"
+                value={booking.flightArrival.replace("T", " · ")}
+              />
+            )}
+            {booking.pickupTime && (
+              <SummaryCard label="Pickup Time" value={booking.pickupTime} />
             )}
             {booking.pricePerPerson !== undefined && (
               <SummaryCard
@@ -1271,6 +1291,16 @@ export function ItineraryPDF({
                 </Text>
               </View>
             )}
+            {(booking.specialRequestItems ?? []).map((item, i) => (
+              <View key={i} style={styles.pricingRow}>
+                <Text style={styles.pricingCell}>
+                  Extra Request · {item.description}
+                </Text>
+                <Text style={styles.pricingCellRight}>
+                  {formatCurrency(item.price, booking.currency)}
+                </Text>
+              </View>
+            ))}
             <View style={{ ...styles.pricingRow, ...styles.pricingRowLast }}>
               <Text style={{ ...styles.pricingCell, ...styles.pricingTotalLabel }}>
                 Total Amount Due

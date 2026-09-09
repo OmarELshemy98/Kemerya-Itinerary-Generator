@@ -9,6 +9,7 @@ import { TourSearchBar } from "@/components/tour-search-bar";
 import { HierarchicalCategorySelector } from "@/components/hierarchical-category-selector";
 import { BookingConfigurationForm } from "@/components/booking-configuration-form";
 import { PDFPreviewDialog } from "@/components/pdf/pdf-preview-dialog";
+import { PDFDownloader } from "@/components/pdf/pdf-downloader";
 import { TourPreview } from "@/components/tour-preview";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +58,7 @@ function DashboardInner() {
   const [isCustomMode, setIsCustomMode] = React.useState(false);
   const [bookingConfig, setBookingConfig] = React.useState<BookingConfig | null>(null);
   const [showPDF, setShowPDF] = React.useState(false);
+  const [pendingDownload, setPendingDownload] = React.useState<BookingConfig | null>(null);
   const [bookingCount, setBookingCount] = React.useState(0);
 
   const handleTourSelect = (tour: Tour) => {
@@ -69,10 +71,15 @@ function DashboardInner() {
     }, 100);
   };
 
-  const handleBookingSubmit = (config: BookingConfig) => {
+  const handleBookingSubmit = (config: BookingConfig, mode: "download" | "view") => {
     setBookingConfig(config);
     setBookingCount((c) => c + 1);
-    setShowPDF(true);
+
+    if (mode === "view") {
+      setShowPDF(true);
+    } else {
+      setPendingDownload(config);
+    }
 
     // Save itinerary to database
     fetch("/api/itineraries", {
@@ -270,12 +277,19 @@ function DashboardInner() {
         </section>
       )}
 
-      {/* PDF Dialog */}
+      {/* PDF Dialog (View mode) */}
       <PDFPreviewDialog
         open={showPDF}
         onOpenChange={setShowPDF}
         tour={selectedTour}
         booking={bookingConfig}
+      />
+
+      {/* Direct download (Generate mode) */}
+      <PDFDownloader
+        booking={pendingDownload}
+        tour={selectedTour}
+        onDone={() => setPendingDownload(null)}
       />
     </div>
   );

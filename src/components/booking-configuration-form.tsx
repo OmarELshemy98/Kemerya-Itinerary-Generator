@@ -18,6 +18,7 @@ import {
   Phone,
   Info,
   MessageCircle,
+  Eye,
 } from "lucide-react";
 import type { Tour, BookingConfig, Currency, ItineraryDay } from "@/types";
 import {
@@ -93,12 +94,17 @@ const bookingSchema = z
     pricePerPerson: z.coerce.number().min(0).optional(),
     startDate: z.string().min(1, "Start date is required"),
     endDate: z.string().min(1, "End date is required"),
-    clientName: z.string().min(2, "Client name required").optional().or(z.literal("")),
-    clientEmail: z.string().email("Invalid email").optional().or(z.literal("")),
-    clientPhone: z.string().optional().or(z.literal("")),
+    clientName: z.string().min(2, "Client name is required"),
+    clientEmail: z.string().min(1, "Email is required").email("Invalid email"),
+    clientPhone: z.string().min(5, "Phone is required"),
     clientWhatsapp: z.string().optional().or(z.literal("")),
+    /** Meeting/pickup point, e.g. "Cairo Airport arrivals hall" */
+    meetingPoint: z.string().min(2, "Meeting point is required"),
     notes: z.string().optional().or(z.literal("")),
     specialRequests: z.string().optional().or(z.literal("")),
+    /** Editable inclusions/exclusions (pre-filled from the tour for standard mode) */
+    inclusions: z.array(z.string()).optional(),
+    exclusions: z.array(z.string()).optional(),
     /** Flight arrival details, e.g. "MS1001 arriving Cairo 14:30" */
     flightArrival: z.string().optional().or(z.literal("")),
     /** Tour pickup time, e.g. "08:00 AM at your hotel" */
@@ -146,7 +152,7 @@ interface BookingConfigurationFormProps {
   selectedTour: Tour | null;
   isCustomMode: boolean;
   onCustomModeChange: (custom: boolean) => void;
-  onSubmit: (config: BookingConfig) => void;
+  onSubmit: (config: BookingConfig, mode: "download" | "view") => void;
   initialValues?: Partial<BookingFormValues>;
 }
 
@@ -197,8 +203,12 @@ export function BookingConfigurationForm({
         clientEmail: "",
         clientPhone: "",
         clientWhatsapp: "",
+        meetingPoint: "",
         notes: "",
         specialRequests: "",
+        specialRequestItems: [],
+        inclusions: selectedTour?.inclusions ?? [],
+        exclusions: selectedTour?.exclusions ?? [],
         customInclusions: [],
         customExclusions: [],
         customItinerary: [],
@@ -269,6 +279,21 @@ export function BookingConfigurationForm({
   const endDate = watch("endDate");
   const customInclusions = watch("customInclusions");
   const customExclusions = watch("customExclusions");
+  const tourInclusions = watch("inclusions");
+  const tourExclusions = watch("exclusions");
+  const specialRequestItems = watch("specialRequestItems");
+
+  // Pre-fill editable inclusions/exclusions from the selected standard tour
+  // (only when the employee hasn't customized them yet).
+  React.useEffect(() => {
+    if (isCustomMode || !selectedTour) return;
+    if ((tourInclusions ?? []).length === 0 && (selectedTour.inclusions ?? []).length > 0) {
+      setValue("inclusions", selectedTour.inclusions ?? []);
+    }
+    if ((tourExclusions ?? []).length === 0 && (selectedTour.exclusions ?? []).length > 0) {
+      setValue("exclusions", selectedTour.exclusions ?? []);
+    }
+  }, [selectedTour, isCustomMode, tourInclusions, tourExclusions, setValue]);
 
   const totalTravelers = adults + children + infants;
 
@@ -276,7 +301,7 @@ export function BookingConfigurationForm({
     startDate && endDate ? calculateNights(new Date(startDate), new Date(endDate)) : 0;
 
 
-  const handleFormSubmit = (values: BookingFormValues) => {
+  const handleFormSubmit = (values: BookingFormValues, mode: "download" | "view" = "download") => {
     const config: BookingConfig = {
       id: `bk-${Date.now()}`,
       isCustomTour: values.isCustomTour,
@@ -286,6 +311,9 @@ export function BookingConfigurationForm({
       customItinerary: values.isCustomTour ? (values.customItinerary as ItineraryDay[]) : undefined,
       customInclusions: values.isCustomTour ? values.customInclusions : undefined,
       customExclusions: values.isCustomTour ? values.customExclusions : undefined,
+      // Standard mode: employee-editable inclusions/exclusions (pre-filled from tour)
+      inclusions: !values.isCustomTour ? values.inclusions : undefined,
+      exclusions: !values.isCustomTour ? values.exclusions : undefined,
       travelers: {
         adults: values.adults,
         children: values.children,
@@ -301,19 +329,25 @@ export function BookingConfigurationForm({
           : undefined,
       startDate: values.startDate,
       endDate: values.endDate,
-      clientName: values.clientName || undefined,
-      clientEmail: values.clientEmail || undefined,
-      clientPhone: values.clientPhone || undefined,
+      clientName: values.clientName,
+      clientEmail: values.clientEmail,
+      clientPhone: values.clientPhone,
       clientWhatsapp: values.clientWhatsapp || undefined,
+      meetingPoint: values.meetingPoint,
+      flightArrival: values.flightArrival || undefined,
       notes: values.notes || undefined,
       specialRequests: values.specialRequests || undefined,
+      specialRequestItems:
+        values.specialRequestItems && values.specialRequestItems.length > 0
+          ? values.specialRequestItems
+          : undefined,
       createdAt: new Date().toISOString(),
     };
-    onSubmit(config);
+    onSubmit(config, mode);
   };
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)}>
+    <form onSubmit={handleSubmit((values) => handleFormSubmit(values, "download"))}>
       <Card className="border-slate-200 bg-white/60 backdrop-blur">
         <CardHeader className="border-b border-slate-100">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -535,37 +569,29 @@ export function BookingConfigurationForm({
             )}
           </Section>
 
-          {/* Inclusions & Exclusions for standard tours */}
-          {!isCustomMode && selectedTour && ((selectedTour.inclusions ?? []).length > 0 || (selectedTour.exclusions ?? []).length > 0) && (
-            <Section icon={<Plus className="h-4 w-4" />} title="Inclusions & Exclusions">
+          {/* Inclusions & Exclusions — editable for standard tours */}
+          {!isCustomMode && selectedTour && (
+            <Section icon={<Plus className="h-4 w-4" />} title="Inclusions & Exclusions (Editable)">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {(selectedTour.inclusions ?? []).length > 0 && (
-                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                    <Label className="mb-2 block text-xs font-semibold text-emerald-800">Inclusions</Label>
-                    <ul className="space-y-1">
-                      {(selectedTour.inclusions ?? []).map((item, i) => (
-                        <li key={i} className="flex items-start gap-1.5 text-xs text-emerald-700">
-                          <span className="mt-0.5 text-emerald-500">✓</span>
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {(selectedTour.exclusions ?? []).length > 0 && (
-                  <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-                    <Label className="mb-2 block text-xs font-semibold text-red-800">Exclusions</Label>
-                    <ul className="space-y-1">
-                      {(selectedTour.exclusions ?? []).map((item, i) => (
-                        <li key={i} className="flex items-start gap-1.5 text-xs text-red-700">
-                          <span className="mt-0.5 text-red-500">✗</span>
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                <InclusionExclusionEditor
+                  label="Inclusions"
+                  badgeVariant="emerald"
+                  value={tourInclusions ?? []}
+                  onChange={(items) => setValue("inclusions", items as any)}
+                  placeholder="Add an inclusion (e.g. Private Guide, Breakfast, Transfer...)"
+                />
+                <InclusionExclusionEditor
+                  label="Exclusions"
+                  badgeVariant="destructive"
+                  value={tourExclusions ?? []}
+                  onChange={(items) => setValue("exclusions", items as any)}
+                  placeholder="Add an exclusion..."
+                  isExclusion
+                />
               </div>
+              <p className="text-[10px] text-slate-400">
+                Pre-filled from the selected tour — add or remove items as needed before generating the PDF.
+              </p>
             </Section>
           )}
 
@@ -666,6 +692,20 @@ export function BookingConfigurationForm({
                 </p>
               </div>
             </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Airport Arrival / Tour Start *</Label>
+                <Input
+                  type="datetime-local"
+                  {...register("flightArrival")}
+                  placeholder="Flight landing or tour start moment"
+                  className="mt-1.5"
+                />
+                <p className="mt-1 text-[10px] text-slate-400">
+                  e.g. flight landing time at the airport, or when the tour program begins.
+                </p>
+              </div>
+            </div>
           </Section>
 
           {/* Optional Tours */}
@@ -675,10 +715,10 @@ export function BookingConfigurationForm({
             </Section>
           )}
 
-          <Section icon={<User className="h-4 w-4" />} title="Client Information (Optional)">
+          <Section icon={<User className="h-4 w-4" />} title="Client Information (Required)">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
-                <Label>Client Name</Label>
+                <Label>Client Name *</Label>
                 <div className="relative mt-1.5">
                   <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input
@@ -687,9 +727,14 @@ export function BookingConfigurationForm({
                     className="pl-9"
                   />
                 </div>
+                {errors.clientName && (
+                  <p className="mt-1 text-xs text-red-600">
+                    {errors.clientName.message}
+                  </p>
+                )}
               </div>
               <div>
-                <Label>Email</Label>
+                <Label>Email *</Label>
                 <div className="relative mt-1.5">
                   <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input
@@ -698,15 +743,15 @@ export function BookingConfigurationForm({
                     placeholder="client@example.com"
                     className="pl-9"
                   />
-                  {errors.clientEmail && (
-                    <p className="mt-1 text-xs text-red-600">
-                      {errors.clientEmail.message}
-                    </p>
-                  )}
                 </div>
+                {errors.clientEmail && (
+                  <p className="mt-1 text-xs text-red-600">
+                    {errors.clientEmail.message}
+                  </p>
+                )}
               </div>
               <div>
-                <Label>Phone</Label>
+                <Label>Phone *</Label>
                 <div className="relative mt-1.5">
                   <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input
@@ -716,9 +761,14 @@ export function BookingConfigurationForm({
                     className="pl-9"
                   />
                 </div>
+                {errors.clientPhone && (
+                  <p className="mt-1 text-xs text-red-600">
+                    {errors.clientPhone.message}
+                  </p>
+                )}
               </div>
               <div>
-                <Label>WhatsApp *</Label>
+                <Label>WhatsApp</Label>
                 <div className="relative mt-1.5">
                   <MessageCircle className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-500" />
                   <Input
@@ -729,6 +779,25 @@ export function BookingConfigurationForm({
                   />
                 </div>
               </div>
+              <div className="sm:col-span-2 lg:col-span-4">
+                <Label>Meeting Point (نقطة الالتقاء) *</Label>
+                <div className="relative mt-1.5">
+                  <Info className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    {...register("meetingPoint")}
+                    placeholder="e.g. Cairo Airport arrivals hall, hotel lobby, or Nile cruise dock..."
+                    className="pl-9"
+                  />
+                </div>
+                <p className="mt-1 text-[10px] text-slate-400">
+                  Where exactly the driver / guide will meet the client. Appears on the PDF itinerary.
+                </p>
+                {errors.meetingPoint && (
+                  <p className="mt-1 text-xs text-red-600">
+                    {errors.meetingPoint.message}
+                  </p>
+                )}
+              </div>
             </div>
           </Section>
 
@@ -738,8 +807,8 @@ export function BookingConfigurationForm({
                 <Label>Notes for Itinerary</Label>
                 <Textarea
                   {...register("notes")}
-                  placeholder="Any notes to appear on the PDF itinerary..."
-                  rows={3}
+                  placeholder="Any notes to appear on the PDF itinerary (e.g. guide language, dress code, photography policy)..."
+                  rows={5}
                   className="mt-1.5"
                 />
               </div>
@@ -747,11 +816,86 @@ export function BookingConfigurationForm({
                 <Label>Special Requests</Label>
                 <Textarea
                   {...register("specialRequests")}
-                  placeholder="Client special requests (e.g. room preferences, allergies, dietary needs)..."
-                  rows={3}
+                  placeholder="Client special requests (e.g. room preferences, allergies, dietary needs, accessibility requirements)..."
+                  rows={5}
                   className="mt-1.5"
                 />
               </div>
+            </div>
+
+            {/* Detailed special request items with optional price */}
+            <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <Label className="text-xs font-semibold text-slate-700">
+                  Detailed Requests / Extra Services (with prices)
+                </Label>
+                <span className="text-[10px] text-slate-400">Optional — shown on the PDF pricing table</span>
+              </div>
+              {(specialRequestItems ?? []).length === 0 && (
+                <p className="text-xs text-slate-400">
+                  No extra items added yet. Use this for things like &quot;Hot air balloon upgrade — $120&quot;.
+                </p>
+              )}
+              <div className="space-y-2">
+                {(specialRequestItems ?? []).map((item, index) => (
+                  <div key={item.id} className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <Input
+                        value={item.description}
+                        onChange={(e) => {
+                          const updated = [...(specialRequestItems ?? [])];
+                          updated[index] = { ...updated[index], description: e.target.value };
+                          setValue("specialRequestItems", updated as any);
+                        }}
+                        placeholder="Item description (e.g. Hot air balloon upgrade)"
+                      />
+                    </div>
+                    <div className="w-28 shrink-0">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        value={item.price || ""}
+                        onChange={(e) => {
+                          const updated = [...(specialRequestItems ?? [])];
+                          updated[index] = { ...updated[index], price: Number(e.target.value) || 0 };
+                          setValue("specialRequestItems", updated as any);
+                        }}
+                        placeholder="Price"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 text-red-500 hover:bg-red-50 hover:text-red-600"
+                      onClick={() =>
+                        setValue(
+                          "specialRequestItems",
+                          (specialRequestItems ?? []).filter((_, i) => i !== index) as any
+                        )
+                      }
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2 w-full border-dashed"
+                onClick={() =>
+                  setValue("specialRequestItems", [
+                    ...(specialRequestItems ?? []),
+                    { id: `sri-${Date.now()}`, description: "", price: 0 },
+                  ] as any)
+                }
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Request / Extra Service
+              </Button>
             </div>
           </Section>
 
@@ -865,6 +1009,17 @@ export function BookingConfigurationForm({
               disabled={isSubmitting}
             >
               Reset Form
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              disabled={isSubmitting || (!isCustomMode && !selectedTour)}
+              className="gap-2"
+              onClick={handleSubmit((values) => handleFormSubmit(values, "view"))}
+            >
+              <Eye className="h-4 w-4" />
+              View PDF
             </Button>
             <Button
               type="submit"

@@ -110,6 +110,8 @@ export interface BookingConfig {
   specialRequestItems?: SpecialRequestItem[];
   flightArrival?: string;
   pickupTime?: string;
+  /** Meeting/pickup point for the tour, e.g. "Cairo Airport arrivals hall" */
+  meetingPoint?: string;
   flightDeparture?: string;
   tourEndTime?: string;
   tourStartTime?: string;
