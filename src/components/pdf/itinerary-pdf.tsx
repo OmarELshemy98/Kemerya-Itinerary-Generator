@@ -19,52 +19,66 @@ import {
   calculateNights,
 } from "@/lib/utils";
 
+import cinzel400 from "@fontsource/cinzel/files/cinzel-latin-400-normal.woff";
+import cinzel700 from "@fontsource/cinzel/files/cinzel-latin-700-normal.woff";
+import cinzelDeco400 from "@fontsource/cinzel-decorative/files/cinzel-decorative-latin-400-normal.woff";
+import lora400 from "@fontsource/lora/files/lora-latin-400-normal.woff";
+import lora400Italic from "@fontsource/lora/files/lora-latin-400-italic.woff";
+import lora700 from "@fontsource/lora/files/lora-latin-700-normal.woff";
+
 Font.registerHyphenationCallback((word) => [word]);
 
+// Fonts are bundled locally (no external CDN) so PDF generation always
+// works, even offline / behind firewalls.
 Font.register({
   family: "Cinzel",
   fonts: [
-    {
-      src: "https://cdn.jsdelivr.net/npm/@fontsource/cinzel@5/files/cinzel-latin-400-normal.woff",
-    },
-    {
-      src: "https://cdn.jsdelivr.net/npm/@fontsource/cinzel@5/files/cinzel-latin-700-normal.woff",
-      fontWeight: 700,
-    },
+    { src: cinzel400 },
+    { src: cinzel700, fontWeight: 700 },
   ],
+});
+
+// Decorative display face — headings, tour titles & day numbers only.
+Font.register({
+  family: "Cinzel Decorative",
+  fonts: [{ src: cinzelDeco400 }],
 });
 
 Font.register({
   family: "Lora",
   fonts: [
-    {
-      src: "https://cdn.jsdelivr.net/npm/@fontsource/lora@5/files/lora-latin-400-normal.woff",
-    },
-    {
-      src: "https://cdn.jsdelivr.net/npm/@fontsource/lora@5/files/lora-latin-400-italic.woff",
-      fontStyle: "italic",
-    },
-    {
-      src: "https://cdn.jsdelivr.net/npm/@fontsource/lora@5/files/lora-latin-700-normal.woff",
-      fontWeight: 700,
-    },
+    { src: lora400 },
+    { src: lora400Italic, fontStyle: "italic" },
+    { src: lora700, fontWeight: 700 },
   ],
 });
 
 const BRAND_COLORS = {
-  navy: "#1E3A8A", // Lapis Lazuli - Headers & Badges
+  navy: "#1E3A8A", // Lapis Lazuli - links & small accents only
   gold: "#C5A059", // Muted Gold - Borders & Accents
   dark: "#2C1E16", // Dark Espresso - Primary Text
   lightGold: "#E8D7B1",
-  bg: "#EEDC9A", // Papyrus
+  bg: "#FDFBF7", // Premium Ivory
   text: "#2C1E16", // Dark Espresso - Primary Text
-  muted: "#64748B",
+  muted: "#8A8171", // Warm muted stone for secondary text
   border: "#C5A059", // Muted Gold - Borders & Accents
-  inclusionsBg: "#F0FDF4",
-  inclusionsText: "#166534",
-  exclusionsBg: "#FEF2F2",
-  exclusionsText: "#991B1B",
+  inclusionsBg: "#FFFFFF",
+  inclusionsText: "#2C1E16",
+  exclusionsBg: "#FFFFFF",
+  exclusionsText: "#2C1E16",
 };
+
+const TERMS_URL = "https://www.kemeryatours.com/page/terms-and-conditions";
+const TERMS_ITEMS = [
+  "Booking Confirmation: A booking is locked in only when Kemerya Tours confirms availability in writing, the required deposit is paid, and the official Booking Confirmation is issued. The lead traveler accepts these terms for every person included in the reservation.",
+  "Deposits & Balance: A non-refundable deposit equal to 35% of the total trip cost is required upon booking confirmation. The remaining 65% balance must be paid upon arrival.",
+  "Pricing & Fees: Quotes are issued in USD or EUR. Bank conversion rates and card processing fees are the traveler's responsibility. If government agencies increase monument ticket fees, taxes, port fees, or fuel surcharges before the trip, the total will be updated to cover those mandatory charges.",
+  "Services & Suppliers: Certain travel components are provided by independent third-party suppliers (hotels, airlines, cruise operators, carriers, and site authorities). Services included are strictly those detailed in the confirmed quotation and itinerary.",
+  "Cancellations & Changes: Most bookings can be changed or canceled depending on the airline, hotel, or service provider's policy. Deposits are non-refundable; cancellation fees follow the confirmed booking terms.",
+  "Liability: Kemerya Tours' maximum financial liability for any dispute, injury, damage, or expense connected to the trip never exceeds the total amount paid for the specific booking. Indirect or consequential damages are excluded.",
+  "In-Trip Complaints: Report any issue to your guide or local representative immediately so it can be fixed on the spot; otherwise send a detailed email complaint within 15 days of finishing the trip.",
+  "Emergency & Governing Law: A 24/7 emergency line is printed on the confirmation voucher. Egyptian law governs these booking terms.",
+];
 
 const styles = StyleSheet.create({
   page: {
@@ -84,57 +98,127 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     padding: 14,
   },
-  // --- Papyrus texture overlay ---
-  papyrusTexture: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    opacity: 0.5,
-  },
-  textureLine: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: BRAND_COLORS.gold,
-    opacity: 0.14,
-  },
-  textureFiber: {
-    position: "absolute",
-    width: "160%",
-    height: 26,
-    backgroundColor: "#D9B96A",
-    opacity: 0.05,
-  },
-  // --- Ankh watermark (centered) ---
+  // --- Ankh watermark (centered, faint gold foil stamp) ---
   watermarkAnkh: {
     position: "absolute",
     top: "42%",
     left: 0,
     right: 0,
     alignItems: "center",
-    opacity: 0.05,
+    opacity: 0.04,
   },
   ankhLoop: {
     width: 70,
     height: 78,
     borderWidth: 10,
     borderStyle: "solid",
-    borderColor: BRAND_COLORS.dark,
+    borderColor: BRAND_COLORS.gold,
     borderRadius: 999,
   },
   ankhCrossbar: {
     width: 96,
     height: 10,
-    backgroundColor: BRAND_COLORS.dark,
+    backgroundColor: BRAND_COLORS.gold,
     marginTop: -2,
   },
   ankhStem: {
     width: 10,
     height: 84,
-    backgroundColor: BRAND_COLORS.dark,
+    backgroundColor: BRAND_COLORS.gold,
+  },
+  // --- Terms & Policy ---
+  termsSection: {
+    marginTop: 4,
+  },
+  termsCard: {
+    backgroundColor: "white",
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: BRAND_COLORS.border,
+    padding: 14,
+  },
+  termsItemRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginBottom: 6,
+  },
+  termsBullet: {
+    color: BRAND_COLORS.gold,
+    fontSize: 8.5,
+    fontWeight: "bold",
+  },
+  termsItemText: {
+    flex: 1,
+    fontSize: 8.5,
+    color: BRAND_COLORS.text,
+    fontFamily: "Lora",
+    lineHeight: 1.55,
+    textAlign: "justify",
+  },
+  termsLinkText: {
+    fontSize: 8.5,
+    color: BRAND_COLORS.navy,
+    fontFamily: "Lora",
+    textDecoration: "underline",
+  },
+  // --- Leave a Review block ---
+  reviewCard: {
+    backgroundColor: "white",
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: BRAND_COLORS.gold,
+    padding: 24,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  reviewTitle: {
+    color: BRAND_COLORS.dark,
+    fontSize: 13,
+    fontFamily: "Cinzel Decorative",
+    letterSpacing: 0.5,
+  },
+  reviewSubtitle: {
+    color: BRAND_COLORS.muted,
+    fontSize: 9,
+    fontFamily: "Lora",
+    textAlign: "center",
+    marginTop: 5,
+    lineHeight: 1.5,
+  },
+  reviewBadge: {
+    backgroundColor: BRAND_COLORS.gold,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    marginTop: 10,
+  },
+  reviewBadgeText: {
+    color: "white",
+    fontSize: 9.5,
+    fontFamily: "Cinzel Decorative",
+    letterSpacing: 0.8,
+  },
+  reviewLink: {
+    color: BRAND_COLORS.muted,
+    fontSize: 8,
+    fontFamily: "Lora",
+    marginTop: 8,
+  },
+  // --- Social links footer ---
+  socialRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 14,
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopStyle: "solid",
+    borderTopColor: BRAND_COLORS.border,
+  },
+  socialLinkItem: {
+    fontSize: 8.5,
+    color: BRAND_COLORS.navy,
+    fontFamily: "Lora",
+    fontWeight: "bold",
   },
   logoImg: {
     height: 55,
@@ -170,9 +254,8 @@ const styles = StyleSheet.create({
   },
   brandName: {
     fontSize: 26,
-    fontWeight: "bold",
-    fontFamily: "Cinzel",
-    color: BRAND_COLORS.navy,
+    fontFamily: "Cinzel Decorative",
+    color: BRAND_COLORS.dark,
     letterSpacing: 1.2,
   },
   brandTagline: {
@@ -194,15 +277,18 @@ const styles = StyleSheet.create({
     lineHeight: 1.6,
   },
   heroCard: {
-    backgroundColor: BRAND_COLORS.navy,
-    padding: 28,
+    backgroundColor: "white",
+    padding: 32,
     marginBottom: 24,
     borderRadius: 0,
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: BRAND_COLORS.gold,
     position: "relative",
     overflow: "hidden",
   },
   heroTopBar: {
-    height: 4,
+    height: 3,
     position: "absolute",
     top: 0,
     left: 0,
@@ -210,19 +296,18 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND_COLORS.gold,
   },
   heroTourName: {
-    color: "white",
+    color: BRAND_COLORS.dark,
     fontSize: 22,
-    fontWeight: "bold",
-    fontFamily: "Cinzel",
-    marginBottom: 8,
-    lineHeight: 1.25,
+    fontFamily: "Cinzel Decorative",
+    marginBottom: 10,
+    lineHeight: 1.3,
   },
   heroSubtitle: {
-    color: BRAND_COLORS.lightGold,
+    color: BRAND_COLORS.gold,
     fontSize: 10,
-    letterSpacing: 1.5,
+    letterSpacing: 2,
     textTransform: "uppercase",
-    marginBottom: 20,
+    marginBottom: 22,
   },
   heroGrid: {
     flexDirection: "row",
@@ -234,7 +319,7 @@ const styles = StyleSheet.create({
     minWidth: "30%",
     paddingRight: 12,
     borderRightWidth: 1,
-    borderRightColor: "rgba(255,255,255,0.1)",
+    borderRightColor: BRAND_COLORS.border,
   },
   heroStatLast: {
     flex: 1,
@@ -243,14 +328,14 @@ const styles = StyleSheet.create({
     borderRightWidth: 0,
   },
   heroStatLabel: {
-    color: BRAND_COLORS.lightGold,
+    color: BRAND_COLORS.muted,
     fontSize: 7.5,
     letterSpacing: 1.5,
     textTransform: "uppercase",
     marginBottom: 4,
   },
   heroStatValue: {
-    color: "white",
+    color: BRAND_COLORS.dark,
     fontSize: 14,
     fontWeight: "bold",
   },
@@ -277,10 +362,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: "bold",
-    color: BRAND_COLORS.navy,
-    fontFamily: "Cinzel",
-    letterSpacing: 0.3,
+    color: BRAND_COLORS.dark,
+    fontFamily: "Cinzel Decorative",
+    letterSpacing: 0.4,
   },
   sectionUnderline: {
     flex: 1,
@@ -295,7 +379,7 @@ const styles = StyleSheet.create({
   summaryItem: {
     width: "48%",
     flexDirection: "row",
-    padding: 12,
+    padding: 14,
     borderRadius: 0,
     backgroundColor: "white",
     borderWidth: 1,
@@ -335,9 +419,12 @@ const styles = StyleSheet.create({
   dayHeader: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: BRAND_COLORS.dark,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: "white",
+    borderBottomWidth: 1,
+    borderBottomStyle: "solid",
+    borderBottomColor: BRAND_COLORS.border,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
   },
   dayBadge: {
     backgroundColor: BRAND_COLORS.gold,
@@ -349,19 +436,17 @@ const styles = StyleSheet.create({
   dayBadgeText: {
     color: "white",
     fontSize: 9,
-    fontWeight: "bold",
-    fontFamily: "Cinzel",
+    fontFamily: "Cinzel Decorative",
     letterSpacing: 0.5,
   },
   dayTitle: {
-    color: "white",
+    color: BRAND_COLORS.dark,
     fontSize: 12,
-    fontWeight: "bold",
-    fontFamily: "Cinzel",
+    fontFamily: "Cinzel Decorative",
     flex: 1,
   },
   dayContent: {
-    padding: 16,
+    padding: 20,
   },
   dayDescription: {
     fontSize: 10,
@@ -405,35 +490,37 @@ const styles = StyleSheet.create({
     width: "50%",
   },
   inclusionsCard: {
-    backgroundColor: BRAND_COLORS.inclusionsBg,
+    backgroundColor: "white",
     borderRadius: 0,
-    padding: 16,
+    padding: 20,
     borderWidth: 1,
-    borderColor: "#BBF7D0",
+    borderStyle: "solid",
+    borderColor: BRAND_COLORS.gold,
   },
   exclusionsCard: {
-    backgroundColor: BRAND_COLORS.exclusionsBg,
+    backgroundColor: "white",
     borderRadius: 0,
-    padding: 16,
+    padding: 20,
     borderWidth: 1,
-    borderColor: "#FECACA",
+    borderStyle: "solid",
+    borderColor: BRAND_COLORS.gold,
   },
   sectionCardTitle: {
     fontSize: 11,
-    fontWeight: "bold",
+    fontFamily: "Cinzel Decorative",
     textTransform: "uppercase",
     letterSpacing: 1,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   inclusionTitleText: {
-    color: BRAND_COLORS.inclusionsText,
+    color: BRAND_COLORS.dark,
   },
   exclusionTitleText: {
-    color: BRAND_COLORS.exclusionsText,
+    color: BRAND_COLORS.dark,
   },
   listItem: {
     flexDirection: "row",
-    marginBottom: 7,
+    marginBottom: 8,
     gap: 8,
     alignItems: "flex-start",
   },
@@ -441,7 +528,7 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 0,
-    backgroundColor: "#16A34A",
+    backgroundColor: BRAND_COLORS.gold,
     color: "white",
     fontSize: 9,
     textAlign: "center",
@@ -487,7 +574,7 @@ const styles = StyleSheet.create({
     borderBottomColor: BRAND_COLORS.border,
   },
   pricingRowLast: {
-    backgroundColor: BRAND_COLORS.navy,
+    backgroundColor: BRAND_COLORS.bg,
     borderBottomWidth: 0,
   },
   pricingCell: {
@@ -510,14 +597,14 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   pricingTotalLabel: {
-    color: "white",
+    color: BRAND_COLORS.dark,
     fontSize: 12,
     fontWeight: "bold",
     textTransform: "uppercase",
     letterSpacing: 1,
   },
   pricingTotalValue: {
-    color: BRAND_COLORS.gold,
+    color: BRAND_COLORS.dark,
     fontSize: 16,
     fontWeight: "bold",
   },
@@ -544,32 +631,32 @@ const styles = StyleSheet.create({
     textAlign: "justify",
   },
   notesBlock: {
-    backgroundColor: "#FFFBEB",
+    backgroundColor: "white",
     borderRadius: 0,
-    padding: 14,
+    padding: 18,
     borderWidth: 1,
-    borderColor: "#FDE68A",
+    borderStyle: "solid",
+    borderColor: BRAND_COLORS.gold,
     marginBottom: 16,
   },
   notesTitle: {
     fontSize: 9,
     fontWeight: "bold",
-    color: "#92400E",
+    color: BRAND_COLORS.gold,
     textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: 6,
   },
   notesText: {
     fontSize: 9.5,
-    color: "#78350F",
+    color: BRAND_COLORS.text,
     fontFamily: "Lora",
     lineHeight: 1.6,
   },
   // Drop cap for the first Tour Overview paragraph
   dropCap: {
-    fontSize: 28,
-    fontWeight: "bold",
-    fontFamily: "Cinzel",
+    fontSize: 30,
+    fontFamily: "Cinzel Decorative",
     color: BRAND_COLORS.gold,
     lineHeight: 1,
     marginRight: 3,
@@ -596,16 +683,18 @@ const styles = StyleSheet.create({
     color: BRAND_COLORS.muted,
   },
   operationsCard: {
-    backgroundColor: BRAND_COLORS.navy,
+    backgroundColor: "white",
     borderRadius: 0,
-    padding: 18,
+    padding: 24,
     marginTop: 16,
-    color: "white",
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: BRAND_COLORS.gold,
   },
   operationsHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 14,
     gap: 10,
   },
   opsBadge: {
@@ -615,16 +704,16 @@ const styles = StyleSheet.create({
     borderRadius: 0,
   },
   opsBadgeText: {
-    color: BRAND_COLORS.navy,
+    color: "white",
     fontSize: 8,
     fontWeight: "bold",
     letterSpacing: 0.5,
     textTransform: "uppercase",
   },
   opsCardTitle: {
-    color: "white",
+    color: BRAND_COLORS.dark,
     fontSize: 12,
-    fontWeight: "bold",
+    fontFamily: "Cinzel Decorative",
   },
   opsGrid: {
     flexDirection: "row",
@@ -638,13 +727,13 @@ const styles = StyleSheet.create({
   },
   opsLabel: {
     fontSize: 7.5,
-    color: BRAND_COLORS.lightGold,
+    color: BRAND_COLORS.muted,
     textTransform: "uppercase",
     letterSpacing: 1,
   },
   opsValue: {
     fontSize: 10,
-    color: "white",
+    color: BRAND_COLORS.text,
     fontWeight: "semibold",
   },
   clientBadge: {
@@ -669,7 +758,7 @@ const styles = StyleSheet.create({
     opacity: 0.04,
     fontSize: 140,
     fontWeight: "bold",
-    color: BRAND_COLORS.navy,
+    color: BRAND_COLORS.gold,
     letterSpacing: -2,
     transform: "rotate(-45deg)",
   },
@@ -681,34 +770,6 @@ const styles = StyleSheet.create({
     fontSize: 8,
     color: BRAND_COLORS.muted,
   },
-  socialSection: {
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: BRAND_COLORS.border,
-  },
-  socialTitle: {
-    fontSize: 11,
-    fontWeight: "bold",
-    color: BRAND_COLORS.navy,
-    marginBottom: 8,
-  },
-  socialLinks: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 12,
-  },
-  socialLink: {
-    fontSize: 9,
-    color: BRAND_COLORS.gold,
-    textDecoration: "underline",
-  },
-  reviewPrompt: {
-    fontSize: 9,
-    color: BRAND_COLORS.text,
-    lineHeight: 1.6,
-  },
 });
 
 /**
@@ -716,51 +777,16 @@ const styles = StyleSheet.create({
  * papyrus background, gold royal frame, papyrus texture overlay,
  * and a centered, highly transparent Ankh watermark.
  */
+/**
+ * RoyalPage — shared page chrome for every page of the PDF:
+ * Premium Ivory background, gold royal frame, and a centered,
+ * faint gold-foil Ankh watermark.
+ */
 function RoyalPage({ children }: { children: React.ReactNode }) {
   return (
     <Page size="A4" style={styles.page}>
       <View style={styles.pageFrame}>
-        {/* Papyrus texture overlay */}
-        <View style={styles.papyrusTexture} fixed>
-          <View
-            style={[styles.textureLine, { top: "12%" }]}
-          />
-          <View
-            style={[styles.textureLine, { top: "27%", opacity: 0.1 }]}
-          />
-          <View
-            style={[styles.textureLine, { top: "44%", opacity: 0.12 }]}
-          />
-          <View
-            style={[styles.textureLine, { top: "61%", opacity: 0.1 }]}
-          />
-          <View
-            style={[styles.textureLine, { top: "78%", opacity: 0.14 }]}
-          />
-          <View
-            style={[styles.textureLine, { top: "91%", opacity: 0.09 }]}
-          />
-          <View
-            style={[
-              styles.textureFiber,
-              { top: "18%", left: "-30%", transform: "rotate(35deg)" },
-            ]}
-          />
-          <View
-            style={[
-              styles.textureFiber,
-              { top: "55%", left: "-20%", transform: "rotate(-25deg)" },
-            ]}
-          />
-          <View
-            style={[
-              styles.textureFiber,
-              { top: "84%", left: "-35%", transform: "rotate(15deg)" },
-            ]}
-          />
-        </View>
-
-        {/* Centered Ankh watermark (5% opacity) */}
+        {/* Centered Ankh watermark (gold foil, 4% opacity) */}
         <View style={styles.watermarkAnkh} fixed>
           <View style={styles.ankhLoop} />
           <View style={styles.ankhCrossbar} />
@@ -989,12 +1015,6 @@ export function ItineraryPDF({
             )}
             {booking.pickupTime && (
               <SummaryCard label="Pickup Time" value={booking.pickupTime} />
-            )}
-            {booking.pricePerPerson !== undefined && (
-              <SummaryCard
-                label="Price Per Person"
-                value={formatCurrency(booking.pricePerPerson, booking.currency)}
-              />
             )}
           </View>
         </View>
@@ -1382,6 +1402,106 @@ export function ItineraryPDF({
           </Text>
           <Text style={styles.footerPage}>
             Page {itinerary.length > 3 ? "4" : "3"}
+          </Text>
+        </View>
+      </RoyalPage>
+
+      {/* PAGE 5 - TERMS & POLICY + LEAVE A REVIEW */}
+      <RoyalPage>
+        <View style={styles.watermark}>KEMERYA</View>
+
+        <View style={styles.header}>
+          <View style={styles.brandBlock}>
+            {companyInfo.logo ? (
+              // eslint-disable-next-line jsx-a11y/alt-text
+              <Image src={companyInfo.logo} style={styles.logoImgSmall} />
+            ) : (
+              <Text style={{ ...styles.brandName, fontSize: 18 }}>{companyInfo.name}</Text>
+            )}
+            <Text style={styles.brandTagline}>Terms & Policy</Text>
+            <View style={styles.brandLine} />
+          </View>
+          <View style={styles.headerContact}>
+            <Text>Ref: #{bookingRef}</Text>
+            <Text>{formatDateShort(booking.startDate)} → {formatDateShort(booking.endDate)}</Text>
+          </View>
+        </View>
+
+        {/* 06 - TERMS & POLICY */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionNumber}>06</View>
+            <Text style={styles.sectionTitle}>Terms & Policy</Text>
+            <View style={styles.sectionUnderline} />
+          </View>
+          <View style={styles.termsCard}>
+            {TERMS_ITEMS.map((item, i) => (
+              <View key={i} style={styles.termsItemRow}>
+                <Text style={styles.termsBullet}>▪</Text>
+                <Text style={styles.termsItemText}>{item}</Text>
+              </View>
+            ))}
+            <Text style={styles.termsItemText}>
+              Read the full terms on our website:{" "}
+              <Link src={TERMS_URL} style={styles.termsLinkText}>
+                {TERMS_URL}
+              </Link>
+            </Text>
+          </View>
+        </View>
+
+        {/* LEAVE A REVIEW */}
+        <View style={styles.reviewCard}>
+          <Text style={styles.reviewTitle}>Leave a Review</Text>
+          <Text style={styles.reviewSubtitle}>
+            Loved your tour? Your feedback on Google Business helps travelers
+            like you find us.
+          </Text>
+          <Link src={companyInfo.socialMedia?.googleBusiness || "https://share.google/RLldzNlk9YFVuIGbD"}>
+            <View style={styles.reviewBadge}>
+              <Text style={styles.reviewBadgeText}>★ Write a Review</Text>
+            </View>
+          </Link>
+          <Text style={styles.reviewLink}>
+            {companyInfo.socialMedia?.googleBusiness || "https://share.google/RLldzNlk9YFVuIGbD"}
+          </Text>
+        </View>
+
+        {/* SOCIAL MEDIA LINKS */}
+        <View style={styles.socialRow}>
+          {companyInfo.socialMedia?.facebook && (
+            <Link src={companyInfo.socialMedia.facebook} style={styles.socialLinkItem}>
+              Facebook
+            </Link>
+          )}
+          {companyInfo.socialMedia?.instagram && (
+            <Link src={companyInfo.socialMedia.instagram} style={styles.socialLinkItem}>
+              Instagram
+            </Link>
+          )}
+          {companyInfo.socialMedia?.youtube && (
+            <Link src={companyInfo.socialMedia.youtube} style={styles.socialLinkItem}>
+              YouTube
+            </Link>
+          )}
+          {companyInfo.socialMedia?.twitter && (
+            <Link src={companyInfo.socialMedia.twitter} style={styles.socialLinkItem}>
+              X (Twitter)
+            </Link>
+          )}
+          {companyInfo.socialMedia?.googleBusiness && (
+            <Link src={companyInfo.socialMedia.googleBusiness} style={styles.socialLinkItem}>
+              Google Business
+            </Link>
+          )}
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerBrand}>
+            © {new Date().getFullYear()} {companyInfo.name} · All Rights Reserved
+          </Text>
+          <Text style={styles.footerPage}>
+            Page {itinerary.length > 3 ? "5" : "4"}
           </Text>
         </View>
       </RoyalPage>

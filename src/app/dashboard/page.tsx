@@ -8,14 +8,86 @@ import type { Tour, BookingConfig } from "@/types";
 import { TourSearchBar } from "@/components/tour-search-bar";
 import { HierarchicalCategorySelector } from "@/components/hierarchical-category-selector";
 import { BookingConfigurationForm } from "@/components/booking-configuration-form";
-import { PDFPreviewDialog } from "@/components/pdf/pdf-preview-dialog";
-import { PDFDownloader } from "@/components/pdf/pdf-downloader";
+import { PDFPreviewDialog, buildWhatsAppMessage } from "@/components/pdf/pdf-preview-dialog";
+import { PDFDownloader, buildItineraryFileName } from "@/components/pdf/pdf-downloader";
 import { TourPreview } from "@/components/tour-preview";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { KEMERYA_COMPANY_INFO } from "@/data/company";
 import { formatDateShort, formatCurrency, cn } from "@/lib/utils";
+
+function GreetingMessageButton({
+  booking,
+  tour,
+}: {
+  booking: BookingConfig;
+  tour: Tour | null;
+}) {
+  const [copied, setCopied] = React.useState(false);
+
+  const message = React.useMemo(
+    () =>
+      buildWhatsAppMessage(
+        booking,
+        tour,
+        KEMERYA_COMPANY_INFO,
+        buildItineraryFileName(booking, tour)
+      ),
+    [booking, tour]
+  );
+
+  const clientPhone = booking.clientWhatsapp || booking.clientPhone || "";
+  const phone = clientPhone.replace(/[^\d]/g, "");
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleSend = () => {
+    if (phone.length >= 10) {
+      window.open(
+        `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
+        "_blank",
+        "noopener,noreferrer"
+      );
+    } else {
+      handleCopy();
+    }
+  };
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-9"
+        onClick={handleCopy}
+      >
+        {copied ? (
+          <Check className="mr-2 h-4 w-4 text-emerald-600" />
+        ) : (
+          <Copy className="mr-2 h-4 w-4" />
+        )}
+        {copied ? "Copied!" : "Copy Greeting"}
+      </Button>
+      <Button
+        size="sm"
+        className="h-9 bg-emerald-500 text-white hover:bg-emerald-600"
+        onClick={handleSend}
+      >
+        <MessageCircle className="mr-2 h-4 w-4" />
+        Greeting Message
+      </Button>
+    </>
+  );
+}
 
 function WhatsAppButton({ phoneNumber }: { phoneNumber: string }) {
   const [copied, setCopied] = React.useState(false);
@@ -236,6 +308,10 @@ function DashboardInner() {
                     phoneNumber={bookingConfig.clientWhatsapp || bookingConfig.clientPhone || ""}
                   />
                 )}
+                <GreetingMessageButton
+                  booking={bookingConfig}
+                  tour={bookingConfig.isCustomTour ? null : selectedTour}
+                />
                 <Button variant="gold" size="sm" onClick={() => setShowPDF(true)}>
                   <FileText className="mr-2 h-4 w-4" />
                   Re-open PDF

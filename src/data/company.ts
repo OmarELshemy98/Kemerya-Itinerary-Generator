@@ -25,6 +25,6 @@ export const KEMERYA_COMPANY_INFO: CompanyInfo = {
     instagram: "https://www.instagram.com/kemeryatours",
     youtube: "https://www.youtube.com/@kemeryatours",
     twitter: "https://x.com/kemeryatours",
-    googleBusiness: "https://share.google/hOY66JBneGaV0P1Nx",
+    googleBusiness: "https://share.google/RLldzNlk9YFVuIGbD",
   },
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BlobProvider } from "@react-pdf/renderer";
+import { pdf } from "@react-pdf/renderer";
 import type { Tour, BookingConfig } from "@/types";
 import { ItineraryPDF } from "./itinerary-pdf";
 import { KEMERYA_COMPANY_INFO } from "@/data/company";
@@ -12,67 +12,69 @@ interface PDFDownloaderProps {
   onDone?: () => void;
 }
 
-/**
- * Hidden helper that triggers the actual file download once the PDF blob
- * is ready. Extracted as its own component so the useEffect inside
- * BlobProvider's render prop is a real component hook.
- */
-function TriggerDownload({
-  blob,
-  loading,
-  fileName,
-  onDone,
-}: {
-  blob: Blob | null;
-  loading: boolean;
-  fileName: string;
-  onDone?: () => void;
-}) {
-  React.useEffect(() => {
-    if (!blob || loading) return;
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    // Give the browser a moment before revoking, then notify parent.
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-    onDone?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blob, loading, fileName]);
-
-  return null;
-}
-
-/**
- * PDFDownloader — mounts an off-screen BlobProvider for the given booking
- * and automatically downloads the generated PDF. Used when the employee
- * clicks "Generate PDF Itinerary" (direct download, no preview dialog).
- */
-export function PDFDownloader({ booking, tour, onDone }: PDFDownloaderProps) {
-  if (!booking) return null;
-
+export function buildItineraryFileName(
+  booking: BookingConfig,
+  tour: Tour | null
+): string {
   const bookingRef = booking.id.toUpperCase().replace(/-/g, "").slice(-8);
   const tourTitle = booking.isCustomTour
     ? booking.customTourTitle || "Custom-Tour"
     : tour?.title || "Kemerya-Tour";
-  const safeName = tourTitle.replace(/[^a-z0-9\-_ ]/gi, "").trim().replace(/\s+/g, "-");
-  const fileName = `Kemerya-Itinerary-${safeName}-${bookingRef}.pdf`;
+  const safeName = tourTitle
+    .replace(/[^a-zA-Z0-9\-_ ]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 60);
+  return `Kemerya-Itinerary-${safeName}-${bookingRef.slice(-4)}.pdf`;
+}
 
-  return (
-    <div style={{ position: "absolute", width: 0, height: 0, overflow: "hidden" }} aria-hidden>
-      <BlobProvider document={<ItineraryPDF tour={tour} booking={booking} />}>
-        {({ blob, loading }) => (
-          <TriggerDownload
-            blob={blob}
-            loading={loading}
-            fileName={fileName}
-            onDone={onDone}
-          />
-        )}
-      </BlobProvider>
-    </div>
-  );
+/**
+ * PDFDownloader — generates the PDF imperatively (pdf().toBlob()) and
+ * triggers a direct download. Renders nothing; runs only in the browser.
+ */
+export function PDFDownloader({ booking, tour, onDone }: PDFDownloaderProps) {
+  const startedRef = React.useRef<BookingConfig | null>(null);
+
+  React.useEffect(() => {
+    if (!booking) {
+      startedRef.current = null;
+      return;
+    }
+    // Guard against double-execution for the same booking object
+    if (startedRef.current === booking) return;
+    startedRef.current = booking;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const blob = await pdf(
+          <ItineraryPDF tour={tour} booking={booking} companyInfo={KEMERYA_COMPANY_INFO} />
+        ).toBlob();
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = buildItineraryFileName(booking, tour);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        onDone?.();
+      } catch (err) {
+        console.error("PDF generation failed:", err);
+        alert(
+          "Sorry, the PDF could not be generated. Please check your connection and try again.\n\n" +
+            String(err)
+        );
+        onDone?.();
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [booking, tour]);
+
+  return null;
 }

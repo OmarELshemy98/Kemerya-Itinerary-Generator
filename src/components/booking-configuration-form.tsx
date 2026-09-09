@@ -91,7 +91,6 @@ const bookingSchema = z
     totalPrice: z.coerce.number().min(0, "Price cannot be negative"),
     // Optional manual per-person price — employee can type a number, or leave
     // blank to fall back to the auto tier price. Blank/0 → omitted from PDF.
-    pricePerPerson: z.coerce.number().min(0).optional(),
     startDate: z.string().min(1, "Start date is required"),
     endDate: z.string().min(1, "End date is required"),
     clientName: z.string().min(2, "Client name is required"),
@@ -188,7 +187,6 @@ export function BookingConfigurationForm({
           (selectedTour?.basePriceEUR != null
             ? Math.round(selectedTour.basePriceEUR / 0.92)
             : 0),
-        pricePerPerson: undefined,
         startDate: todayISO(),
         endDate: (() => {
           const d = new Date();
@@ -223,7 +221,6 @@ export function BookingConfigurationForm({
   const adults = watch("adults");
   const children = watch("children");
   const infants = watch("infants");
-  const manualPerPerson = watch("pricePerPerson");
   const startDateSel = watch("startDate");
 
   React.useEffect(() => {
@@ -237,19 +234,11 @@ export function BookingConfigurationForm({
       );
       setValue("endDate", end.toISOString().split("T")[0]);
 
-      // Pricing: if employee entered a manual per-person price, honor it;
-      // otherwise use the exact website tier for this group size.
+      // Pricing: always use the exact website tier for this group size.
       const travelers = Math.max(
         (adults || 0) + (children || 0) + (infants || 0),
         1
       );
-      if (manualPerPerson && manualPerPerson > 0) {
-        setValue(
-          "totalPrice",
-          Math.round(manualPerPerson * travelers * 100) / 100
-        );
-        return;
-      }
       const tierPrice = pickPricePerPerson(selectedTour.pricesTable, travelers);
       const fallbackPerPax =
         selectedTour.basePriceUSD ??
@@ -262,7 +251,7 @@ export function BookingConfigurationForm({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTour, isCustomMode, adults, children, infants, manualPerPerson, startDateSel]);
+  }, [selectedTour, isCustomMode, adults, children, infants, startDateSel]);
 
   const {
     fields: itineraryFields,
@@ -321,12 +310,6 @@ export function BookingConfigurationForm({
       },
       currency: values.currency as Currency,
       totalPrice: values.totalPrice,
-      // Only send a per-person price if the employee entered one; otherwise
-      // leave it out so it never shows in the PDF / summary.
-      pricePerPerson:
-        values.pricePerPerson && values.pricePerPerson > 0
-          ? values.pricePerPerson
-          : undefined,
       startDate: values.startDate,
       endDate: values.endDate,
       clientName: values.clientName,
@@ -524,20 +507,6 @@ export function BookingConfigurationForm({
                     {errors.totalPrice.message}
                   </p>
                 )}
-              </div>
-              <div>
-                <Label>Price per Person ({currency})</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  {...register("pricePerPerson", { valueAsNumber: true })}
-                  className="mt-1.5"
-                  placeholder="Auto (from tier)"
-                />
-                <p className="mt-1 text-[10px] text-slate-400">
-                  Leave empty to use the website tier per-person price.
-                </p>
               </div>
             </div>
             {/* Pricing tiers from the website */}

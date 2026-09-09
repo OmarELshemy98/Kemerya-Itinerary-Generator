@@ -41,7 +41,7 @@ function sanitizePhone(phone: string): string {
   return phone.replace(/[^\d]/g, "");
 }
 
-function buildWhatsAppMessage(
+export function buildWhatsAppMessage(
   booking: BookingConfig,
   tour: Tour | null,
   companyInfo: CompanyInfo,
@@ -334,7 +334,11 @@ export function PDFPreviewDialog({
         </DialogHeader>
 
         <BlobProvider document={pdfDocument}>
-          {({ blob, url, loading }) => (
+          {({ blob, url, loading, error: blobError }) => {
+            const renderError = blobError
+              ? String(blobError?.message || blobError)
+              : null;
+            return (
             <>
               {/* Preview Area */}
               <div className="relative flex-1 overflow-hidden bg-slate-100">
@@ -353,7 +357,7 @@ export function PDFPreviewDialog({
                       </p>
                     </div>
                   </div>
-                ) : error ? (
+                ) : error || renderError ? (
                   <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
                       <X className="h-6 w-6" />
@@ -361,7 +365,9 @@ export function PDFPreviewDialog({
                     <p className="text-sm font-semibold text-red-700">
                       Failed to render PDF preview
                     </p>
-                    <p className="max-w-md text-xs text-red-500">{error}</p>
+                    <p className="max-w-md text-xs text-red-500">
+                      {error || renderError}
+                    </p>
                   </div>
                 ) : !url && !blob ? (
                   <div className="flex h-full items-center justify-center p-6">
@@ -429,7 +435,8 @@ export function PDFPreviewDialog({
                 </div>
               </div>
             </>
-          )}
+            );
+          }}
         </BlobProvider>
       </DialogContent>
     </Dialog>
