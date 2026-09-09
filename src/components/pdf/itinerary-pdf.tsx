@@ -19,37 +19,30 @@ import {
   calculateNights,
 } from "@/lib/utils";
 
-import cinzel400 from "@fontsource/cinzel/files/cinzel-latin-400-normal.woff";
-import cinzel700 from "@fontsource/cinzel/files/cinzel-latin-700-normal.woff";
-import cinzelDeco400 from "@fontsource/cinzel-decorative/files/cinzel-decorative-latin-400-normal.woff";
-import lora400 from "@fontsource/lora/files/lora-latin-400-normal.woff";
-import lora400Italic from "@fontsource/lora/files/lora-latin-400-italic.woff";
-import lora700 from "@fontsource/lora/files/lora-latin-700-normal.woff";
-
+// Fonts are served locally from /public/fonts (no external CDN) so PDF
+// generation always works, even offline / behind firewalls.
 Font.registerHyphenationCallback((word) => [word]);
 
-// Fonts are bundled locally (no external CDN) so PDF generation always
-// works, even offline / behind firewalls.
 Font.register({
   family: "Cinzel",
   fonts: [
-    { src: cinzel400 },
-    { src: cinzel700, fontWeight: 700 },
+    { src: "/fonts/cinzel-latin-400-normal.woff" },
+    { src: "/fonts/cinzel-latin-700-normal.woff", fontWeight: 700 },
   ],
 });
 
 // Decorative display face — headings, tour titles & day numbers only.
 Font.register({
   family: "Cinzel Decorative",
-  fonts: [{ src: cinzelDeco400 }],
+  fonts: [{ src: "/fonts/cinzel-decorative-latin-400-normal.woff" }],
 });
 
 Font.register({
   family: "Lora",
   fonts: [
-    { src: lora400 },
-    { src: lora400Italic, fontStyle: "italic" },
-    { src: lora700, fontWeight: 700 },
+    { src: "/fonts/lora-latin-400-normal.woff" },
+    { src: "/fonts/lora-latin-400-italic.woff", fontStyle: "italic" },
+    { src: "/fonts/lora-latin-700-normal.woff", fontWeight: 700 },
   ],
 });
 
@@ -757,10 +750,20 @@ const styles = StyleSheet.create({
     bottom: 60,
     opacity: 0.04,
     fontSize: 140,
+    fontFamily: "Cinzel Decorative",
     fontWeight: "bold",
     color: BRAND_COLORS.gold,
     letterSpacing: -2,
     transform: "rotate(-45deg)",
+    lineHeight: 140,
+  },
+  // Watermark text style (replaces <View> string child — invalid in react-pdf)
+  watermarkText: {
+    fontFamily: "Cinzel Decorative",
+    fontWeight: "bold",
+    color: BRAND_COLORS.gold,
+    letterSpacing: -2,
+    lineHeight: 140,
   },
   pageNumber: {
     fontSize: 8,
@@ -901,7 +904,7 @@ export function ItineraryPDF({
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
       <RoyalPage>
-        <View style={styles.watermark}>KEMERYA</View>
+        <Text style={styles.watermarkText}>KEMERYA</Text>
 
         {/* HEADER */}
         <View style={styles.header}>
