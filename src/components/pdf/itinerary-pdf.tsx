@@ -732,7 +732,11 @@ const styles = StyleSheet.create({
 function RoyalPage({ children }: { children: React.ReactNode }) {
   return (
     <Page size="A4" style={styles.page}>
-      <Image fixed src="/images/itinerary/inner-pages.webp" style={styles.pageBackground} />
+      <Image
+        fixed
+        src={typeof window !== 'undefined' ? `${window.location.origin}/images/itinerary/inner-pages.png` : 'http://localhost:3000/images/itinerary/inner-pages.png'}
+        style={styles.pageBackground}
+      />
       {children}
     </Page>
   );
@@ -741,7 +745,11 @@ function RoyalPage({ children }: { children: React.ReactNode }) {
 function CoverPage({ children }: { children: React.ReactNode }) {
   return (
     <Page size="A4" style={styles.page}>
-      <Image fixed src="/images/itinerary/cover-main-image.webp" style={styles.pageBackground} />
+      <Image
+        fixed
+        src={typeof window !== 'undefined' ? `${window.location.origin}/images/itinerary/cover-main-image.png` : 'http://localhost:3000/images/itinerary/cover-main-image.png'}
+        style={styles.pageBackground}
+      />
       {children}
     </Page>
   );
