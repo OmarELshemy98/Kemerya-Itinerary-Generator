@@ -493,34 +493,26 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     gap: 8,
   },
-  mapWrapper: {
+  routeWrapper: {
     marginVertical: 15,
-    padding: 4,
     borderWidth: 1,
     borderColor: "#C5A059",
     backgroundColor: "#FDFBF7",
   },
-  mapInnerBorder: {
-    borderWidth: 1,
-    borderColor: "rgba(197, 160, 89, 0.3)",
-    padding: 2,
-  },
-  mapHeader: {
+  routeHeader: {
     backgroundColor: "#1E3A8A",
     paddingVertical: 8,
     alignItems: "center",
-    marginBottom: 4,
   },
-  mapTitle: {
+  routeTitle: {
     fontFamily: "Cinzel",
     fontSize: 14,
     color: "#C5A059",
     letterSpacing: 2,
   },
-  mapImage: {
-    width: "100%",
-    height: 200,
-    objectFit: "contain",
+  routeContainer: {
+    padding: 10,
+    alignItems: "center",
   },
   summaryItemLabel: {
     fontSize: 8,
@@ -1035,6 +1027,18 @@ export function ItineraryPDF({
   if (booking.travelers.infants > 0) totalTravelersTextParts.push(`${booking.travelers.infants} Infant${booking.travelers.infants > 1 ? "s" : ""}`);
   const travelersText = totalTravelersTextParts.join(", ");
 
+  // Helper to get location name from day
+  const getLocationName = (day: ItineraryDay, index: number): string => {
+    if (day.title && day.title.trim()) return day.title.trim();
+    return `Day ${index + 1}`;
+  };
+
+  // Build route stops from itinerary
+  const routeStops = (itinerary || []).map((day, i) => ({
+    day: day.day || i + 1,
+    label: getLocationName(day, i),
+  }));
+
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
       <LuxuryPage companyInfo={companyInfo}>
@@ -1138,19 +1142,17 @@ export function ItineraryPDF({
           </View>
         </View>
 
-        {/* JOURNEY ROUTE MAP */}
-        <View style={styles.mapWrapper}>
-          <View style={styles.mapHeader}>
-            <Text style={styles.mapTitle}>JOURNEY ROUTE MAP</Text>
+        {/* JOURNEY ROUTE TIMELINE */}
+        {routeStops.length > 0 && (
+          <View style={styles.routeWrapper}>
+            <View style={styles.routeHeader}>
+              <Text style={styles.routeTitle}>JOURNEY ROUTE</Text>
+            </View>
+            <View style={styles.routeContainer}>
+              <RouteTimeline stops={routeStops} />
+            </View>
           </View>
-          <View style={styles.mapInnerBorder}>
-            {/* eslint-disable-next-line jsx-a11y/alt-text */}
-            <Image
-              src={booking.mapUrl}
-              style={styles.mapImage}
-            />
-          </View>
-        </View>
+        )}
 
         {/* TOUR OVERVIEW — same text as the website #overview section */}
         {!booking.isCustomTour && tour?.overview?.length ? (
@@ -1609,5 +1611,85 @@ function DayCard({ day }: { day: ItineraryDay }) {
       </View>
       <LotusDivider />
     </>
+  );
+}
+
+// Route Timeline Component - SVG journey path with checkpoints
+interface RouteStop {
+  day: number;
+  label: string;
+}
+
+function RouteTimeline({ stops }: { stops: RouteStop[] }) {
+  const width = 480;
+  const height = 80 + (stops.length > 5 ? (stops.length - 5) * 20 : 0);
+  const padding = 40;
+  const usableWidth = width - padding * 2;
+  const stepX = stops.length > 1 ? usableWidth / (stops.length - 1) : 0;
+  const centerY = height / 2;
+
+  return (
+    <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+      {/* Background */}
+      <Path
+        d={`M 0 0 L ${width} 0 L ${width} ${height} L 0 ${height} Z`}
+        fill="#FDFBF7"
+      />
+
+      {/* Main route line */}
+      <Path
+        d={`M ${padding} ${centerY} L ${width - padding} ${centerY}`}
+        stroke="#C5A059"
+        strokeWidth={2}
+        strokeDasharray="6,3"
+      />
+
+      {/* Checkpoints */}
+      {stops.map((stop, i) => {
+        const x = padding + i * stepX;
+        const isFirst = i === 0;
+        const isLast = i === stops.length - 1;
+
+        return (
+          <G key={i}>
+            {/* Checkpoint circle */}
+            <Path
+              d={`M ${x} ${centerY - 10} A 10 10 0 1 1 ${x} ${centerY + 10} A 10 10 0 1 1 ${x} ${centerY - 10} Z`}
+              fill={isFirst || isLast ? "#1E3A8A" : "#C5A059"}
+              stroke="#1E3A8A"
+              strokeWidth={1.5}
+            />
+            {/* Day number inside circle */}
+            <Text
+              style={{ fontSize: 8, fontFamily: "Cinzel", fill: "#FFFFFF", textAnchor: "middle" }}
+              x={x}
+              y={centerY + 4}
+            >
+              {String(stop.day)}
+            </Text>
+            {/* Label above/below */}
+            <Text
+              style={{ fontSize: 7, fontFamily: "Lora", fill: "#2C1E16", textAnchor: "middle" }}
+              x={x}
+              y={i % 2 === 0 ? centerY - 20 : centerY + 28}
+            >
+              {stop.label.length > 15 ? stop.label.slice(0, 13) + "..." : stop.label}
+            </Text>
+          </G>
+        );
+      })}
+
+      {/* Start marker */}
+      <Path
+        d={`M ${padding - 5} ${centerY - 15} L ${padding + 5} ${centerY - 15} L ${padding} ${centerY - 25} Z`}
+        fill="#1E3A8A"
+      />
+
+      {/* End marker */}
+      <Path
+        d={`M ${width - padding - 5} ${centerY - 15} L ${width - padding + 5} ${centerY - 15} L ${width - padding} ${centerY - 25} Z`}
+        fill="#1E3A8A"
+      />
+    </Svg>
   );
 }
