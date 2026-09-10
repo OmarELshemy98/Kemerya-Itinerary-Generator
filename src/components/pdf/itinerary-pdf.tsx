@@ -517,6 +517,11 @@ const styles = StyleSheet.create({
     color: "#C5A059",
     letterSpacing: 2,
   },
+  mapImage: {
+    width: "100%",
+    height: 200,
+    objectFit: "contain",
+  },
   summaryItemLabel: {
     fontSize: 8,
     color: BRAND_COLORS.muted,
@@ -1133,25 +1138,19 @@ export function ItineraryPDF({
           </View>
         </View>
 
-        {/* GEOAPIFY STATIC MAP */}
-        {booking.mapUrl && (
-          <View style={styles.mapWrapper}>
-            <View style={styles.mapHeader}>
-              <Text style={styles.mapTitle}>JOURNEY MAP</Text>
-            </View>
-            <View style={styles.mapInnerBorder}>
-              {/* eslint-disable-next-line jsx-a11y/alt-text */}
-              <Image
-                src={booking.mapUrl}
-                style={{
-                  width: "100%",
-                  height: 200,
-                  objectFit: "contain",
-                }}
-              />
-            </View>
+        {/* JOURNEY ROUTE MAP — always rendered with MapTiler fallback */}
+        <View style={styles.mapWrapper}>
+          <View style={styles.mapHeader}>
+            <Text style={styles.mapTitle}>JOURNEY ROUTE MAP</Text>
           </View>
-        )}
+          <View style={styles.mapInnerBorder}>
+            {/* eslint-disable-next-line jsx-a11y/alt-text */}
+            <Image
+              src={booking.mapUrl || 'https://api.maptiler.com/maps/dataviz-light/static/auto/800x350@2x.png?path=color:0x1E3A8A|width:3|31.1342,29.9792|31.2165,29.8713|31.2536,29.8499&markers=31.1342,29.9792,0xC5A059|31.2165,29.8713,0xC5A059|31.2536,29.8499,0xC5A059&key=cYbsTvD4eueAzUHeHwco'}
+              style={styles.mapImage}
+            />
+          </View>
+        </View>
 
         {/* TOUR OVERVIEW — same text as the website #overview section */}
         {!booking.isCustomTour && tour?.overview?.length ? (
@@ -1580,7 +1579,7 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
 function DayCard({ day }: { day: ItineraryDay }) {
   return (
     <>
-      <View style={styles.dayCard}>
+      <View break style={styles.dayCard}>
         <View style={styles.dayHeader}>
           <View style={styles.dayBadge}>
             <AnkhIcon size={14} color="#C5A059" />
