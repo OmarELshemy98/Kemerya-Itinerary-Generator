@@ -3,37 +3,9 @@ import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { ItineraryPDF } from "../src/components/pdf/itinerary-pdf";
 import type { BookingConfig, Tour } from "../src/types";
-import { generateLuxuryMapUrl } from "../src/utils/mapHelper";
+import { generateDynamicMap } from "../src/utils/mapGenerator";
 
 process.env.NEXT_PUBLIC_MAPTILER_API_KEY = "cYbsTvD4eueAzUHeHwco";
-
-const mockLocations = [
-  { lat: 29.9792, lon: 31.1342 }, // Giza
-  { lat: 29.8713, lon: 31.2165 }, // Saqqara
-  { lat: 29.8499, lon: 31.2536 }  // Memphis
-];
-
-const booking: BookingConfig = {
-  id: "bk-test-76837901",
-  isCustomTour: false,
-  travelers: { adults: 1, children: 0, infants: 0 },
-  currency: "USD",
-  totalPrice: 768,
-  startDate: "2026-09-09",
-  endDate: "2026-09-10",
-  clientName: "Omar Ibrahim",
-  clientEmail: "omar@example.com",
-  clientPhone: "+201234567890",
-  meetingPoint: "Cairo Airport arrivals hall",
-  flightArrival: "2026-09-09T14:30",
-  notes: "Test note",
-  specialRequests: "Window seat",
-  specialRequestItems: [{ id: "sri-1", description: "Balloon upgrade", price: 120 }],
-  inclusions: ["Private guide", "Entrance fees"],
-  exclusions: ["Drinks"],
-  createdAt: new Date().toISOString(),
-  mapUrl: generateLuxuryMapUrl(mockLocations),
-};
 
 const tour: Tour = {
   id: "t-1",
@@ -56,6 +28,28 @@ const tour: Tour = {
 
 (async () => {
   try {
+    const mapUrl = await generateDynamicMap(tour.itinerary);
+    const booking: BookingConfig = {
+      id: "bk-test-76837901",
+      isCustomTour: false,
+      travelers: { adults: 1, children: 0, infants: 0 },
+      currency: "USD",
+      totalPrice: 768,
+      startDate: "2026-09-09",
+      endDate: "2026-09-10",
+      clientName: "Omar Ibrahim",
+      clientEmail: "omar@example.com",
+      clientPhone: "+201234567890",
+      meetingPoint: "Cairo Airport arrivals hall",
+      flightArrival: "2026-09-09T14:30",
+      notes: "Test note",
+      specialRequests: "Window seat",
+      specialRequestItems: [{ id: "sri-1", description: "Balloon upgrade", price: 120 }],
+      inclusions: ["Private guide", "Entrance fees"],
+      exclusions: ["Drinks"],
+      createdAt: new Date().toISOString(),
+      mapUrl: mapUrl || undefined,
+    };
     const buffer = await renderToBuffer(
       React.createElement(ItineraryPDF, { tour, booking }) as never
     );

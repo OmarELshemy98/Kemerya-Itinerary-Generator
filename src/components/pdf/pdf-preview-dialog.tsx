@@ -28,7 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatDateShort, formatCurrency, cn } from "@/lib/utils";
-import { generateLuxuryMapUrl } from "@/utils/mapHelper";
+import { generateDynamicMap } from "@/utils/mapGenerator";
 
 interface PDFPreviewDialogProps {
   open: boolean;
@@ -121,6 +121,24 @@ export function PDFPreviewDialog({
   const [customPhone, setCustomPhone] = React.useState<string>("");
   const [showPhoneEditor, setShowPhoneEditor] = React.useState<boolean>(false);
   const [copied, setCopied] = React.useState<boolean>(false);
+  const [dynamicMapUrl, setDynamicMapUrl] = React.useState<string | null>(null);
+
+  // Fetch dynamic map from itinerary locations
+  React.useEffect(() => {
+    if (!booking) return;
+    const itineraryDays = booking.isCustomTour
+      ? booking.customItinerary || []
+      : tour?.itinerary || [];
+    if (itineraryDays.length === 0) {
+      setDynamicMapUrl(null);
+      return;
+    }
+    let cancelled = false;
+    generateDynamicMap(itineraryDays).then((url) => {
+      if (!cancelled) setDynamicMapUrl(url);
+    });
+    return () => { cancelled = true; };
+  }, [booking, tour]);
 
   React.useEffect(() => {
     if (open) {
@@ -188,13 +206,8 @@ export function PDFPreviewDialog({
     }
   };
 
-  // Inject MapTiler static map URL into booking for the PDF
-  const mockLocations = [
-    { lat: 29.9792, lon: 31.1342 }, // Giza
-    { lat: 29.8713, lon: 31.2165 }, // Saqqara
-    { lat: 29.8499, lon: 31.2536 }  // Memphis
-  ];
-  const mapUrl = generateLuxuryMapUrl(mockLocations);
+  // Inject dynamic MapTiler map URL into booking for the PDF
+  const mapUrl = dynamicMapUrl || booking.mapUrl;
   const bookingWithMap = booking ? { ...booking, mapUrl } : booking;
 
   const pdfDocument = (

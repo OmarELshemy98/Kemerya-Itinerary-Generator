@@ -5,7 +5,7 @@ import { pdf } from "@react-pdf/renderer";
 import type { Tour, BookingConfig } from "@/types";
 import { ItineraryPDF } from "./itinerary-pdf";
 import { KEMERYA_COMPANY_INFO } from "@/data/company";
-import { generateLuxuryMapUrl } from "@/utils/mapHelper";
+import { generateDynamicMap } from "@/utils/mapGenerator";
 
 interface PDFDownloaderProps {
   booking: BookingConfig | null;
@@ -48,13 +48,11 @@ export function PDFDownloader({ booking, tour, onDone }: PDFDownloaderProps) {
     let cancelled = false;
     (async () => {
       try {
-        const mockLocations = [
-          { lat: 29.9792, lon: 31.1342 }, // Giza
-          { lat: 29.8713, lon: 31.2165 }, // Saqqara
-          { lat: 29.8499, lon: 31.2536 }  // Memphis
-        ];
-        const mapUrl = generateLuxuryMapUrl(mockLocations);
-        const bookingWithMap: BookingConfig = { ...booking, mapUrl };
+        const itineraryDays = booking.isCustomTour
+          ? booking.customItinerary || []
+          : tour?.itinerary || [];
+        const mapUrl = await generateDynamicMap(itineraryDays);
+        const bookingWithMap: BookingConfig = { ...booking, mapUrl: mapUrl || booking.mapUrl };
         const blob = await pdf(
           <ItineraryPDF tour={tour} booking={bookingWithMap} companyInfo={KEMERYA_COMPANY_INFO} />
         ).toBlob();
