@@ -92,7 +92,7 @@ const TERMS_ITEMS = [
 
 /** Ankh — Ancient Egyptian symbol of life */
 const AnkhIcon = ({
-  size = 20,
+  size = 16,
   color = "#C5A059",
 }: {
   size?: number;
@@ -184,13 +184,13 @@ const styles = StyleSheet.create({
   // ─── Core Layout ─────────────────────────────────────────────────────────────
   page: {
     backgroundColor: "#FDFBF7",
-    padding: 22,
+    padding: 20,
     fontFamily: "Lora",
   },
   pageFrame: {
     borderWidth: 1,
     borderColor: "#C5A059",
-    padding: 18,
+    padding: 16,
     position: "relative",
   },
   headerBox: {
@@ -493,6 +493,30 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     gap: 8,
   },
+  mapWrapper: {
+    marginVertical: 15,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: "#C5A059",
+    backgroundColor: "#FDFBF7",
+  },
+  mapInnerBorder: {
+    borderWidth: 1,
+    borderColor: "rgba(197, 160, 89, 0.3)",
+    padding: 2,
+  },
+  mapHeader: {
+    backgroundColor: "#1E3A8A",
+    paddingVertical: 8,
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  mapTitle: {
+    fontFamily: "Cinzel",
+    fontSize: 14,
+    color: "#C5A059",
+    letterSpacing: 2,
+  },
   summaryItemLabel: {
     fontSize: 8,
     color: BRAND_COLORS.muted,
@@ -518,8 +542,8 @@ const styles = StyleSheet.create({
   dayCard: {
     backgroundColor: "transparent",
     borderRadius: 0,
-    marginBottom: 14,
-    padding: 14,
+    marginBottom: 8,
+    padding: 10,
     borderWidth: 1,
     borderColor: BRAND_COLORS.border,
     overflow: "hidden",
@@ -528,11 +552,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#1E3A8A",
-    borderBottomWidth: 1,
-    borderBottomStyle: "solid",
-    borderBottomColor: BRAND_COLORS.border,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    padding: 8,
+    marginBottom: 10,
     gap: 8,
   },
   dayBadge: {
@@ -1111,6 +1132,26 @@ export function ItineraryPDF({
             )}
           </View>
         </View>
+
+        {/* GEOAPIFY STATIC MAP */}
+        {booking.mapUrl && (
+          <View style={styles.mapWrapper}>
+            <View style={styles.mapHeader}>
+              <Text style={styles.mapTitle}>JOURNEY MAP</Text>
+            </View>
+            <View style={styles.mapInnerBorder}>
+              {/* eslint-disable-next-line jsx-a11y/alt-text */}
+              <Image
+                src={booking.mapUrl}
+                style={{
+                  width: "100%",
+                  height: 200,
+                  objectFit: "contain",
+                }}
+              />
+            </View>
+          </View>
+        )}
 
         {/* TOUR OVERVIEW — same text as the website #overview section */}
         {!booking.isCustomTour && tour?.overview?.length ? (

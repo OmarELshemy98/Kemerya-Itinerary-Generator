@@ -120,6 +120,8 @@ export interface BookingConfig {
   includesAll?: boolean;
   excludesAll?: boolean;
   createdAt: string;
+  /** Optional Geoapify static map image URL for the itinerary */
+  mapUrl?: string;
 }
 
 export interface ItineraryPDFData {

@@ -3,6 +3,15 @@ import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { ItineraryPDF } from "../src/components/pdf/itinerary-pdf";
 import type { BookingConfig, Tour } from "../src/types";
+import { generateLuxuryMapUrl } from "../src/utils/mapHelper";
+
+process.env.NEXT_PUBLIC_MAPTILER_API_KEY = "cYbsTvD4eueAzUHeHwco";
+
+const mockLocations = [
+  { lat: 29.9792, lon: 31.1342 }, // Giza
+  { lat: 29.8713, lon: 31.2165 }, // Saqqara
+  { lat: 29.8499, lon: 31.2536 }  // Memphis
+];
 
 const booking: BookingConfig = {
   id: "bk-test-76837901",
@@ -23,6 +32,7 @@ const booking: BookingConfig = {
   inclusions: ["Private guide", "Entrance fees"],
   exclusions: ["Drinks"],
   createdAt: new Date().toISOString(),
+  mapUrl: generateLuxuryMapUrl(mockLocations),
 };
 
 const tour: Tour = {

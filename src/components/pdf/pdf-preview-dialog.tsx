@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatDateShort, formatCurrency, cn } from "@/lib/utils";
+import { generateLuxuryMapUrl } from "@/utils/mapHelper";
 
 interface PDFPreviewDialogProps {
   open: boolean;
@@ -187,8 +188,17 @@ export function PDFPreviewDialog({
     }
   };
 
+  // Inject MapTiler static map URL into booking for the PDF
+  const mockLocations = [
+    { lat: 29.9792, lon: 31.1342 }, // Giza
+    { lat: 29.8713, lon: 31.2165 }, // Saqqara
+    { lat: 29.8499, lon: 31.2536 }  // Memphis
+  ];
+  const mapUrl = generateLuxuryMapUrl(mockLocations);
+  const bookingWithMap = booking ? { ...booking, mapUrl } : booking;
+
   const pdfDocument = (
-    <ItineraryPDF tour={tour} booking={booking} companyInfo={companyInfo} />
+    <ItineraryPDF tour={tour} booking={bookingWithMap} companyInfo={companyInfo} />
   );
 
   return (
