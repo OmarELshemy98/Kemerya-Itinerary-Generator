@@ -161,6 +161,7 @@ export function ToursDataProvider({
       clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisible);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refresh]);
 
   const addCategory = React.useCallback(

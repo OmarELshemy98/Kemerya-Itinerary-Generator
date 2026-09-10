@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Font,
   Link,
+  Image,
   Svg,
   Path,
   G,
@@ -75,49 +76,117 @@ const TERMS_ITEMS = [
   "Emergency & Governing Law: A 24/7 emergency line is printed on the confirmation voucher. Egyptian law governs these booking terms.",
 ];
 
-// ─── Pharaonic SVG Components ────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// Pharaonic SVG Icons — Luxury Gold (#C5A059)
+// ═══════════════════════════════════════════════════════════════
 
-const AnkhIcon = ({ size = 24, color = "#C5A059" }: { size?: number; color?: string }) => (
+/** Ankh — Ancient Egyptian symbol of life */
+const AnkhIcon = ({
+  size = 20,
+  color = "#C5A059",
+}: {
+  size?: number;
+  color?: string;
+}) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <G fill={color}>
-      {/* Ankh: vertical bar */}
       <Path d="M12 2 L12 22 M12 4 C8 4 6 7 6 10 C6 13 8 15 12 15 C16 15 18 13 18 10 C18 7 16 4 12 4 Z" />
     </G>
   </Svg>
 );
 
-const GeometricDivider = () => (
-  <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 12 }}>
-    <View style={{ flex: 1, height: 1, backgroundColor: "#C5A059" }} />
-    <View style={{ marginHorizontal: 10 }}>
-      <Svg width={16} height={16} viewBox="0 0 16 16">
-        <G fill="#C5A059">
-          <Path d="M8 0 L16 8 L8 16 L0 8 Z" />
+/** Pyramid — Icon of Egypt & Tourism */
+const PyramidIcon = ({
+  size = 18,
+  color = "#C5A059",
+}: {
+  size?: number;
+  color?: string;
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <G fill={color}>
+      <Path d="M12 2 L22 20 L2 20 Z" />
+      <Path d="M12 2 L12 20 M7 10 L17 10" fill="none" stroke={color} strokeWidth="0.5" />
+    </G>
+  </Svg>
+);
+
+/** Location Pin — For destinations & meeting points */
+const LocationPinIcon = ({
+  size = 14,
+  color = "#C5A059",
+}: {
+  size?: number;
+  color?: string;
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <G fill={color}>
+      <Path d="M12 2 C7 2 3 6 3 11 C3 17 12 22 12 22 C12 22 21 17 21 11 C21 6 17 2 12 2 Z M12 13.5 C10.62 13.5 9.5 12.38 9.5 11 C9.5 9.62 10.62 8.5 12 8.5 C13.38 8.5 14.5 9.62 14.5 11 C14.5 12.38 13.38 13.5 12 13.5 Z" />
+    </G>
+  </Svg>
+);
+
+/** Lotus Divider — Horizontal SVG divider with central lotus/diamond motif */
+const LotusDivider = ({
+  width = 400,
+  color = "#C5A059",
+}: {
+  width?: number;
+  color?: string;
+}) => (
+  <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 10 }}>
+    <View style={{ flex: 1, height: 0.5, backgroundColor: color }} />
+    <View style={{ marginHorizontal: 8 }}>
+      <Svg width={20} height={20} viewBox="0 0 20 20">
+        <G fill={color}>
+          {/* Central diamond */}
+          <Path d="M10 2 L18 10 L10 18 L2 10 Z" />
+          {/* Inner lotus petals */}
+          <Path d="M10 5 L13 10 L10 15 L7 10 Z" fill="#FDFBF7" />
         </G>
       </Svg>
     </View>
-    <View style={{ flex: 1, height: 1, backgroundColor: "#C5A059" }} />
+    <View style={{ flex: 1, height: 0.5, backgroundColor: color }} />
   </View>
+);
+
+/** Eye of Horus — Protection & ancient Egyptian motif */
+const EyeOfHorusIcon = ({
+  size = 16,
+  color = "#C5A059",
+}: {
+  size?: number;
+  color?: string;
+}) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <G>
+      {/* Eye outline */}
+      <Path d="M2 12 C5 6 9 4 12 4 C15 4 19 6 22 12 C19 18 15 20 12 20 C9 20 5 18 2 12 Z" fill={color} />
+      {/* Inner eye curve */}
+      <Path d="M12 8 C10 8 8 10 8 12 C8 14 10 16 12 16" fill="none" stroke="#FDFBF7" strokeWidth="1.5" />
+      {/* Pupil circle using path */}
+      <Path d="M12 10 C10.9 10 10 10.9 10 12 C10 13.1 10.9 14 12 14 C13.1 14 14 13.1 14 12 C14 10.9 13.1 10 12 10 Z" fill="#FDFBF7" />
+    </G>
+  </Svg>
 );
 
 const styles = StyleSheet.create({
   // ─── Core Layout ─────────────────────────────────────────────────────────────
   page: {
     backgroundColor: "#FDFBF7",
-    padding: 30,
+    padding: 22,
     fontFamily: "Lora",
   },
   pageFrame: {
-    flex: 1,
     borderWidth: 1,
     borderColor: "#C5A059",
-    padding: 24,
+    padding: 18,
     position: "relative",
   },
   headerBox: {
     alignItems: "center",
-    marginBottom: 20,
-    paddingBottom: 15,
+    marginBottom: 12,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#C5A059",
   },
@@ -366,13 +435,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   section: {
-    marginBottom: 22,
+    marginBottom: 14,
   },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
-    gap: 10,
+    marginBottom: 8,
+    gap: 8,
   },
   sectionNumber: {
     width: 28,
@@ -400,24 +469,26 @@ const styles = StyleSheet.create({
   summaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 8,
     justifyContent: "space-between",
   },
   summaryItem: {
     width: "48%",
     flexDirection: "row",
-    padding: 14,
+    alignItems: "center",
+    padding: 10,
     borderWidth: 1,
     borderColor: "#C5A059",
     borderRadius: 0,
     backgroundColor: "transparent",
+    gap: 8,
   },
   summaryItemLabel: {
     fontSize: 8,
     color: BRAND_COLORS.muted,
     letterSpacing: 1,
     textTransform: "uppercase",
-    marginBottom: 3,
+    marginBottom: 2,
   },
   summaryItemValue: {
     fontSize: 11,
@@ -426,9 +497,8 @@ const styles = StyleSheet.create({
   },
   summaryItemBullet: {
     width: 4,
-    height: "100%",
+    height: 12,
     backgroundColor: BRAND_COLORS.gold,
-    marginRight: 10,
     borderRadius: 0,
   },
   summaryItemTextWrap: {
@@ -447,19 +517,22 @@ const styles = StyleSheet.create({
   dayHeader: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "transparent",
+    backgroundColor: "#1E3A8A",
     borderBottomWidth: 1,
     borderBottomStyle: "solid",
     borderBottomColor: BRAND_COLORS.border,
-    paddingHorizontal: 18,
-    paddingVertical: 13,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 8,
   },
   dayBadge: {
     backgroundColor: BRAND_COLORS.gold,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 0,
-    marginRight: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   dayBadgeText: {
     color: "white",
@@ -468,7 +541,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   dayTitle: {
-    color: BRAND_COLORS.dark,
+    color: BRAND_COLORS.gold,
     fontSize: 12,
     fontFamily: "Cinzel Decorative",
     flex: 1,
@@ -791,13 +864,36 @@ const styles = StyleSheet.create({
   },
 });
 
-function LuxuryPage({ children }: { children: React.ReactNode }) {
+function LuxuryPage({
+  children,
+  companyInfo,
+}: {
+  children: React.ReactNode;
+  companyInfo?: CompanyInfo;
+}) {
+  const logoSrc = companyInfo?.logo;
   return (
     <Page size="A4" style={styles.page}>
       <View style={styles.pageFrame}>
         <View style={styles.headerBox}>
-          <AnkhIcon size={28} />
-          <Text style={styles.brandTitle}>KEMERYA TOURS</Text>
+          {logoSrc ? (
+            // eslint-disable-next-line jsx-a11y/alt-text
+            <Image
+              src={logoSrc}
+              style={{
+                width: 150,
+                height: 50,
+                objectFit: "contain",
+                marginBottom: 10,
+              }}
+            />
+          ) : (
+            <AnkhIcon size={28} />
+          )}
+          <Text style={styles.brandTitle}>
+            {companyInfo?.name || "KEMERYA TOURS"}
+          </Text>
+          <LotusDivider width={200} />
         </View>
         {children}
       </View>
@@ -904,7 +1000,7 @@ export function ItineraryPDF({
 
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
-      <LuxuryPage>
+      <LuxuryPage companyInfo={companyInfo}>
         {/* Minimalist Booking Ref Badge - Floating above Tour Title */}
         <View style={styles.bookingRefBadge}>
           <Text style={styles.bookingRefText}>Ref: {bookingRef}</Text>
@@ -1074,7 +1170,7 @@ export function ItineraryPDF({
       {/* =============================================== */}
       {/* PAGE 2 - ITINERARY DAYS 1-3                    */}
       {/* =============================================== */}
-      <LuxuryPage>
+      <LuxuryPage companyInfo={companyInfo}>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -1106,7 +1202,7 @@ export function ItineraryPDF({
 
       {/* PAGE 3 - REMAINING ITINERARY DAYS */}
       {itinerary.length > 3 && (
-        <LuxuryPage>
+        <LuxuryPage companyInfo={companyInfo}>
 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -1127,7 +1223,7 @@ export function ItineraryPDF({
       )}
 
       {/* PAGE 4 - INCLUSIONS, EXCLUSIONS, PRICING, CONTACTS */}
-      <LuxuryPage>
+      <LuxuryPage companyInfo={companyInfo}>
 
         {/* 03 - INCLUSIONS / EXCLUSIONS */}
         <View style={styles.section}>
@@ -1325,7 +1421,7 @@ export function ItineraryPDF({
       </LuxuryPage>
 
       {/* PAGE 5 - TERMS & POLICY + LEAVE A REVIEW */}
-      <LuxuryPage>
+      <LuxuryPage companyInfo={companyInfo}>
 
         {/* 06 - TERMS & POLICY */}
         <View style={styles.section}>
@@ -1407,9 +1503,20 @@ export function ItineraryPDF({
 }
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
+  const getIcon = () => {
+    const lowerLabel = label.toLowerCase();
+    if (lowerLabel.includes("meeting") || lowerLabel.includes("location") || lowerLabel.includes("destination")) {
+      return <LocationPinIcon size={12} />;
+    }
+    if (lowerLabel.includes("duration") || lowerLabel.includes("period")) {
+      return <PyramidIcon size={12} />;
+    }
+    return <View style={styles.summaryItemBullet} />;
+  };
+
   return (
     <View style={styles.summaryItem}>
-      <View style={styles.summaryItemBullet} />
+      {getIcon()}
       <View style={styles.summaryItemTextWrap}>
         <Text style={styles.summaryItemLabel}>{label}</Text>
         <Text style={styles.summaryItemValue}>{value}</Text>
@@ -1424,6 +1531,7 @@ function DayCard({ day }: { day: ItineraryDay }) {
       <View style={styles.dayCard}>
         <View style={styles.dayHeader}>
           <View style={styles.dayBadge}>
+            <AnkhIcon size={14} color="#C5A059" />
             <Text style={styles.dayBadgeText}>DAY {day.day}</Text>
           </View>
           <Text style={styles.dayTitle}>{day.title}</Text>
@@ -1448,7 +1556,7 @@ function DayCard({ day }: { day: ItineraryDay }) {
           )}
         </View>
       </View>
-      <GeometricDivider />
+      <LotusDivider />
     </>
   );
 }
