@@ -9,7 +9,9 @@ import {
   StyleSheet,
   Font,
   Link,
-  Image,
+  Svg,
+  Path,
+  G,
 } from "@react-pdf/renderer";
 import type { Tour, BookingConfig, CompanyInfo, ItineraryDay } from "@/types";
 import { KEMERYA_COMPANY_INFO } from "@/data/company";
@@ -73,28 +75,67 @@ const TERMS_ITEMS = [
   "Emergency & Governing Law: A 24/7 emergency line is printed on the confirmation voucher. Egyptian law governs these booking terms.",
 ];
 
+// ─── Pharaonic SVG Components ────────────────────────────────────────────────
+
+const AnkhIcon = ({ size = 24, color = "#C5A059" }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <G fill={color}>
+      {/* Ankh: vertical bar */}
+      <Path d="M12 2 L12 22 M12 4 C8 4 6 7 6 10 C6 13 8 15 12 15 C16 15 18 13 18 10 C18 7 16 4 12 4 Z" />
+    </G>
+  </Svg>
+);
+
+const GeometricDivider = () => (
+  <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 12 }}>
+    <View style={{ flex: 1, height: 1, backgroundColor: "#C5A059" }} />
+    <View style={{ marginHorizontal: 10 }}>
+      <Svg width={16} height={16} viewBox="0 0 16 16">
+        <G fill="#C5A059">
+          <Path d="M8 0 L16 8 L8 16 L0 8 Z" />
+        </G>
+      </Svg>
+    </View>
+    <View style={{ flex: 1, height: 1, backgroundColor: "#C5A059" }} />
+  </View>
+);
+
 const styles = StyleSheet.create({
-  coverPage: {
-    backgroundColor: "transparent",
+  // ─── Core Layout ─────────────────────────────────────────────────────────────
+  page: {
+    backgroundColor: "#FDFBF7",
+    padding: 30,
     fontFamily: "Lora",
-    padding: 40,
+  },
+  pageFrame: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#C5A059",
+    padding: 24,
+    position: "relative",
+  },
+  headerBox: {
+    alignItems: "center",
+    marginBottom: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#C5A059",
+  },
+  brandTitle: {
+    fontFamily: "Cinzel",
+    fontSize: 24,
+    color: "#1E3A8A",
+    letterSpacing: 2,
+    marginTop: 8,
+  },
+  coverPage: {
+    backgroundColor: "#FDFBF7",
+    padding: 30,
+    fontFamily: "Lora",
   },
   innerPage: {
-    backgroundColor: "transparent",
+    backgroundColor: "#FDFBF7",
     fontFamily: "Lora",
-    padding: 40,
-  },
-  coverContent: {
-    marginTop: 200,
-    marginLeft: 240,
-    marginRight: 40,
-    flex: 1,
-  },
-  innerContent: {
-    marginTop: 220,
-    marginBottom: 100,
-    marginHorizontal: 60,
-    flex: 1,
   },
   bookingRefBadge: {
     backgroundColor: BRAND_COLORS.gold,
@@ -110,14 +151,6 @@ const styles = StyleSheet.create({
     fontFamily: "Cinzel",
     fontWeight: 700,
     letterSpacing: 1,
-  },
-  pageBackground: {
-    position: "absolute",
-    top: "25%",
-    left: "15%",
-    right: "15%",
-    opacity: 0.03,
-    zIndex: -1,
   },
   // --- Terms & Policy ---
   termsSection: {
@@ -270,11 +303,11 @@ const styles = StyleSheet.create({
     lineHeight: 1.6,
   },
   heroCard: {
-    backgroundColor: "white",
-    padding: 32,
+    backgroundColor: "transparent",
+    padding: 0,
     marginBottom: 24,
     borderRadius: 0,
-    borderWidth: 1,
+    borderWidth: 0,
     borderStyle: "solid",
     borderColor: BRAND_COLORS.gold,
     position: "relative",
@@ -377,7 +410,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#C5A059",
     borderRadius: 0,
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    backgroundColor: "transparent",
   },
   summaryItemLabel: {
     fontSize: 8,
@@ -403,7 +436,7 @@ const styles = StyleSheet.create({
     flexDirection: "column",
   },
   dayCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    backgroundColor: "transparent",
     borderRadius: 0,
     marginBottom: 14,
     padding: 14,
@@ -485,7 +518,7 @@ const styles = StyleSheet.create({
     width: "50%",
   },
   inclusionsCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    backgroundColor: "transparent",
     borderRadius: 0,
     padding: 14,
     borderWidth: 1,
@@ -493,7 +526,7 @@ const styles = StyleSheet.create({
     borderColor: "#C5A059",
   },
   exclusionsCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    backgroundColor: "transparent",
     borderRadius: 0,
     padding: 14,
     borderWidth: 1,
@@ -555,7 +588,7 @@ const styles = StyleSheet.create({
     color: BRAND_COLORS.exclusionsText,
   },
   pricingTable: {
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    backgroundColor: "transparent",
     borderRadius: 0,
     padding: 14,
     borderWidth: 1,
@@ -606,7 +639,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   termsBlock: {
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    backgroundColor: "transparent",
     borderRadius: 0,
     padding: 14,
     borderWidth: 1,
@@ -758,34 +791,14 @@ const styles = StyleSheet.create({
   },
 });
 
-/**
- * RoyalPage — shared page chrome for every inner page of the PDF:
- * Uses the inner-pages background image as the full-page backdrop.
- */
-function RoyalPage({ children }: { children: React.ReactNode }) {
+function LuxuryPage({ children }: { children: React.ReactNode }) {
   return (
-    <Page size="A4" style={styles.innerPage}>
-      <Image
-        fixed
-        src={typeof window !== 'undefined' ? `${window.location.origin}/images/itinerary/inner-pages.png` : 'http://localhost:3000/images/itinerary/inner-pages.png'}
-        style={styles.pageBackground}
-      />
-      <View style={styles.innerContent}>
-        {children}
-      </View>
-    </Page>
-  );
-}
-
-function CoverPage({ children }: { children: React.ReactNode }) {
-  return (
-    <Page size="A4" style={styles.coverPage}>
-      <Image
-        fixed
-        src={typeof window !== 'undefined' ? `${window.location.origin}/images/itinerary/cover-main-image.png` : 'http://localhost:3000/images/itinerary/cover-main-image.png'}
-        style={styles.pageBackground}
-      />
-      <View style={styles.coverContent}>
+    <Page size="A4" style={styles.page}>
+      <View style={styles.pageFrame}>
+        <View style={styles.headerBox}>
+          <AnkhIcon size={28} />
+          <Text style={styles.brandTitle}>KEMERYA TOURS</Text>
+        </View>
         {children}
       </View>
     </Page>
@@ -891,7 +904,7 @@ export function ItineraryPDF({
 
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
-      <CoverPage>
+      <LuxuryPage>
         {/* Minimalist Booking Ref Badge - Floating above Tour Title */}
         <View style={styles.bookingRefBadge}>
           <Text style={styles.bookingRefText}>Ref: {bookingRef}</Text>
@@ -1056,12 +1069,12 @@ export function ItineraryPDF({
         <View style={styles.footer}>
           <Text style={styles.footerPage}>Page 1</Text>
         </View>
-      </CoverPage>
+      </LuxuryPage>
 
       {/* =============================================== */}
       {/* PAGE 2 - ITINERARY DAYS 1-3                    */}
       {/* =============================================== */}
-      <RoyalPage>
+      <LuxuryPage>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -1089,11 +1102,11 @@ export function ItineraryPDF({
         <View style={styles.footer}>
           <Text style={styles.footerPage}>Page 2</Text>
         </View>
-      </RoyalPage>
+      </LuxuryPage>
 
       {/* PAGE 3 - REMAINING ITINERARY DAYS */}
       {itinerary.length > 3 && (
-        <RoyalPage>
+        <LuxuryPage>
 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -1110,11 +1123,11 @@ export function ItineraryPDF({
           <View style={styles.footer}>
             <Text style={styles.footerPage}>Page 3</Text>
           </View>
-        </RoyalPage>
+        </LuxuryPage>
       )}
 
       {/* PAGE 4 - INCLUSIONS, EXCLUSIONS, PRICING, CONTACTS */}
-      <RoyalPage>
+      <LuxuryPage>
 
         {/* 03 - INCLUSIONS / EXCLUSIONS */}
         <View style={styles.section}>
@@ -1309,10 +1322,10 @@ export function ItineraryPDF({
             Page {itinerary.length > 3 ? "4" : "3"}
           </Text>
         </View>
-      </RoyalPage>
+      </LuxuryPage>
 
       {/* PAGE 5 - TERMS & POLICY + LEAVE A REVIEW */}
-      <RoyalPage>
+      <LuxuryPage>
 
         {/* 06 - TERMS & POLICY */}
         <View style={styles.section}>
@@ -1388,7 +1401,7 @@ export function ItineraryPDF({
             Page {itinerary.length > 3 ? "5" : "4"}
           </Text>
         </View>
-      </RoyalPage>
+      </LuxuryPage>
     </Document>
   );
 }
@@ -1407,32 +1420,35 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
 
 function DayCard({ day }: { day: ItineraryDay }) {
   return (
-    <View style={styles.dayCard}>
-      <View style={styles.dayHeader}>
-        <View style={styles.dayBadge}>
-          <Text style={styles.dayBadgeText}>DAY {day.day}</Text>
-        </View>
-        <Text style={styles.dayTitle}>{day.title}</Text>
-      </View>
-      <View style={styles.dayContent}>
-        <Text style={styles.dayDescription}>{day.description}</Text>
-        {(day.meals || day.accommodation) && (
-          <View style={styles.metaRow}>
-            {day.accommodation && (
-              <View style={styles.metaItem}>
-                <Text style={styles.metaLabel}>Stay ·</Text>
-                <Text style={styles.metaValue}>{day.accommodation}</Text>
-              </View>
-            )}
-            {day.meals && day.meals.length > 0 && (
-              <View style={styles.metaItem}>
-                <Text style={styles.metaLabel}>Meals ·</Text>
-                <Text style={styles.metaValue}>{day.meals.join(", ")}</Text>
-              </View>
-            )}
+    <>
+      <View style={styles.dayCard}>
+        <View style={styles.dayHeader}>
+          <View style={styles.dayBadge}>
+            <Text style={styles.dayBadgeText}>DAY {day.day}</Text>
           </View>
-        )}
+          <Text style={styles.dayTitle}>{day.title}</Text>
+        </View>
+        <View style={styles.dayContent}>
+          <Text style={styles.dayDescription}>{day.description}</Text>
+          {(day.meals || day.accommodation) && (
+            <View style={styles.metaRow}>
+              {day.accommodation && (
+                <View style={styles.metaItem}>
+                  <Text style={styles.metaLabel}>Stay ·</Text>
+                  <Text style={styles.metaValue}>{day.accommodation}</Text>
+                </View>
+              )}
+              {day.meals && day.meals.length > 0 && (
+                <View style={styles.metaItem}>
+                  <Text style={styles.metaLabel}>Meals ·</Text>
+                  <Text style={styles.metaValue}>{day.meals.join(", ")}</Text>
+                </View>
+              )}
+            </View>
+          )}
+        </View>
       </View>
-    </View>
+      <GeometricDivider />
+    </>
   );
 }

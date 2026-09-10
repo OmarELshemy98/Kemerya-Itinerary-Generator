@@ -1,0 +1,403 @@
+﻿diff --git a/src/components/pdf/itinerary-pdf.tsx b/src/components/pdf/itinerary-pdf.tsx
+index 9baa45b..5acdb3c 100644
+--- a/src/components/pdf/itinerary-pdf.tsx
++++ b/src/components/pdf/itinerary-pdf.tsx
+@@ -9,7 +9,9 @@ import {
+   StyleSheet,
+   Font,
+   Link,
+-  Image,
++  Svg,
++  Path,
++  G,
+ } from "@react-pdf/renderer";
+ import type { Tour, BookingConfig, CompanyInfo, ItineraryDay } from "@/types";
+ import { KEMERYA_COMPANY_INFO } from "@/data/company";
+@@ -73,27 +75,68 @@ const TERMS_ITEMS = [
+   "Emergency & Governing Law: A 24/7 emergency line is printed on the confirmation voucher. Egyptian law governs these booking terms.",
+ ];
+ 
++// ΓöÇΓöÇΓöÇ Pharaonic SVG Components ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++
++const AnkhIcon = ({ size = 24, color = "#C5A059" }: { size?: number; color?: string }) => (
++  <Svg width={size} height={size} viewBox="0 0 24 24">
++    <G fill={color}>
++      {/* Ankh: vertical bar */}
++      <Path d="M12 2 L12 22 M12 4 C8 4 6 7 6 10 C6 13 8 15 12 15 C16 15 18 13 18 10 C18 7 16 4 12 4 Z" />
++    </G>
++  </Svg>
++);
++
++const GeometricDivider = () => (
++  <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 12 }}>
++    <View style={{ flex: 1, height: 1, backgroundColor: "#C5A059" }} />
++    <View style={{ marginHorizontal: 10 }}>
++      <Svg width={16} height={16} viewBox="0 0 16 16">
++        <G fill="#C5A059">
++          <Path d="M8 0 L16 8 L8 16 L0 8 Z" />
++        </G>
++      </Svg>
++    </View>
++    <View style={{ flex: 1, height: 1, backgroundColor: "#C5A059" }} />
++  </View>
++);
++
+ const styles = StyleSheet.create({
++  // ΓöÇΓöÇΓöÇ Core Layout ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++  page: {
++    backgroundColor: "#FDFBF7",
++    padding: 30,
++    fontFamily: "Lora",
++  },
++  pageFrame: {
++    flex: 1,
++    borderWidth: 1,
++    borderColor: "#C5A059",
++    padding: 24,
++    position: "relative",
++  },
++  headerBox: {
++    alignItems: "center",
++    marginBottom: 20,
++    paddingBottom: 15,
++    borderBottomWidth: 1,
++    borderBottomColor: "#C5A059",
++  },
++  brandTitle: {
++    fontFamily: "Cinzel",
++    fontSize: 24,
++    color: "#1E3A8A",
++    letterSpacing: 2,
++    marginTop: 8,
++  },
+   coverPage: {
+-    backgroundColor: "transparent",
++    backgroundColor: "#FDFBF7",
++    padding: 30,
+     fontFamily: "Lora",
+   },
+   innerPage: {
+-    backgroundColor: "transparent",
++    backgroundColor: "#FDFBF7",
+     fontFamily: "Lora",
+   },
+-  coverContent: {
+-    marginTop: 200,
+-    marginLeft: 240,
+-    marginRight: 40,
+-    flex: 1,
+-  },
+-  innerContent: {
+-    marginTop: 220,
+-    marginBottom: 100,
+-    marginHorizontal: 60,
+-    flex: 1,
+-  },
+   bookingRefBadge: {
+     backgroundColor: BRAND_COLORS.gold,
+     paddingHorizontal: 16,
+@@ -109,14 +152,6 @@ const styles = StyleSheet.create({
+     fontWeight: 700,
+     letterSpacing: 1,
+   },
+-  pageBackground: {
+-    position: "absolute",
+-    minWidth: "100%",
+-    minHeight: "100%",
+-    height: "100%",
+-    width: "100%",
+-    zIndex: -1,
+-  },
+   // --- Terms & Policy ---
+   termsSection: {
+     marginTop: 4,
+@@ -268,11 +303,11 @@ const styles = StyleSheet.create({
+     lineHeight: 1.6,
+   },
+   heroCard: {
+-    backgroundColor: "white",
+-    padding: 32,
++    backgroundColor: "transparent",
++    padding: 0,
+     marginBottom: 24,
+     borderRadius: 0,
+-    borderWidth: 1,
++    borderWidth: 0,
+     borderStyle: "solid",
+     borderColor: BRAND_COLORS.gold,
+     position: "relative",
+@@ -303,14 +338,14 @@ const styles = StyleSheet.create({
+   heroGrid: {
+     flexDirection: "row",
+     flexWrap: "wrap",
+-    gap: 12,
++    gap: 10,
++    marginTop: 15,
+   },
+   heroStat: {
+-    flex: 1,
+-    minWidth: "30%",
+-    paddingRight: 12,
++    width: "31%",
++    paddingRight: 8,
+     borderRightWidth: 1,
+-    borderRightColor: BRAND_COLORS.border,
++    borderRightColor: "rgba(0,0,0,0.1)",
+   },
+   heroStatLast: {
+     flex: 1,
+@@ -365,16 +400,17 @@ const styles = StyleSheet.create({
+   summaryGrid: {
+     flexDirection: "row",
+     flexWrap: "wrap",
+-    gap: 10,
++    gap: 12,
++    justifyContent: "space-between",
+   },
+   summaryItem: {
+     width: "48%",
+     flexDirection: "row",
+     padding: 14,
++    borderWidth: 1,
++    borderColor: "#C5A059",
+     borderRadius: 0,
+     backgroundColor: "transparent",
+-    borderWidth: 1,
+-    borderColor: BRAND_COLORS.border,
+   },
+   summaryItemLabel: {
+     fontSize: 8,
+@@ -403,6 +439,7 @@ const styles = StyleSheet.create({
+     backgroundColor: "transparent",
+     borderRadius: 0,
+     marginBottom: 14,
++    padding: 14,
+     borderWidth: 1,
+     borderColor: BRAND_COLORS.border,
+     overflow: "hidden",
+@@ -483,18 +520,18 @@ const styles = StyleSheet.create({
+   inclusionsCard: {
+     backgroundColor: "transparent",
+     borderRadius: 0,
+-    padding: 20,
++    padding: 14,
+     borderWidth: 1,
+     borderStyle: "solid",
+-    borderColor: BRAND_COLORS.gold,
++    borderColor: "#C5A059",
+   },
+   exclusionsCard: {
+     backgroundColor: "transparent",
+     borderRadius: 0,
+-    padding: 20,
++    padding: 14,
+     borderWidth: 1,
+     borderStyle: "solid",
+-    borderColor: BRAND_COLORS.gold,
++    borderColor: "#C5A059",
+   },
+   sectionCardTitle: {
+     fontSize: 11,
+@@ -553,6 +590,7 @@ const styles = StyleSheet.create({
+   pricingTable: {
+     backgroundColor: "transparent",
+     borderRadius: 0,
++    padding: 14,
+     borderWidth: 1,
+     borderColor: BRAND_COLORS.border,
+     overflow: "hidden",
+@@ -603,7 +641,7 @@ const styles = StyleSheet.create({
+   termsBlock: {
+     backgroundColor: "transparent",
+     borderRadius: 0,
+-    padding: 16,
++    padding: 14,
+     borderWidth: 1,
+     borderColor: BRAND_COLORS.border,
+     marginBottom: 10,
+@@ -655,7 +693,7 @@ const styles = StyleSheet.create({
+   },
+   footer: {
+     position: "absolute",
+-    bottom: 30,
++    bottom: 25,
+     left: 40,
+     right: 40,
+     paddingTop: 12,
+@@ -753,34 +791,14 @@ const styles = StyleSheet.create({
+   },
+ });
+ 
+-/**
+- * RoyalPage ΓÇö shared page chrome for every inner page of the PDF:
+- * Uses the inner-pages background image as the full-page backdrop.
+- */
+-function RoyalPage({ children }: { children: React.ReactNode }) {
+-  return (
+-    <Page size="A4" style={styles.innerPage}>
+-      <Image
+-        fixed
+-        src={typeof window !== 'undefined' ? `${window.location.origin}/images/itinerary/inner-pages.png` : 'http://localhost:3000/images/itinerary/inner-pages.png'}
+-        style={styles.pageBackground}
+-      />
+-      <View style={styles.innerContent}>
+-        {children}
+-      </View>
+-    </Page>
+-  );
+-}
+-
+-function CoverPage({ children }: { children: React.ReactNode }) {
++function LuxuryPage({ children }: { children: React.ReactNode }) {
+   return (
+-    <Page size="A4" style={styles.coverPage}>
+-      <Image
+-        fixed
+-        src={typeof window !== 'undefined' ? `${window.location.origin}/images/itinerary/cover-main-image.png` : 'http://localhost:3000/images/itinerary/cover-main-image.png'}
+-        style={styles.pageBackground}
+-      />
+-      <View style={styles.coverContent}>
++    <Page size="A4" style={styles.page}>
++      <View style={styles.pageFrame}>
++        <View style={styles.headerBox}>
++          <AnkhIcon size={28} />
++          <Text style={styles.brandTitle}>KEMERYA TOURS</Text>
++        </View>
+         {children}
+       </View>
+     </Page>
+@@ -886,7 +904,7 @@ export function ItineraryPDF({
+ 
+   return (
+     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
+-      <CoverPage>
++      <LuxuryPage>
+         {/* Minimalist Booking Ref Badge - Floating above Tour Title */}
+         <View style={styles.bookingRefBadge}>
+           <Text style={styles.bookingRefText}>Ref: {bookingRef}</Text>
+@@ -1051,12 +1069,12 @@ export function ItineraryPDF({
+         <View style={styles.footer}>
+           <Text style={styles.footerPage}>Page 1</Text>
+         </View>
+-      </CoverPage>
++      </LuxuryPage>
+ 
+       {/* =============================================== */}
+       {/* PAGE 2 - ITINERARY DAYS 1-3                    */}
+       {/* =============================================== */}
+-      <RoyalPage>
++      <LuxuryPage>
+ 
+         <View style={styles.section}>
+           <View style={styles.sectionHeader}>
+@@ -1084,11 +1102,11 @@ export function ItineraryPDF({
+         <View style={styles.footer}>
+           <Text style={styles.footerPage}>Page 2</Text>
+         </View>
+-      </RoyalPage>
++      </LuxuryPage>
+ 
+       {/* PAGE 3 - REMAINING ITINERARY DAYS */}
+       {itinerary.length > 3 && (
+-        <RoyalPage>
++        <LuxuryPage>
+ 
+           <View style={styles.section}>
+             <View style={styles.sectionHeader}>
+@@ -1105,11 +1123,11 @@ export function ItineraryPDF({
+           <View style={styles.footer}>
+             <Text style={styles.footerPage}>Page 3</Text>
+           </View>
+-        </RoyalPage>
++        </LuxuryPage>
+       )}
+ 
+       {/* PAGE 4 - INCLUSIONS, EXCLUSIONS, PRICING, CONTACTS */}
+-      <RoyalPage>
++      <LuxuryPage>
+ 
+         {/* 03 - INCLUSIONS / EXCLUSIONS */}
+         <View style={styles.section}>
+@@ -1304,10 +1322,10 @@ export function ItineraryPDF({
+             Page {itinerary.length > 3 ? "4" : "3"}
+           </Text>
+         </View>
+-      </RoyalPage>
++      </LuxuryPage>
+ 
+       {/* PAGE 5 - TERMS & POLICY + LEAVE A REVIEW */}
+-      <RoyalPage>
++      <LuxuryPage>
+ 
+         {/* 06 - TERMS & POLICY */}
+         <View style={styles.section}>
+@@ -1383,7 +1401,7 @@ export function ItineraryPDF({
+             Page {itinerary.length > 3 ? "5" : "4"}
+           </Text>
+         </View>
+-      </RoyalPage>
++      </LuxuryPage>
+     </Document>
+   );
+ }
+@@ -1402,32 +1420,35 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
+ 
+ function DayCard({ day }: { day: ItineraryDay }) {
+   return (
+-    <View style={styles.dayCard}>
+-      <View style={styles.dayHeader}>
+-        <View style={styles.dayBadge}>
+-          <Text style={styles.dayBadgeText}>DAY {day.day}</Text>
+-        </View>
+-        <Text style={styles.dayTitle}>{day.title}</Text>
+-      </View>
+-      <View style={styles.dayContent}>
+-        <Text style={styles.dayDescription}>{day.description}</Text>
+-        {(day.meals || day.accommodation) && (
+-          <View style={styles.metaRow}>
+-            {day.accommodation && (
+-              <View style={styles.metaItem}>
+-                <Text style={styles.metaLabel}>Stay ┬╖</Text>
+-                <Text style={styles.metaValue}>{day.accommodation}</Text>
+-              </View>
+-            )}
+-            {day.meals && day.meals.length > 0 && (
+-              <View style={styles.metaItem}>
+-                <Text style={styles.metaLabel}>Meals ┬╖</Text>
+-                <Text style={styles.metaValue}>{day.meals.join(", ")}</Text>
+-              </View>
+-            )}
++    <>
++      <View style={styles.dayCard}>
++        <View style={styles.dayHeader}>
++          <View style={styles.dayBadge}>
++            <Text style={styles.dayBadgeText}>DAY {day.day}</Text>
+           </View>
+-        )}
++          <Text style={styles.dayTitle}>{day.title}</Text>
++        </View>
++        <View style={styles.dayContent}>
++          <Text style={styles.dayDescription}>{day.description}</Text>
++          {(day.meals || day.accommodation) && (
++            <View style={styles.metaRow}>
++              {day.accommodation && (
++                <View style={styles.metaItem}>
++                  <Text style={styles.metaLabel}>Stay ┬╖</Text>
++                  <Text style={styles.metaValue}>{day.accommodation}</Text>
++                </View>
++              )}
++              {day.meals && day.meals.length > 0 && (
++                <View style={styles.metaItem}>
++                  <Text style={styles.metaLabel}>Meals ┬╖</Text>
++                  <Text style={styles.metaValue}>{day.meals.join(", ")}</Text>
++                </View>
++              )}
++            </View>
++          )}
++        </View>
+       </View>
+-    </View>
++      <GeometricDivider />
++    </>
+   );
+ }
