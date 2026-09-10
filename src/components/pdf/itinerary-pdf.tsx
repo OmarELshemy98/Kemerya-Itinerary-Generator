@@ -21,31 +21,41 @@ import {
   formatCurrency,
   calculateNights,
 } from "@/lib/utils";
+import { resolveLogoSrc } from "@/lib/pdf-assets";
 
 // Fonts are served locally from /public/fonts (no external CDN) so PDF
 // generation always works, even offline / behind firewalls.
 Font.registerHyphenationCallback((word) => [word]);
 
+// Resolve font path: in the browser use /public path, in Node.js use absolute path
+const fontPath = (filename: string) => {
+  if (typeof window !== "undefined") {
+    return `/fonts/${filename}`;
+  }
+  // Node.js environment — resolve relative to project public folder
+  return `${process.cwd()}/public/fonts/${filename}`;
+};
+
 Font.register({
   family: "Cinzel",
   fonts: [
-    { src: "/fonts/cinzel-latin-400-normal.woff" },
-    { src: "/fonts/cinzel-latin-700-normal.woff", fontWeight: 700 },
+    { src: fontPath("cinzel-latin-400-normal.woff") },
+    { src: fontPath("cinzel-latin-700-normal.woff"), fontWeight: 700 },
   ],
 });
 
 // Decorative display face — headings, tour titles & day numbers only.
 Font.register({
   family: "Cinzel Decorative",
-  fonts: [{ src: "/fonts/cinzel-decorative-latin-400-normal.woff" }],
+  fonts: [{ src: fontPath("cinzel-decorative-latin-400-normal.woff") }],
 });
 
 Font.register({
   family: "Lora",
   fonts: [
-    { src: "/fonts/lora-latin-400-normal.woff" },
-    { src: "/fonts/lora-latin-400-italic.woff", fontStyle: "italic" },
-    { src: "/fonts/lora-latin-700-normal.woff", fontWeight: 700 },
+    { src: fontPath("lora-latin-400-normal.woff") },
+    { src: fontPath("lora-latin-400-italic.woff"), fontStyle: "italic" },
+    { src: fontPath("lora-latin-700-normal.woff"), fontWeight: 700 },
   ],
 });
 
@@ -871,7 +881,8 @@ function LuxuryPage({
   children: React.ReactNode;
   companyInfo?: CompanyInfo;
 }) {
-  const logoSrc = companyInfo?.logo;
+  // Resolve logo path: in browser use /public path, in Node.js use data URL
+  const logoSrc = resolveLogoSrc(companyInfo?.logo);
   return (
     <Page size="A4" style={styles.page}>
       <View style={styles.pageFrame}>
@@ -1053,7 +1064,7 @@ export function ItineraryPDF({
         {/* 01 - BOOKING SUMMARY */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionNumber}>01</View>
+            <View style={styles.sectionNumber}><Text>01</Text></View>
             <Text style={styles.sectionTitle}>Booking Summary</Text>
             <View style={styles.sectionUnderline} />
           </View>
@@ -1105,7 +1116,7 @@ export function ItineraryPDF({
         {!booking.isCustomTour && tour?.overview?.length ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View style={styles.sectionNumber}>02</View>
+              <View style={styles.sectionNumber}><Text>02</Text></View>
               <Text style={styles.sectionTitle}>Tour Overview</Text>
               <View style={styles.sectionUnderline} />
             </View>
@@ -1174,7 +1185,7 @@ export function ItineraryPDF({
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionNumber}>02</View>
+            <View style={styles.sectionNumber}><Text>02</Text></View>
             <Text style={styles.sectionTitle}>Day-by-Day Itinerary</Text>
             <View style={styles.sectionUnderline} />
           </View>
@@ -1206,7 +1217,7 @@ export function ItineraryPDF({
 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View style={styles.sectionNumber}>02</View>
+              <View style={styles.sectionNumber}><Text>02</Text></View>
               <Text style={styles.sectionTitle}>Itinerary (Continued)</Text>
               <View style={styles.sectionUnderline} />
             </View>
@@ -1228,7 +1239,7 @@ export function ItineraryPDF({
         {/* 03 - INCLUSIONS / EXCLUSIONS */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionNumber}>03</View>
+            <View style={styles.sectionNumber}><Text>03</Text></View>
             <Text style={styles.sectionTitle}>Inclusions & Exclusions</Text>
             <View style={styles.sectionUnderline} />
           </View>
@@ -1281,7 +1292,7 @@ export function ItineraryPDF({
         {/* 04 - PRICING */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionNumber}>04</View>
+            <View style={styles.sectionNumber}><Text>04</Text></View>
             <Text style={styles.sectionTitle}>Pricing & Payment</Text>
             <View style={styles.sectionUnderline} />
           </View>
@@ -1363,7 +1374,7 @@ export function ItineraryPDF({
         {/* 05 - OPERATIONS CONTACTS */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionNumber}>05</View>
+            <View style={styles.sectionNumber}><Text>05</Text></View>
             <Text style={styles.sectionTitle}>Operations & Contact Info</Text>
             <View style={styles.sectionUnderline} />
           </View>
@@ -1426,7 +1437,7 @@ export function ItineraryPDF({
         {/* 06 - TERMS & POLICY */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionNumber}>06</View>
+            <View style={styles.sectionNumber}><Text>06</Text></View>
             <Text style={styles.sectionTitle}>Terms & Policy</Text>
             <View style={styles.sectionUnderline} />
           </View>
