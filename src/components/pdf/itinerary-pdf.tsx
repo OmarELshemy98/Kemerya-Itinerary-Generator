@@ -1139,20 +1139,18 @@ export function ItineraryPDF({
         </View>
 
         {/* JOURNEY ROUTE MAP */}
-        {booking.mapUrl && (
-          <View style={styles.mapWrapper}>
-            <View style={styles.mapHeader}>
-              <Text style={styles.mapTitle}>JOURNEY ROUTE MAP</Text>
-            </View>
-            <View style={styles.mapInnerBorder}>
-              {/* eslint-disable-next-line jsx-a11y/alt-text */}
-              <Image
-                src={booking.mapUrl}
-                style={styles.mapImage}
-              />
-            </View>
+        <View style={styles.mapWrapper}>
+          <View style={styles.mapHeader}>
+            <Text style={styles.mapTitle}>JOURNEY ROUTE MAP</Text>
           </View>
-        )}
+          <View style={styles.mapInnerBorder}>
+            {/* eslint-disable-next-line jsx-a11y/alt-text */}
+            <Image
+              src={booking.mapUrl}
+              style={styles.mapImage}
+            />
+          </View>
+        </View>
 
         {/* TOUR OVERVIEW — same text as the website #overview section */}
         {!booking.isCustomTour && tour?.overview?.length ? (

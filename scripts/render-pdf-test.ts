@@ -48,7 +48,7 @@ const tour: Tour = {
       inclusions: ["Private guide", "Entrance fees"],
       exclusions: ["Drinks"],
       createdAt: new Date().toISOString(),
-      mapUrl: mapUrl || undefined,
+      mapUrl,
     };
     const buffer = await renderToBuffer(
       React.createElement(ItineraryPDF, { tour, booking }) as never
