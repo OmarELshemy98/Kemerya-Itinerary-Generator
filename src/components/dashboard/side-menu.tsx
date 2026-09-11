@@ -12,6 +12,7 @@ import {
   Map,
   CheckCircle2,
   Settings,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,12 @@ export function SideMenu({ userRole, collapsed, onToggle, mobileOpen, onMobileCl
         label: "Custom Tours",
         icon: <Map className="h-5 w-5" />,
         path: "/dashboard/custom-tours",
+      },
+      {
+        id: "hold-itineraries",
+        label: "Hold Itineraries",
+        icon: <Clock className="h-5 w-5" />,
+        path: "/dashboard/hold-itineraries",
       },
       {
         id: "approved-itineraries",

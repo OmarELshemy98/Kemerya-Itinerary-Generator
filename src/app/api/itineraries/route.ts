@@ -14,7 +14,7 @@ async function getCurrentUserId(): Promise<string | null> {
   return user?.id ?? null;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
@@ -23,6 +23,10 @@ export async function GET() {
         { status: 401 }
       );
     }
+
+    // Get filter type from query params
+    const { searchParams } = new URL(request.url);
+    const filterType = searchParams.get("type"); // "custom", "approved", "hold", or null for all
 
     // Get user's role to determine if they can see all itineraries
     const serverSupabase = createServerClient();
@@ -47,6 +51,17 @@ export async function GET() {
     // Non-admin users can only see their own itineraries
     if (!isAdmin) {
       query = query.eq("user_id", userId);
+    }
+
+    // Apply filters based on type
+    if (filterType === "custom") {
+      query = query.eq("is_custom_tour", true);
+    } else if (filterType === "approved") {
+      // Approved page: ONLY approved itineraries
+      query = query.eq("is_approved", true);
+    } else if (filterType === "hold") {
+      // Hold = NOT approved (false OR NULL for old rows)
+      query = query.or("is_approved.is.null,is_approved.eq.false");
     }
 
     const { data, error } = await query;
@@ -98,6 +113,7 @@ export async function GET() {
       notes: row.notes,
       special_requests: row.special_requests,
       created_at: row.created_at,
+      is_approved: row.is_approved ?? false,
     }));
 
     return NextResponse.json({ ok: true, itineraries });
@@ -150,6 +166,26 @@ export async function POST(request: Request) {
       end_date: booking.endDate,
       notes: booking.notes || null,
       special_requests: booking.specialRequests || null,
+      is_approved: booking.isApproved || false,
+      booking_data: {
+        isCustomTour: booking.isCustomTour,
+        tourId: (booking as any).tourId,
+        customTourTitle: booking.customTourTitle,
+        customTourDescription: booking.customTourDescription,
+        customItinerary: booking.customItinerary,
+        customInclusions: booking.customInclusions,
+        customExclusions: booking.customExclusions,
+        customRouteStops: booking.customRouteStops,
+        dayRoutes: booking.dayRoutes,
+        customTerms: booking.customTerms,
+        inclusions: booking.inclusions,
+        exclusions: booking.exclusions,
+        clientWhatsapp: booking.clientWhatsapp,
+        meetingPoint: booking.meetingPoint,
+        flightArrival: booking.flightArrival,
+        pricePerPerson: booking.pricePerPerson,
+        mapUrl: booking.mapUrl,
+      },
     };
 
     // Use serviceSupabase to bypass RLS

@@ -24,12 +24,20 @@ export interface ItineraryDay {
   accommodation?: string;
   /** Route stops for this specific day */
   routeStops?: DayRouteStop[];
+  /** Per-day journey map stops — destinations visited THIS day (employee-editable) */
+  dayRoute?: string[];
 }
 
 export interface DayRouteStop {
   id: string;
   name: string;
   order: number;
+}
+
+/** Per-day journey route — places the client visits THAT day (per-day map) */
+export interface DayRoute {
+  day: number;
+  stops: string[];
 }
 
 export interface SpecialRequestItem {
@@ -132,6 +140,8 @@ export interface BookingConfig {
   mapUrl?: string;
   /** Custom route stops - editable list of destinations for the journey roadmap */
   customRouteStops?: RouteStop[];
+  /** Per-day journey routes — one mini-map per day (places visited THAT day) */
+  dayRoutes?: DayRoute[];
   /** Whether this itinerary has been approved */
   isApproved?: boolean;
   /** Custom terms & conditions for this specific itinerary */

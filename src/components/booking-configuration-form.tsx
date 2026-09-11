@@ -26,7 +26,7 @@ import {
   ArrowDown,
   CheckCircle2,
 } from "lucide-react";
-import type { Tour, BookingConfig, Currency, ItineraryDay, RouteStop } from "@/types";
+import type { Tour, BookingConfig, Currency, ItineraryDay, RouteStop, DayRoute } from "@/types";
 import {
   Card,
   CardContent,
@@ -444,6 +444,13 @@ const bookingSchema = z
     isApproved: z.boolean().optional().default(false),
     /** Custom terms & conditions for this specific itinerary */
     customTerms: z.array(z.string()).optional(),
+    /** Per-day journey map stops (simple strings per day) */
+    dayRoutes: z.array(z.object({
+      day: z.coerce.number().int().min(1),
+      stops: z.array(z.string()),
+    })).optional(),
+    /** Route stops attached to each custom itinerary day (index-aligned) */
+    customDayRoutes: z.array(z.array(z.string())).optional(),
     customInclusions: z.array(z.string()).optional(),
     customExclusions: z.array(z.string()).optional(),
     customItinerary: z.array(z.object({
