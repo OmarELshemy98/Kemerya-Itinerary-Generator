@@ -12,6 +12,7 @@ import {
   Wand2,
   FileText,
   Plus,
+  Minus,
   Trash2,
   User,
   Mail,
@@ -1191,15 +1192,86 @@ export function BookingConfigurationForm({
                 </div>
               </Section>
 
-              <Section icon={<Calendar className="h-4 w-4" />} title={`Custom Itinerary (Day by Day)`}>
-                <div className="space-y-3">
-                  {itineraryFields.length === 0 && (
-                  <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center">
-                    <p className="text-sm text-slate-500">
-                      No itinerary days added yet.
-                    </p>
+              <Section icon={<Calendar className="h-4 w-4" />} title={`Custom Itinerary`}>
+                <div className="space-y-4">
+                  {/* Number of Days Input */}
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <Label className="text-xs">Number of Days</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={30}
+                        value={itineraryFields.length || ""}
+                        onChange={(e) => {
+                          const numDays = parseInt(e.target.value) || 0;
+                          const currentLength = itineraryFields.length;
+                          
+                          if (numDays > currentLength) {
+                            for (let i = currentLength; i < numDays; i++) {
+                              appendDay({
+                                day: i + 1,
+                                title: `Day ${i + 1}`,
+                                description: "",
+                              });
+                            }
+                          } else if (numDays < currentLength && numDays >= 0) {
+                            for (let i = currentLength - 1; i >= numDays; i--) {
+                              removeDay(i);
+                            }
+                          }
+                        }}
+                        placeholder="Enter number of days..."
+                        className="mt-1"
+                      />
+                      <p className="mt-1 text-[10px] text-slate-400">
+                        Enter the number of days to auto-create itinerary inputs
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Label className="text-xs">&nbsp;</Label>
+                      <div className="flex gap-1 mt-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (itineraryFields.length > 1) {
+                              removeDay(itineraryFields.length - 1);
+                            }
+                          }}
+                          disabled={itineraryFields.length <= 1}
+                          className="h-9 w-9 p-0"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            appendDay({
+                              day: itineraryFields.length + 1,
+                              title: `Day ${itineraryFields.length + 1}`,
+                              description: "",
+                            });
+                          }}
+                          className="h-9 w-9 p-0"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                )}
+
+                  {/* Itinerary Days */}
+                  {itineraryFields.length === 0 && (
+                    <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center">
+                      <p className="text-sm text-slate-500">
+                        Enter the number of days above to create itinerary inputs.
+                      </p>
+                    </div>
+                  )}
                   {itineraryFields.map((field, index) => (
                     <div key={field.id} className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
                       <div className="mb-3 flex items-center justify-between">
@@ -1244,34 +1316,18 @@ export function BookingConfigurationForm({
                       </div>
                     </div>
                   ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      appendDay({
-                        day: itineraryFields.length + 1,
-                        title: `Day ${itineraryFields.length + 1}`,
-                        description: "",
-                      })
-                    }
-                    className="w-full border-dashed"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Day {itineraryFields.length + 1}
-                  </Button>
                 </div>
-              </Section>
-
-              {/* Journey Route Stops Editor */}
-              <Section icon={<Map className="h-4 w-4" />} title="Journey Route (Destinations)">
-                <RouteStopsEditor
-                  stops={customRouteStops}
-                  onChange={(stops) => setValue("customRouteStops", stops)}
-                />
               </Section>
             </>
           )}
+
+          {/* Journey Route Stops Editor - Always visible */}
+          <Section icon={<Map className="h-4 w-4" />} title="Journey Route (Destinations)">
+            <RouteStopsEditor
+              stops={customRouteStops}
+              onChange={(stops) => setValue("customRouteStops", stops)}
+            />
+          </Section>
 
           <Separator />
 

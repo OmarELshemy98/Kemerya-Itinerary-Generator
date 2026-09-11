@@ -9,6 +9,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
+  Map,
+  CheckCircle2,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -48,15 +51,33 @@ export function SideMenu({ userRole, collapsed, onToggle, mobileOpen, onMobileCl
         icon: <FileText className="h-5 w-5" />,
         path: "/dashboard/itineraries",
       },
+      {
+        id: "custom-tours",
+        label: "Custom Tours",
+        icon: <Map className="h-5 w-5" />,
+        path: "/dashboard/custom-tours",
+      },
+      {
+        id: "approved-itineraries",
+        label: "Approved Itineraries",
+        icon: <CheckCircle2 className="h-5 w-5" />,
+        path: "/dashboard/approved-itineraries",
+      },
     ];
 
-    // قسم الـ Users متاح للسوبر أدمن فقط
+    // قسم الـ Users و Terms متاح للسوبر أدمن فقط
     if (userRole === "super_admin") {
       items.push({
         id: "users",
         label: "Users",
         icon: <Users className="h-5 w-5" />,
         path: "/dashboard/users",
+      });
+      items.push({
+        id: "terms-settings",
+        label: "Terms Settings",
+        icon: <Settings className="h-5 w-5" />,
+        path: "/dashboard/terms-settings",
       });
     }
 

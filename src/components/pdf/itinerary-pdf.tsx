@@ -87,6 +87,23 @@ const TERMS_ITEMS = [
   "Emergency & Governing Law: A 24/7 emergency line is printed on the confirmation voucher. Egyptian law governs these booking terms.",
 ];
 
+function getTermsItems(): string[] {
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("kemerya_terms");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return TERMS_ITEMS;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Pharaonic SVG Icons — Luxury Gold (#C5A059)
 // ═══════════════════════════════════════════════════════════════
@@ -1659,7 +1676,7 @@ export function ItineraryPDF({
             <View style={styles.sectionUnderline} />
           </View>
           <View style={styles.termsCard}>
-            {TERMS_ITEMS.map((item, i) => (
+            {getTermsItems().map((item, i) => (
               <View key={i} style={styles.termsItemRow}>
                 <Text style={styles.termsBullet}>▪</Text>
                 <Text style={styles.termsItemText}>{item}</Text>
