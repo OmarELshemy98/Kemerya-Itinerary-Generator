@@ -87,7 +87,12 @@ const TERMS_ITEMS = [
   "Emergency & Governing Law: A 24/7 emergency line is printed on the confirmation voucher. Egyptian law governs these booking terms.",
 ];
 
-function getTermsItems(): string[] {
+function getTermsItems(booking?: BookingConfig): string[] {
+  // First check if booking has custom terms
+  if (booking?.customTerms && booking.customTerms.length > 0) {
+    return booking.customTerms;
+  }
+  // Then check localStorage for globally edited terms
   if (typeof window !== "undefined") {
     try {
       const stored = localStorage.getItem("kemerya_terms");
@@ -1676,7 +1681,7 @@ export function ItineraryPDF({
             <View style={styles.sectionUnderline} />
           </View>
           <View style={styles.termsCard}>
-            {getTermsItems().map((item, i) => (
+            {getTermsItems(booking).map((item, i) => (
               <View key={i} style={styles.termsItemRow}>
                 <Text style={styles.termsBullet}>▪</Text>
                 <Text style={styles.termsItemText}>{item}</Text>

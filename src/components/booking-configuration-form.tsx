@@ -24,6 +24,7 @@ import {
   GripVertical,
   ArrowUp,
   ArrowDown,
+  CheckCircle2,
 } from "lucide-react";
 import type { Tour, BookingConfig, Currency, ItineraryDay, RouteStop } from "@/types";
 import {
@@ -269,6 +270,95 @@ function RouteStopsEditor({
     </div>
   );
 }
+
+/**
+ * Terms Editor - Editable terms & conditions per itinerary
+ */
+function TermsEditor({
+  terms,
+  onChange,
+}: {
+  terms: string[];
+  onChange: (terms: string[]) => void;
+}) {
+  const addTerm = () => {
+    onChange([...terms, ""]);
+  };
+
+  const removeTerm = (index: number) => {
+    onChange(terms.filter((_, i) => i !== index));
+  };
+
+  const updateTerm = (index: number, value: string) => {
+    onChange(terms.map((t, i) => (i === index ? value : t)));
+  };
+
+  const resetToDefault = () => {
+    const defaultTerms = [
+      "Booking Confirmation: A booking is locked in only when Kemerya Tours confirms availability in writing, the required deposit is paid, and the official Booking Confirmation is issued.",
+      "Deposits & Balance: A non-refundable deposit equal to 35% of the total trip cost is required upon booking confirmation. The remaining 65% balance must be paid upon arrival.",
+      "Pricing & Fees: Quotes are issued in USD or EUR. Bank conversion rates and card processing fees are the traveler's responsibility.",
+      "Services & Suppliers: Certain travel components are provided by independent third-party suppliers. Services included are strictly those detailed in the confirmed quotation and itinerary.",
+      "Cancellations & Changes: Most bookings can be changed or canceled depending on the airline, hotel, or service provider's policy.",
+      "Liability: Kemerya Tours' maximum financial liability never exceeds the total amount paid for the specific booking.",
+      "In-Trip Complaints: Report any issue to your guide or local representative immediately.",
+      "Emergency & Governing Law: A 24/7 emergency line is printed on the confirmation voucher. Egyptian law governs these booking terms.",
+    ];
+    onChange(defaultTerms);
+  };
+
+  return (
+    <div className="space-y-3">
+      {terms.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-slate-300 p-4 text-center">
+          <p className="text-sm text-slate-500 mb-2">No custom terms added. Default terms will be used.</p>
+          <Button type="button" variant="outline" size="sm" onClick={resetToDefault}>
+            Load Default Terms
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {terms.map((term, index) => (
+            <div key={index} className="flex gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#C5A059] text-xs font-bold text-white">
+                {index + 1}
+              </div>
+              <Textarea
+                value={term}
+                onChange={(e) => updateTerm(index, e.target.value)}
+                placeholder="Enter term or condition..."
+                rows={2}
+                className="flex-1 resize-none text-sm"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => removeTerm(index)}
+                className="h-8 w-8 shrink-0 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
+              >
+                ×
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={addTerm} className="border-dashed">
+          <Plus className="mr-2 h-4 w-4" />
+          Add Term
+        </Button>
+        {terms.length > 0 && (
+          <Button type="button" variant="ghost" size="sm" onClick={resetToDefault}>
+            Reset to Default
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function pickPricePerPerson(pricesTable: { personsLabel: string; priceUSD: number }[] | undefined, travelers: number): number {
   if (!pricesTable || pricesTable.length === 0) return 0;
   const n = Math.max(1, travelers);
@@ -350,6 +440,10 @@ const bookingSchema = z
       name: z.string().min(1, "Location name required"),
       order: z.number().int().min(0),
     })).optional(),
+    /** Whether this itinerary is approved */
+    isApproved: z.boolean().optional().default(false),
+    /** Custom terms & conditions for this specific itinerary */
+    customTerms: z.array(z.string()).optional(),
     customInclusions: z.array(z.string()).optional(),
     customExclusions: z.array(z.string()).optional(),
     customItinerary: z.array(z.object({
@@ -476,6 +570,8 @@ export function BookingConfigurationForm({
         customExclusions: [],
         customItinerary: [],
         customRouteStops: [],
+        isApproved: false,
+        customTerms: [],
         bookingRef: generateBookingRef(),
         ...initialValues,
       },
@@ -490,6 +586,8 @@ export function BookingConfigurationForm({
   const infants = watch("infants");
   const startDateSel = watch("startDate");
   const customRouteStops = watch("customRouteStops");
+  const isApproved = watch("isApproved");
+  const customTerms = watch("customTerms");
 
   React.useEffect(() => {
     if (selectedTour && !isCustomMode) {
@@ -570,6 +668,8 @@ export function BookingConfigurationForm({
       customInclusions: values.isCustomTour ? values.customInclusions : undefined,
       customExclusions: values.isCustomTour ? values.customExclusions : undefined,
       customRouteStops: values.customRouteStops && values.customRouteStops.length > 0 ? values.customRouteStops : undefined,
+      isApproved: values.isApproved || false,
+      customTerms: values.customTerms && values.customTerms.length > 0 ? values.customTerms : undefined,
       // Standard mode: employee-editable inclusions/exclusions (pre-filled from tour)
       inclusions: !values.isCustomTour ? values.inclusions : undefined,
       exclusions: !values.isCustomTour ? values.exclusions : undefined,
@@ -1331,6 +1431,13 @@ export function BookingConfigurationForm({
 
           <Separator />
 
+          {/* Custom Terms & Conditions */}
+          <Section icon={<FileText className="h-4 w-4" />} title="Terms & Conditions (Custom)">
+            <TermsEditor terms={customTerms || []} onChange={(terms) => setValue("customTerms", terms)} />
+          </Section>
+
+          <Separator />
+
           <div className="flex flex-col justify-end gap-3 sm:flex-row">
             <Button
               type="button"
@@ -1339,6 +1446,17 @@ export function BookingConfigurationForm({
               disabled={isSubmitting}
             >
               Reset Form
+            </Button>
+            <Button
+              type="button"
+              variant={isApproved ? "default" : "outline"}
+              size="sm"
+              disabled={isSubmitting}
+              className={`gap-2 ${isApproved ? "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500" : ""}`}
+              onClick={() => setValue("isApproved", !isApproved)}
+            >
+              <CheckCircle2 className={`h-4 w-4 ${isApproved ? "text-white" : "text-emerald-500"}`} />
+              {isApproved ? "Approved ✓" : "Mark as Approved"}
             </Button>
             <Button
               type="button"

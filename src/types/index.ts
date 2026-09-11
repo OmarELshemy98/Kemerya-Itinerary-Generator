@@ -22,6 +22,14 @@ export interface ItineraryDay {
   highlights?: string[];
   meals?: ("Breakfast" | "Lunch" | "Dinner")[];
   accommodation?: string;
+  /** Route stops for this specific day */
+  routeStops?: DayRouteStop[];
+}
+
+export interface DayRouteStop {
+  id: string;
+  name: string;
+  order: number;
 }
 
 export interface SpecialRequestItem {
@@ -124,6 +132,10 @@ export interface BookingConfig {
   mapUrl?: string;
   /** Custom route stops - editable list of destinations for the journey roadmap */
   customRouteStops?: RouteStop[];
+  /** Whether this itinerary has been approved */
+  isApproved?: boolean;
+  /** Custom terms & conditions for this specific itinerary */
+  customTerms?: string[];
 }
 
 export interface RouteStop {
