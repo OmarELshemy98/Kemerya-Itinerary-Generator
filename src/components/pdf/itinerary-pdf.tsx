@@ -22,6 +22,7 @@ import {
   calculateNights,
 } from "@/lib/utils";
 import { resolveLogoSrc } from "@/lib/pdf-assets";
+import { EGYPT_LOCATIONS } from "@/utils/mapGenerator";
 
 // Fonts are served locally from /public/fonts (no external CDN) so PDF
 // generation always works, even offline / behind firewalls.
@@ -386,19 +387,71 @@ const styles = StyleSheet.create({
     padding: 0,
     marginBottom: 24,
     borderRadius: 0,
-    borderWidth: 0,
+    borderWidth: 2,
     borderStyle: "solid",
     borderColor: BRAND_COLORS.gold,
     position: "relative",
     overflow: "hidden",
   },
   heroTopBar: {
-    height: 3,
+    height: 4,
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     backgroundColor: BRAND_COLORS.gold,
+  },
+  heroBottomBar: {
+    height: 4,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: BRAND_COLORS.gold,
+  },
+  heroCornerTL: {
+    position: "absolute",
+    top: 6,
+    left: 0,
+    width: 30,
+    height: 30,
+    borderTopWidth: 0,
+    borderLeftWidth: 3,
+    borderStyle: "solid",
+    borderColor: BRAND_COLORS.navy,
+  },
+  heroCornerTR: {
+    position: "absolute",
+    top: 6,
+    right: 0,
+    width: 30,
+    height: 30,
+    borderTopWidth: 0,
+    borderRightWidth: 3,
+    borderStyle: "solid",
+    borderColor: BRAND_COLORS.navy,
+  },
+  heroCornerBL: {
+    position: "absolute",
+    bottom: 6,
+    left: 0,
+    width: 30,
+    height: 30,
+    borderBottomWidth: 0,
+    borderLeftWidth: 3,
+    borderStyle: "solid",
+    borderColor: BRAND_COLORS.navy,
+  },
+  heroCornerBR: {
+    position: "absolute",
+    bottom: 6,
+    right: 0,
+    width: 30,
+    height: 30,
+    borderBottomWidth: 0,
+    borderRightWidth: 3,
+    borderStyle: "solid",
+    borderColor: BRAND_COLORS.navy,
   },
   heroTourName: {
     color: BRAND_COLORS.dark,
@@ -410,7 +463,7 @@ const styles = StyleSheet.create({
   heroSubtitle: {
     color: BRAND_COLORS.gold,
     fontSize: 10,
-    letterSpacing: 2,
+    letterSpacing: 3,
     textTransform: "uppercase",
     marginBottom: 22,
   },
@@ -481,6 +534,10 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
     justifyContent: "space-between",
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#E8D7B1",
+    backgroundColor: "#FFFFFF",
   },
   summaryItem: {
     width: "48%",
@@ -513,6 +570,56 @@ const styles = StyleSheet.create({
   routeContainer: {
     padding: 10,
     alignItems: "center",
+  },
+  destinationsWrapper: {
+    marginTop: 15,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: "#C5A059",
+    backgroundColor: "#FDFBF7",
+  },
+  destinationsSubtitle: {
+    fontFamily: "Lora",
+    fontSize: 9,
+    color: "#8A8171",
+    fontStyle: "italic",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  destinationsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 8,
+  },
+  destinationCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E8D7B1",
+    minWidth: "45%",
+    gap: 8,
+  },
+  destinationIcon: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#C5A059",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  destinationIconText: {
+    fontSize: 6,
+    color: "#FFFFFF",
+  },
+  destinationName: {
+    fontFamily: "Cinzel",
+    fontSize: 8,
+    color: "#2C1E16",
+    flex: 1,
   },
   summaryItemLabel: {
     fontSize: 8,
@@ -1027,17 +1134,46 @@ export function ItineraryPDF({
   if (booking.travelers.infants > 0) totalTravelersTextParts.push(`${booking.travelers.infants} Infant${booking.travelers.infants > 1 ? "s" : ""}`);
   const travelersText = totalTravelersTextParts.join(", ");
 
-  // Helper to get location name from day
-  const getLocationName = (day: ItineraryDay, index: number): string => {
-    if (day.title && day.title.trim()) return day.title.trim();
-    return `Day ${index + 1}`;
+  // Helper to extract location names from day text using mapGenerator's location DB
+  const extractDayLocations = (day: ItineraryDay): string[] => {
+    const dayText = `${day.title || ''} ${day.description || ''}`;
+    const lower = dayText.toLowerCase();
+    const found: string[] = [];
+    
+    // Sort by length (longest first) to match "pyramids of giza" before "giza"
+    const sortedKeys = Object.keys(EGYPT_LOCATIONS).sort((a, b) => b.length - a.length);
+    
+    for (const loc of sortedKeys) {
+      if (lower.includes(loc)) {
+        // Use title case for display
+        const displayName = loc.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        if (!found.includes(displayName)) {
+          found.push(displayName);
+        }
+      }
+    }
+    return found;
   };
 
-  // Build route stops from itinerary
-  const routeStops = (itinerary || []).map((day, i) => ({
-    day: day.day || i + 1,
-    label: getLocationName(day, i),
-  }));
+  // Build route stops from itinerary with all locations
+  const routeStops = (itinerary || []).map((day, i) => {
+    const locations = extractDayLocations(day);
+    const dayLabel = day.title && day.title.trim() 
+      ? day.title.trim() 
+      : `Day ${i + 1}`;
+    return {
+      day: day.day || i + 1,
+      label: dayLabel,
+      locations: locations.length > 0 ? locations : [dayLabel],
+    };
+  });
+
+  // Collect all unique locations for the roadmap
+  const allLocations = Array.from(
+    new Set(
+      routeStops.flatMap(stop => stop.locations)
+    )
+  );
 
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
@@ -1050,6 +1186,11 @@ export function ItineraryPDF({
         {/* HERO */}
         <View style={styles.heroCard}>
           <View style={styles.heroTopBar} />
+          <View style={styles.heroBottomBar} />
+          <View style={styles.heroCornerTL} />
+          <View style={styles.heroCornerTR} />
+          <View style={styles.heroCornerBL} />
+          <View style={styles.heroCornerBR} />
           <View style={styles.clientBadge}>
             <Text style={styles.clientBadgeText}>Booking Reference · {bookingRef}</Text>
           </View>
@@ -1150,6 +1291,30 @@ export function ItineraryPDF({
             </View>
             <View style={styles.routeContainer}>
               <RouteTimeline stops={routeStops} />
+            </View>
+          </View>
+        )}
+
+        {/* DESTINATIONS OVERVIEW - All places to visit */}
+        {allLocations.length > 0 && (
+          <View style={styles.destinationsWrapper}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionNumber}><Text>02</Text></View>
+              <Text style={styles.sectionTitle}>Destinations Overview</Text>
+              <View style={styles.sectionUnderline} />
+            </View>
+            <Text style={styles.destinationsSubtitle}>
+              Explore the magnificent locations included in your journey
+            </Text>
+            <View style={styles.destinationsGrid}>
+              {allLocations.map((location, i) => (
+                <View key={i} style={styles.destinationCard}>
+                  <View style={styles.destinationIcon}>
+                    <Text style={styles.destinationIconText}>◆</Text>
+                  </View>
+                  <Text style={styles.destinationName}>{location}</Text>
+                </View>
+              ))}
             </View>
           </View>
         )}
@@ -1618,78 +1783,135 @@ function DayCard({ day }: { day: ItineraryDay }) {
 interface RouteStop {
   day: number;
   label: string;
+  locations: string[];
 }
 
 function RouteTimeline({ stops }: { stops: RouteStop[] }) {
-  const width = 480;
-  const height = 80 + (stops.length > 5 ? (stops.length - 5) * 20 : 0);
-  const padding = 40;
+  const width = 520;
+  const padding = 50;
   const usableWidth = width - padding * 2;
-  const stepX = stops.length > 1 ? usableWidth / (stops.length - 1) : 0;
-  const centerY = height / 2;
+  const nodeSpacing = stops.length > 1 ? usableWidth / (stops.length - 1) : 0;
+  const centerY = 70;
+  const lineHeight = 24;
+
+  // Calculate required height based on locations
+  const maxLocations = Math.max(...stops.map(s => s.locations.length));
+  const height = centerY * 2 + (maxLocations * lineHeight) + 40;
 
   return (
     <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-      {/* Background */}
+      {/* Background with papyrus-like texture */}
       <Path
         d={`M 0 0 L ${width} 0 L ${width} ${height} L 0 ${height} Z`}
         fill="#FDFBF7"
       />
+      
+      {/* Decorative border */}
+      <Path
+        d={`M 5 5 L ${width - 5} 5 L ${width - 5} ${height - 5} L 5 ${height - 5} Z`}
+        fill="none"
+        stroke="#C5A059"
+        strokeWidth={1}
+        strokeDasharray="4,2"
+      />
 
-      {/* Main route line */}
+      {/* Main route line - golden gradient effect */}
       <Path
         d={`M ${padding} ${centerY} L ${width - padding} ${centerY}`}
         stroke="#C5A059"
-        strokeWidth={2}
-        strokeDasharray="6,3"
+        strokeWidth={3}
+      />
+      <Path
+        d={`M ${padding} ${centerY + 2} L ${width - padding} ${centerY + 2}`}
+        stroke="#E8D7B1"
+        strokeWidth={1}
       />
 
       {/* Checkpoints */}
       {stops.map((stop, i) => {
-        const x = padding + i * stepX;
+        const x = padding + i * nodeSpacing;
         const isFirst = i === 0;
         const isLast = i === stops.length - 1;
 
         return (
           <G key={i}>
-            {/* Checkpoint circle */}
+            {/* Outer glow circle */}
             <Path
-              d={`M ${x} ${centerY - 10} A 10 10 0 1 1 ${x} ${centerY + 10} A 10 10 0 1 1 ${x} ${centerY - 10} Z`}
+              d={`M ${x} ${centerY - 16} A 16 16 0 1 1 ${x} ${centerY + 16} A 16 16 0 1 1 ${x} ${centerY - 16} Z`}
               fill={isFirst || isLast ? "#1E3A8A" : "#C5A059"}
-              stroke="#1E3A8A"
-              strokeWidth={1.5}
+              opacity={0.2}
+            />
+            {/* Main circle */}
+            <Path
+              d={`M ${x} ${centerY - 12} A 12 12 0 1 1 ${x} ${centerY + 12} A 12 12 0 1 1 ${x} ${centerY - 12} Z`}
+              fill={isFirst || isLast ? "#1E3A8A" : "#C5A059"}
+              stroke="#FDFBF7"
+              strokeWidth={2}
             />
             {/* Day number inside circle */}
             <Text
-              style={{ fontSize: 8, fontFamily: "Cinzel", fill: "#FFFFFF", textAnchor: "middle" }}
+              style={{ fontSize: 9, fontFamily: "Cinzel", fill: "#FFFFFF", textAnchor: "middle" }}
               x={x}
-              y={centerY + 4}
+              y={centerY + 3}
             >
               {String(stop.day)}
             </Text>
-            {/* Label above/below */}
+            
+            {/* Day label above */}
             <Text
-              style={{ fontSize: 7, fontFamily: "Lora", fill: "#2C1E16", textAnchor: "middle" }}
+              style={{ fontSize: 7, fontFamily: "Cinzel", fill: "#1E3A8A", textAnchor: "middle" }}
               x={x}
-              y={i % 2 === 0 ? centerY - 20 : centerY + 28}
+              y={centerY - 22}
             >
-              {stop.label.length > 15 ? stop.label.slice(0, 13) + "..." : stop.label}
+              {`Day ${stop.day}`}
             </Text>
+
+            {/* Locations list */}
+            {stop.locations.map((loc, j) => (
+              <Text
+                key={j}
+                style={{ fontSize: 6, fontFamily: "Lora", fill: "#2C1E16", textAnchor: "middle" }}
+                x={x}
+                y={centerY + 28 + (j * lineHeight)}
+              >
+                {loc.length > 20 ? loc.slice(0, 18) + "..." : loc}
+              </Text>
+            ))}
+
+            {/* Start/End markers */}
+            {isFirst && (
+              <G>
+                <Path
+                  d={`M ${x - 8} ${centerY - 28} L ${x + 8} ${centerY - 28} L ${x} ${centerY - 38} Z`}
+                  fill="#1E3A8A"
+                />
+                <Text
+                  style={{ fontSize: 6, fontFamily: "Cinzel", fill: "#1E3A8A", textAnchor: "middle" }}
+                  x={x}
+                  y={centerY - 42}
+                >
+                  START
+                </Text>
+              </G>
+            )}
+            {isLast && (
+              <G>
+                <Path
+                  d={`M ${x - 8} ${centerY - 28} L ${x + 8} ${centerY - 28} L ${x} ${centerY - 38} Z`}
+                  fill="#1E3A8A"
+                />
+                <Text
+                  style={{ fontSize: 6, fontFamily: "Cinzel", fill: "#1E3A8A", textAnchor: "middle" }}
+                  x={x}
+                  y={centerY - 42}
+                >
+                  END
+                </Text>
+              </G>
+            )}
           </G>
         );
       })}
-
-      {/* Start marker */}
-      <Path
-        d={`M ${padding - 5} ${centerY - 15} L ${padding + 5} ${centerY - 15} L ${padding} ${centerY - 25} Z`}
-        fill="#1E3A8A"
-      />
-
-      {/* End marker */}
-      <Path
-        d={`M ${width - padding - 5} ${centerY - 15} L ${width - padding + 5} ${centerY - 15} L ${width - padding} ${centerY - 25} Z`}
-        fill="#1E3A8A"
-      />
     </Svg>
   );
 }

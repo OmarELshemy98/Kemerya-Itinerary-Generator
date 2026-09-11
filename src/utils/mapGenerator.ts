@@ -1,5 +1,5 @@
 // Known Egyptian tourist locations with coordinates [lon, lat]
-const EGYPT_LOCATIONS: Record<string, [number, number]> = {
+export const EGYPT_LOCATIONS: Record<string, [number, number]> = {
   'pyramids of giza': [31.1342, 29.9792],
   'pyramids': [31.1342, 29.9792],
   'giza': [31.1342, 29.9792],
