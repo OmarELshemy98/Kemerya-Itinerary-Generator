@@ -56,9 +56,8 @@ export function buildWhatsAppMessage(
     ? booking.customTourTitle || "Custom Tour"
     : tour?.title || "Kemerya Tours";
   const bookingRef = booking.id
-    .toUpperCase()
-    .replace(/-/g, "")
-    .slice(-8);
+    .replace(/^bk-/, "")
+    .toUpperCase();
 
   const travelersParts: string[] = [];
   if (booking.travelers.adults > 0)

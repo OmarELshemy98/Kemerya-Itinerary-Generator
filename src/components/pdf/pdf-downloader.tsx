@@ -17,7 +17,7 @@ export function buildItineraryFileName(
   booking: BookingConfig,
   tour: Tour | null
 ): string {
-  const bookingRef = booking.id.toUpperCase().replace(/-/g, "").slice(-8);
+  const refPart = booking.id.replace(/^bk-/, "").slice(-12);
   const tourTitle = booking.isCustomTour
     ? booking.customTourTitle || "Custom-Tour"
     : tour?.title || "Kemerya-Tour";
@@ -26,7 +26,7 @@ export function buildItineraryFileName(
     .trim()
     .replace(/\s+/g, "-")
     .slice(0, 60);
-  return `Kemerya-Itinerary-${safeName}-${bookingRef.slice(-4)}.pdf`;
+  return `Kemerya-Itinerary-${safeName}-${refPart}.pdf`;
 }
 
 /**

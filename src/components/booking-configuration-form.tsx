@@ -118,6 +118,8 @@ const bookingSchema = z
         price: z.coerce.number().min(0, "Price must be 0 or positive"),
       })
     ).optional(),
+    /** Editable booking reference, auto-generated as YYYYMMDD-XXX */
+    bookingRef: z.string().optional().or(z.literal("")),
     customInclusions: z.array(z.string()).optional(),
     customExclusions: z.array(z.string()).optional(),
     customItinerary: z.array(z.object({
@@ -156,6 +158,39 @@ interface BookingConfigurationFormProps {
 }
 
 const todayISO = () => new Date().toISOString().split("T")[0];
+
+/**
+ * Generate a booking reference in format YYYYMMDD-XXX
+ * where XXX is a daily-resetting sequential counter (001, 002, ...)
+ * Counter resets each day and persists in localStorage.
+ */
+function generateBookingRef(): string {
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
+  
+  const storageKey = `kemerya_ref_counter_${dateStr}`;
+  const lastDateKey = `kemerya_ref_last_date`;
+  
+  // Get the last date we generated a reference for
+  const lastDate = typeof window !== "undefined" ? localStorage.getItem(lastDateKey) : null;
+  
+  let counter: number;
+  if (lastDate === dateStr) {
+    // Same day - increment counter
+    counter = parseInt(localStorage.getItem(storageKey) || "0", 10) + 1;
+  } else {
+    // New day - reset counter
+    counter = 1;
+  }
+  
+  // Store updated values
+  if (typeof window !== "undefined") {
+    localStorage.setItem(storageKey, String(counter));
+    localStorage.setItem(lastDateKey, dateStr);
+  }
+  
+  return `${dateStr}-${String(counter).padStart(3, "0")}`;
+}
 
 export function BookingConfigurationForm({
   selectedTour,
@@ -210,6 +245,7 @@ export function BookingConfigurationForm({
         customInclusions: [],
         customExclusions: [],
         customItinerary: [],
+        bookingRef: generateBookingRef(),
         ...initialValues,
       },
     });
@@ -291,8 +327,9 @@ export function BookingConfigurationForm({
 
 
   const handleFormSubmit = (values: BookingFormValues, mode: "download" | "view" = "download") => {
+    const ref = values.bookingRef || generateBookingRef();
     const config: BookingConfig = {
-      id: `bk-${Date.now()}`,
+      id: `bk-${ref}`,
       isCustomTour: values.isCustomTour,
       tourId: !values.isCustomTour ? selectedTour?.id : undefined,
       customTourTitle: values.isCustomTour ? values.customTourTitle : undefined,
@@ -406,6 +443,34 @@ export function BookingConfigurationForm({
         </CardHeader>
 
         <CardContent className="space-y-6 p-4 sm:p-6">
+          {/* Booking Reference Section */}
+          <Section icon={<FileText className="h-4 w-4" />} title="Booking Reference">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Reference Number *</Label>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <Input
+                    {...register("bookingRef")}
+                    placeholder="e.g. 20260911-001"
+                    className="font-mono text-sm"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setValue("bookingRef", generateBookingRef())}
+                    title="Generate new reference"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="mt-1 text-[10px] text-slate-400">
+                  Format: YYYYMMDD-XXX (auto-generated, editable)
+                </p>
+              </div>
+            </div>
+          </Section>
+
           {isCustomMode && (
             <>
               <Section icon={<FileText className="h-4 w-4" />} title="Custom Tour Details">

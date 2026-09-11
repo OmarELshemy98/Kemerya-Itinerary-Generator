@@ -1020,7 +1020,7 @@ export function ItineraryPDF({
   const exclusions = getExclusions(tour, booking);
   const totalTravelers =
     booking.travelers.adults + booking.travelers.children + booking.travelers.infants;
-  const bookingRef = booking.id.toUpperCase().replace(/-/g, "").slice(-8);
+  const bookingRef = booking.id.replace(/^bk-/, "").toUpperCase();
   const totalTravelersTextParts: string[] = [];
   if (booking.travelers.adults > 0) totalTravelersTextParts.push(`${booking.travelers.adults} Adult${booking.travelers.adults > 1 ? "s" : ""}`);
   if (booking.travelers.children > 0) totalTravelersTextParts.push(`${booking.travelers.children} Child${booking.travelers.children > 1 ? "ren" : ""}`);
