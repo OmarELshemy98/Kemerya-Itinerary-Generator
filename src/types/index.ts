@@ -122,6 +122,14 @@ export interface BookingConfig {
   createdAt: string;
   /** Optional Geoapify static map image URL for the itinerary */
   mapUrl?: string;
+  /** Custom route stops - editable list of destinations for the journey roadmap */
+  customRouteStops?: RouteStop[];
+}
+
+export interface RouteStop {
+  id: string;
+  name: string;
+  order: number;
 }
 
 export interface ItineraryPDFData {

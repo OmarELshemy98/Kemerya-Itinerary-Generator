@@ -19,8 +19,12 @@ import {
   Info,
   MessageCircle,
   Eye,
+  Map,
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
-import type { Tour, BookingConfig, Currency, ItineraryDay } from "@/types";
+import type { Tour, BookingConfig, Currency, ItineraryDay, RouteStop } from "@/types";
 import {
   Card,
   CardContent,
@@ -43,8 +47,227 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { cn, calculateNights, formatCurrency } from "@/lib/utils";
+import { EGYPT_LOCATIONS } from "@/utils/mapGenerator";
 
-/** Helper: given a pricing table from the website, pick the per-person price for N travelers */
+/**
+ * Popular Egyptian tourist destinations for quick selection
+ */
+const POPULAR_DESTINATIONS = [
+  "Pyramids of Giza",
+  "Egyptian Museum",
+  "Khan El-Khalili",
+  "Citadel of Saladin",
+  "Old Cairo",
+  "Coptic Cairo",
+  "Islamic Cairo",
+  "Saqqara",
+  "Memphis",
+  "Luxor",
+  "Karnak Temple",
+  "Luxor Temple",
+  "Valley of the Kings",
+  "Valley of the Queens",
+  "Hatshepsut Temple",
+  "Colossi of Memnon",
+  "Aswan",
+  "Abu Simbel",
+  "Philae Temple",
+  "High Dam",
+  "Unfinished Obelisk",
+  "Alexandria",
+  "Bibliotheca Alexandrina",
+  "Qaitbay Citadel",
+  "Pompey Pillar",
+  "Hurghada",
+  "Sharm El Sheikh",
+  "Dahab",
+  "Mount Sinai",
+  "St Catherine",
+  "Blue Hole",
+  "Siwa Oasis",
+  "Bahariya",
+  "White Desert",
+  "Fayoum",
+];
+
+function RouteStopsEditor({
+  stops,
+  onChange,
+}: {
+  stops: RouteStop[] | undefined;
+  onChange: (stops: RouteStop[]) => void;
+}) {
+  const currentStops = stops || [];
+
+  const addStop = () => {
+    const newStop: RouteStop = {
+      id: `stop-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: "",
+      order: currentStops.length,
+    };
+    onChange([...currentStops, newStop]);
+  };
+
+  const removeStop = (id: string) => {
+    onChange(currentStops.filter((s) => s.id !== id).map((s, i) => ({ ...s, order: i })));
+  };
+
+  const updateStop = (id: string, name: string) => {
+    onChange(currentStops.map((s) => (s.id === id ? { ...s, name } : s)));
+  };
+
+  const moveUp = (index: number) => {
+    if (index === 0) return;
+    const newStops = [...currentStops];
+    [newStops[index - 1], newStops[index]] = [newStops[index], newStops[index - 1]];
+    onChange(newStops.map((s, i) => ({ ...s, order: i })));
+  };
+
+  const moveDown = (index: number) => {
+    if (index === currentStops.length - 1) return;
+    const newStops = [...currentStops];
+    [newStops[index], newStops[index + 1]] = [newStops[index + 1], newStops[index]];
+    onChange(newStops.map((s, i) => ({ ...s, order: i })));
+  };
+
+  const addPopularDestination = (name: string) => {
+    if (currentStops.some((s) => s.name === name)) return;
+    const newStop: RouteStop = {
+      id: `stop-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name,
+      order: currentStops.length,
+    };
+    onChange([...currentStops, newStop]);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Current stops list */}
+      {currentStops.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center">
+          <Map className="mx-auto h-8 w-8 text-slate-300" />
+          <p className="mt-2 text-sm text-slate-500">
+            No destinations added yet. Add places the client will visit during this trip.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {currentStops.map((stop, index) => (
+            <div
+              key={stop.id}
+              className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2"
+            >
+              {/* Order number */}
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#C5A059] text-xs font-bold text-white">
+                {index + 1}
+              </div>
+
+              {/* Stop name input */}
+              <Input
+                value={stop.name}
+                onChange={(e) => updateStop(stop.id, e.target.value)}
+                placeholder="Enter destination name..."
+                className="flex-1"
+              />
+
+              {/* Quick select dropdown */}
+              <Select
+                onValueChange={(val) => {
+                  updateStop(stop.id, val);
+                }}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Quick add" />
+                </SelectTrigger>
+                <SelectContent>
+                  {POPULAR_DESTINATIONS.filter(
+                    (d) => !currentStops.some((s) => s.name === d)
+                  ).map((dest) => (
+                    <SelectItem key={dest} value={dest}>
+                      {dest}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Move buttons */}
+              <div className="flex flex-col gap-0.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => moveUp(index)}
+                  disabled={index === 0}
+                  className="h-5 w-7 p-0"
+                >
+                  <ArrowUp className="h-3 w-3" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => moveDown(index)}
+                  disabled={index === currentStops.length - 1}
+                  className="h-5 w-7 p-0"
+                >
+                  <ArrowDown className="h-3 w-3" />
+                </Button>
+              </div>
+
+              {/* Remove button */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => removeStop(stop.id)}
+                className="h-7 w-7 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add new stop button */}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={addStop}
+          className="border-dashed"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add Destination
+        </Button>
+      </div>
+
+      {/* Quick add popular destinations */}
+      <div className="rounded-lg border border-slate-200 bg-white p-3">
+        <Label className="text-xs font-medium text-slate-600">Quick Add Popular Destinations</Label>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {POPULAR_DESTINATIONS.filter(
+            (d) => !currentStops.some((s) => s.name === d)
+          )
+            .slice(0, 15)
+            .map((dest) => (
+              <Button
+                key={dest}
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => addPopularDestination(dest)}
+                className="h-6 px-2 text-[10px]"
+              >
+                + {dest}
+              </Button>
+            ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 export function pickPricePerPerson(pricesTable: { personsLabel: string; priceUSD: number }[] | undefined, travelers: number): number {
   if (!pricesTable || pricesTable.length === 0) return 0;
   const n = Math.max(1, travelers);
@@ -120,6 +343,12 @@ const bookingSchema = z
     ).optional(),
     /** Editable booking reference, auto-generated as YYYYMMDD-XXX */
     bookingRef: z.string().optional().or(z.literal("")),
+    /** Custom route stops - editable list of destinations for the journey roadmap */
+    customRouteStops: z.array(z.object({
+      id: z.string(),
+      name: z.string().min(1, "Location name required"),
+      order: z.number().int().min(0),
+    })).optional(),
     customInclusions: z.array(z.string()).optional(),
     customExclusions: z.array(z.string()).optional(),
     customItinerary: z.array(z.object({
@@ -245,6 +474,7 @@ export function BookingConfigurationForm({
         customInclusions: [],
         customExclusions: [],
         customItinerary: [],
+        customRouteStops: [],
         bookingRef: generateBookingRef(),
         ...initialValues,
       },
@@ -258,6 +488,7 @@ export function BookingConfigurationForm({
   const children = watch("children");
   const infants = watch("infants");
   const startDateSel = watch("startDate");
+  const customRouteStops = watch("customRouteStops");
 
   React.useEffect(() => {
     if (selectedTour && !isCustomMode) {
@@ -337,6 +568,7 @@ export function BookingConfigurationForm({
       customItinerary: values.isCustomTour ? (values.customItinerary as ItineraryDay[]) : undefined,
       customInclusions: values.isCustomTour ? values.customInclusions : undefined,
       customExclusions: values.isCustomTour ? values.customExclusions : undefined,
+      customRouteStops: values.customRouteStops && values.customRouteStops.length > 0 ? values.customRouteStops : undefined,
       // Standard mode: employee-editable inclusions/exclusions (pre-filled from tour)
       inclusions: !values.isCustomTour ? values.inclusions : undefined,
       exclusions: !values.isCustomTour ? values.exclusions : undefined,
@@ -1029,6 +1261,14 @@ export function BookingConfigurationForm({
                     Add Day {itineraryFields.length + 1}
                   </Button>
                 </div>
+              </Section>
+
+              {/* Journey Route Stops Editor */}
+              <Section icon={<Map className="h-4 w-4" />} title="Journey Route (Destinations)">
+                <RouteStopsEditor
+                  stops={customRouteStops}
+                  onChange={(stops) => setValue("customRouteStops", stops)}
+                />
               </Section>
             </>
           )}

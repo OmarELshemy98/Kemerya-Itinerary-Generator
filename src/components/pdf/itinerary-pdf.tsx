@@ -1155,25 +1155,35 @@ export function ItineraryPDF({
     return found;
   };
 
-  // Build route stops from itinerary with all locations
-  const routeStops = (itinerary || []).map((day, i) => {
-    const locations = extractDayLocations(day);
-    const dayLabel = day.title && day.title.trim() 
-      ? day.title.trim() 
-      : `Day ${i + 1}`;
-    return {
-      day: day.day || i + 1,
-      label: dayLabel,
-      locations: locations.length > 0 ? locations : [dayLabel],
-    };
-  });
+  // Build route stops - use customRouteStops if available, otherwise extract from itinerary
+  const hasCustomStops = booking.customRouteStops && booking.customRouteStops.length > 0;
+  
+  const routeStops = hasCustomStops
+    ? (booking.customRouteStops || []).sort((a, b) => a.order - b.order).map((stop, i) => ({
+        day: i + 1,
+        label: stop.name || `Stop ${i + 1}`,
+        locations: stop.name ? [stop.name] : [`Stop ${i + 1}`],
+      }))
+    : (itinerary || []).map((day, i) => {
+        const locations = extractDayLocations(day);
+        const dayLabel = day.title && day.title.trim() 
+          ? day.title.trim() 
+          : `Day ${i + 1}`;
+        return {
+          day: day.day || i + 1,
+          label: dayLabel,
+          locations: locations.length > 0 ? locations : [dayLabel],
+        };
+      });
 
   // Collect all unique locations for the roadmap
-  const allLocations = Array.from(
-    new Set(
-      routeStops.flatMap(stop => stop.locations)
-    )
-  );
+  const allLocations = hasCustomStops
+    ? (booking.customRouteStops || []).sort((a, b) => a.order - b.order).map(s => s.name).filter(Boolean)
+    : Array.from(
+        new Set(
+          routeStops.flatMap(stop => stop.locations)
+        )
+      );
 
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
@@ -1780,13 +1790,13 @@ function DayCard({ day }: { day: ItineraryDay }) {
 }
 
 // Route Timeline Component - SVG journey path with checkpoints
-interface RouteStop {
+interface TimelineStop {
   day: number;
   label: string;
   locations: string[];
 }
 
-function RouteTimeline({ stops }: { stops: RouteStop[] }) {
+function RouteTimeline({ stops }: { stops: TimelineStop[] }) {
   const width = 520;
   const padding = 50;
   const usableWidth = width - padding * 2;
