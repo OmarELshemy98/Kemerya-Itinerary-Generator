@@ -52,18 +52,32 @@ export function formatCurrency(
   amount: number,
   currency: string = "USD"
 ): string {
-  const symbols: Record<string, string> = {
-    EUR: "€",
-    USD: "$",
-  };
-  return `${symbols[currency] || currency}${amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  const normalized = currency === "EUR" ? "EUR" : "USD";
+  const safeAmount = Number.isFinite(amount) ? amount : 0;
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: normalized,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(safeAmount);
+  } catch {
+    const symbol = normalized === "EUR" ? "€" : "$";
+    return `${symbol}${safeAmount.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  }
+}
+
+function toDate(date: Date | string): Date | null {
+  const d = typeof date === "string" ? new Date(date) : date;
+  return d instanceof Date && !Number.isNaN(d.getTime()) ? d : null;
 }
 
 export function formatDate(date: Date | string): string {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = toDate(date);
+  if (!d) return "—";
   return d.toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -73,7 +87,8 @@ export function formatDate(date: Date | string): string {
 }
 
 export function formatDateShort(date: Date | string): string {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = toDate(date);
+  if (!d) return "—";
   return d.toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",

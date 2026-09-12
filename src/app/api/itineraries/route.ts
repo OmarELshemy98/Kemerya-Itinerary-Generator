@@ -1,43 +1,87 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { supabase, getServiceSupabase } from "@/lib/supabase";
-import { createClient as createServerClient } from "@/lib/supabase/server";
-import type { BookingConfig, Tour } from "@/types";
+import { dbError, requireAuthWithRole, requireUser, serverError } from "@/lib/api-helpers";
+import type { BookingConfig, ItineraryDay, Tour } from "@/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-async function getCurrentUserId(): Promise<string | null> {
-  const serverSupabase = createServerClient();
-  const {
-    data: { user },
-  } = await serverSupabase.auth.getUser();
-  return user?.id ?? null;
-}
+/** Narrow runtime validation for the itinerary POST payload (defense in depth — the form already validates with zod). */
+const itineraryDaySchema = z.object({
+  day: z.number().int().min(1),
+  title: z.string(),
+  description: z.string(),
+});
+
+const dayRouteSchema = z.object({
+  day: z.number().int().min(1),
+  stops: z.array(z.string()),
+});
+
+const bookingSchema = z.object({
+  id: z.string().min(1),
+  isCustomTour: z.boolean(),
+  tourId: z.string().optional(),
+  customTourTitle: z.string().optional(),
+  customTourDescription: z.string().optional(),
+  customItinerary: z.array(itineraryDaySchema).optional(),
+  customDayRoutes: z.array(z.array(z.string())).optional(),
+  customInclusions: z.array(z.string()).optional(),
+  customExclusions: z.array(z.string()).optional(),
+  customRouteStops: z
+    .array(z.object({ id: z.string(), name: z.string(), order: z.number() }))
+    .optional(),
+  dayRoutes: z.array(dayRouteSchema).optional(),
+  customTerms: z.array(z.string()).optional(),
+  customPrivacy: z.array(z.string()).optional(),
+  offerPrice: z.number().min(0).optional(),
+  offerTitle: z.string().optional(),
+  offerNote: z.string().optional(),
+  inclusions: z.array(z.string()).optional(),
+  exclusions: z.array(z.string()).optional(),
+  travelers: z.object({
+    adults: z.number().int().min(0),
+    children: z.number().int().min(0),
+    infants: z.number().int().min(0),
+  }),
+  currency: z.enum(["USD", "EUR"]),
+  totalPrice: z.number().min(0),
+  pricePerPerson: z.number().min(0).optional(),
+  startDate: z.string().min(1),
+  endDate: z.string().min(1),
+  clientName: z.string().optional(),
+  clientEmail: z.string().email().optional().or(z.literal("")),
+  clientPhone: z.string().optional(),
+  clientWhatsapp: z.string().optional(),
+  meetingPoint: z.string().optional(),
+  flightArrival: z.string().optional(),
+  notes: z.string().optional(),
+  specialRequests: z.string().optional(),
+  isApproved: z.boolean().optional(),
+  mapUrl: z.string().optional(),
+});
+
+const postBodySchema = z.object({
+  tour: z
+    .object({ id: z.string(), title: z.string() })
+    .passthrough()
+    .nullable()
+    .optional(),
+  booking: bookingSchema,
+});
+
 
 export async function GET(request: Request) {
   try {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      return NextResponse.json(
-        { ok: false, error: "Authentication required" },
-        { status: 401 }
-      );
-    }
+    const auth = await requireAuthWithRole();
+    if (!auth.ok) return auth.response;
+    const { userId, isAdmin } = auth.ctx;
 
     // Get filter type from query params
     const { searchParams } = new URL(request.url);
     const filterType = searchParams.get("type"); // "custom", "approved", "hold", or null for all
     const idParam = searchParams.get("id"); // fetch a single itinerary
-
-    // Get user's role to determine if they can see all itineraries
-    const serverSupabase = createServerClient();
-    const { data: profile } = await serverSupabase
-      .from("profiles")
-      .select("role")
-      .eq("id", userId)
-      .maybeSingle();
-
-    const isAdmin = profile?.role === "super_admin" || profile?.role === "admin";
 
     // Use serviceSupabase to bypass RLS
     const serviceSupabase = getServiceSupabase();
@@ -81,24 +125,22 @@ export async function GET(request: Request) {
       if (error.message?.includes("does not exist") || error.code === "42P01") {
         return NextResponse.json({ ok: true, itineraries: [] });
       }
-      console.error("GET /api/itineraries error:", error);
-      return NextResponse.json(
-        { ok: false, error: `Database error: ${error.message}` },
-        { status: 500 }
-      );
+      return dbError(error.message);
     }
 
     // Get user info for each itinerary
-    const userIds = [...new Set((data || []).map((row: any) => row.user_id))];
+    const userIds = [...new Set((data || []).map((row) => row.user_id as string))];
     const { data: profiles } = await client
       .from("profiles")
       .select("id, full_name, email")
       .in("id", userIds);
 
-    const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+    const profileMap = new Map(
+      (profiles || []).map((p) => [p.id as string, p] as const)
+    );
 
     // Transform data to include user info
-    const itineraries = (data || []).map((row: any) => ({
+    const itineraries = (data || []).map((row) => ({
       id: row.id,
       user_id: row.user_id,
       user_email: profileMap.get(row.user_id)?.email || null,
@@ -134,33 +176,29 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({ ok: true, itineraries });
-  } catch (e: any) {
-    return NextResponse.json(
-      { ok: false, error: String(e?.message || e) },
-      { status: 500 }
-    );
+  } catch (e) {
+    return serverError(e, "GET /api/itineraries failed");
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      return NextResponse.json(
-        { ok: false, error: "Authentication required" },
-        { status: 401 }
-      );
-    }
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
+    const userId = auth.userId;
 
-    const body = await request.json();
-    const { tour, booking } = body as { tour: Tour | null; booking: BookingConfig };
-
-    if (!booking) {
+    const json = await request.json().catch(() => null);
+    const parsed = postBodySchema.safeParse(json);
+    if (!parsed.success) {
       return NextResponse.json(
-        { ok: false, error: "Booking data is required" },
+        { ok: false, error: "Invalid booking payload" },
         { status: 400 }
       );
     }
+    const { tour, booking } = parsed.data as {
+      tour: Tour | null | undefined;
+      booking: BookingConfig;
+    };
 
     const itineraryData = {
       user_id: userId,
@@ -190,19 +228,19 @@ export async function POST(request: Request) {
         bookingRef: booking.id,
         isCustomTour: booking.isCustomTour,
         offerPrice: booking.offerPrice || null,
-        offerTitle: (booking as any).offerTitle || null,
-        offerNote: (booking as any).offerNote || null,
-        tourId: (booking as any).tourId,
+        offerTitle: booking.offerTitle || null,
+        offerNote: booking.offerNote || null,
+        tourId: booking.tourId,
         customTourTitle: booking.customTourTitle,
         customTourDescription: booking.customTourDescription,
         customItinerary: booking.customItinerary,
-        customDayRoutes: (booking as any).customDayRoutes || null,
+        customDayRoutes: booking.customDayRoutes || null,
         customInclusions: booking.customInclusions,
         customExclusions: booking.customExclusions,
         customRouteStops: booking.customRouteStops,
         dayRoutes: booking.dayRoutes,
         customTerms: booking.customTerms,
-        customPrivacy: (booking as any).customPrivacy || null,
+        customPrivacy: booking.customPrivacy || null,
         inclusions: booking.inclusions,
         exclusions: booking.exclusions,
         clientWhatsapp: booking.clientWhatsapp,
@@ -232,11 +270,7 @@ export async function POST(request: Request) {
           itinerary: { id: booking.id, ...itineraryData, created_at: new Date().toISOString() },
         });
       }
-      console.error("POST /api/itineraries error:", error);
-      return NextResponse.json(
-        { ok: false, error: `Database error: ${error.message}` },
-        { status: 500 }
-      );
+      return dbError(error.message);
     }
 
     // Log itinerary creation (don't fail if audit_log table doesn't exist)
@@ -253,29 +287,22 @@ export async function POST(request: Request) {
             currency: booking.currency,
           },
         });
-      } catch (auditError) {
-        console.error("Failed to log audit:", auditError);
+      } catch {
+        // audit logging is best-effort
       }
     }
 
     return NextResponse.json({ ok: true, itinerary: data });
-  } catch (e: any) {
-    return NextResponse.json(
-      { ok: false, error: String(e?.message || e) },
-      { status: 500 }
-    );
+  } catch (e) {
+    return serverError(e, "POST /api/itineraries failed");
   }
 }
 
 export async function DELETE(request: Request) {
   try {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      return NextResponse.json(
-        { ok: false, error: "Authentication required" },
-        { status: 401 }
-      );
-    }
+    const auth = await requireAuthWithRole();
+    if (!auth.ok) return auth.response;
+    const { userId, role } = auth.ctx;
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
@@ -286,18 +313,9 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Determine role to allow admins to delete any itinerary; regular users
-    // can only delete their own.
-    const serverSupabase = createServerClient();
-    const { data: profile } = await serverSupabase
-      .from("profiles")
-      .select("role")
-      .eq("id", userId)
-      .maybeSingle();
-    const isAdmin =
-      profile?.role === "super_admin" ||
-      profile?.role === "admin" ||
-      profile?.role === "operator";
+    // Admins/operators can delete any itinerary; regular users only their own.
+    const canDeleteAny =
+      role === "super_admin" || role === "admin" || role === "operator";
 
     const serviceSupabase = getServiceSupabase();
     const client = serviceSupabase || supabase;
@@ -305,24 +323,18 @@ export async function DELETE(request: Request) {
     // Use serviceSupabase (bypasses RLS) so admins can delete any itinerary,
     // but scope the delete to the owner for regular users.
     let query = client.from("itineraries").delete().eq("id", id);
-    if (!isAdmin) {
+    if (!canDeleteAny) {
       query = query.eq("user_id", userId);
     }
 
-    const { data, error } = await query.select();
+    const { error } = await query.select();
 
     if (error) {
-      return NextResponse.json(
-        { ok: false, error: `Database error: ${error.message}` },
-        { status: 500 }
-      );
+      return dbError(error.message);
     }
 
     return NextResponse.json({ ok: true, deleted: { id } });
-  } catch (e: any) {
-    return NextResponse.json(
-      { ok: false, error: String(e?.message || e) },
-      { status: 500 }
-    );
+  } catch (e) {
+    return serverError(e, "DELETE /api/itineraries failed");
   }
 }

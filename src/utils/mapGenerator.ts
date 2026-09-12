@@ -1,3 +1,5 @@
+import { warnMissingEnv } from "@/lib/env";
+
 // Known Egyptian tourist locations with coordinates [lon, lat]
 export const EGYPT_LOCATIONS: Record<string, [number, number]> = {
   'pyramids of giza': [31.1342, 29.9792],
@@ -95,15 +97,20 @@ function extractLocationsFromText(text: string): string[] {
   return found;
 }
 
-export async function generateDynamicMap(itineraryDays: any[]): Promise<string> {
-  const apiKey = process.env.NEXT_PUBLIC_MAPTILER_API_KEY || 'cYbsTvD4eueAzUHeHwco';
+export async function generateDynamicMap(itineraryDays: unknown): Promise<string | undefined> {
+  const apiKey = process.env.NEXT_PUBLIC_MAPTILER_API_KEY;
+  if (!apiKey) {
+    warnMissingEnv("NEXT_PUBLIC_MAPTILER_API_KEY");
+    return undefined;
+  }
   const coords: [number, number][] = [];
   const usedCoords = new Set<string>(); // Avoid duplicate coordinates
 
   // Extract locations from all itinerary days (title + description)
-  if (itineraryDays && Array.isArray(itineraryDays)) {
-    for (const day of itineraryDays) {
-      const dayText = `${day.title || ''} ${day.description || ''}`;
+  if (Array.isArray(itineraryDays)) {
+    for (const raw of itineraryDays) {
+      const day = raw as { title?: unknown; description?: unknown };
+      const dayText = `${typeof day.title === "string" ? day.title : ""} ${typeof day.description === "string" ? day.description : ""}`;
       const locations = extractLocationsFromText(dayText);
       
       for (const loc of locations) {

@@ -112,7 +112,7 @@ export function ItineraryViewer({ id }: { id: string }) {
     }
     let cancelled = false;
     generateDynamicMap(days).then((u) => {
-      if (!cancelled) setDynamicMapUrl(u);
+      if (!cancelled) setDynamicMapUrl(u ?? null);
     });
     return () => {
       cancelled = true;

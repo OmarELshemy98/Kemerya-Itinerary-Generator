@@ -78,7 +78,7 @@ export function ItineraryDownloader({ id }: { id: string }) {
       console.error("Itinerary download failed:", e);
       window.alert(
         "Could not generate the PDF. Please check your connection and try again.\n\n" +
-          String((e as any)?.message || e)
+          (e instanceof Error ? e.message : String(e))
       );
     } finally {
       setState("idle");

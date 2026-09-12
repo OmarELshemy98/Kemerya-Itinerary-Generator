@@ -744,11 +744,11 @@ export function BookingConfigurationForm({
       tourId: !values.isCustomTour ? selectedTour?.id : undefined,
       customTourTitle: values.isCustomTour ? values.customTourTitle : undefined,
       customTourDescription: values.isCustomTour ? values.customTourDescription : undefined,
-      customItinerary: values.isCustomTour ? (values.customItinerary as ItineraryDay[]) : undefined,
+      customItinerary: values.isCustomTour ? values.customItinerary : undefined,
       customInclusions: values.isCustomTour ? values.customInclusions : undefined,
       customExclusions: values.isCustomTour ? values.customExclusions : undefined,
       customRouteStops: values.customRouteStops && values.customRouteStops.length > 0 ? values.customRouteStops : undefined,
-      dayRoutes: values.dayRoutes && values.dayRoutes.length > 0 ? (values.dayRoutes as any) : undefined,
+      dayRoutes: values.dayRoutes && values.dayRoutes.length > 0 ? values.dayRoutes : undefined,
       isApproved: values.isApproved || false,
       offerPrice:
         values.offerPrice && values.offerPrice > 0 ? values.offerPrice : undefined,

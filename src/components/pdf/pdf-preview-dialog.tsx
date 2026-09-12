@@ -134,7 +134,7 @@ export function PDFPreviewDialog({
     }
     let cancelled = false;
     generateDynamicMap(itineraryDays).then((url) => {
-      if (!cancelled) setDynamicMapUrl(url);
+      if (!cancelled) setDynamicMapUrl(url ?? null);
     });
     return () => { cancelled = true; };
   }, [booking, tour]);

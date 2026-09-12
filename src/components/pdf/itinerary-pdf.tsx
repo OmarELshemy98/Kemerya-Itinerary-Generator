@@ -97,49 +97,46 @@ const TERMS_ITEMS = [
   "Emergency & Governing Law: A 24/7 emergency line is printed on the confirmation voucher. Egyptian law governs these booking terms.",
 ];
 
+function safeParseStringList(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed
+          .filter((v): v is string => typeof v === "string")
+          .map((v) => v.trim())
+          .filter(Boolean)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 function getTermsItems(booking?: BookingConfig): string[] {
   if (booking?.customTerms && booking.customTerms.length > 0) {
     return booking.customTerms;
   }
   if (typeof window !== "undefined") {
-    try {
-      const stored = localStorage.getItem("kemerya_terms");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch {
-      // ignore
-    }
+    const stored = safeParseStringList(localStorage.getItem("kemerya_terms"));
+    if (stored.length > 0) return stored;
   }
   return TERMS_ITEMS;
 }
 
 function getPrivacyItems(booking?: BookingConfig): string[] {
-  const custom = (booking as any)?.customPrivacy as string[] | undefined;
-  if (custom && custom.filter((t) => t && t.trim().length > 0).length > 0)
-    return custom.filter(Boolean);
+  const custom = booking?.customPrivacy?.filter((t) => t && t.trim().length > 0);
+  if (custom && custom.length > 0) return custom.filter(Boolean);
   if (typeof window !== "undefined") {
-    try {
-      const stored = localStorage.getItem("kemerya_privacy");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed.filter(Boolean);
-      }
-    } catch {
-      // ignore
-    }
+    const stored = safeParseStringList(localStorage.getItem("kemerya_privacy"));
+    if (stored.length > 0) return stored;
   }
   return PRIVACY_ITEMS;
 }
 
 function getOfferMeta(booking: BookingConfig): { title: string; note: string } {
-  const b = booking as any;
   return {
-    title: (b.offerTitle && String(b.offerTitle).trim()) || "Exclusive Limited-Time Offer",
-    note: (b.offerNote && String(b.offerNote).trim()) || "",
+    title: booking.offerTitle?.trim() || "Exclusive Limited-Time Offer",
+    note: booking.offerNote?.trim() || "",
   };
 }
 

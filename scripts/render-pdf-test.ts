@@ -2,8 +2,10 @@
 import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { ItineraryPDF } from "../src/components/pdf/itinerary-pdf";
-import type { BookingConfig, Tour } from "../src/types";
+import type { BookingConfig, CompanyInfo, Tour } from "../src/types";
+import { KEMERYA_COMPANY_INFO } from "../src/data/company";
 import { generateDynamicMap } from "../src/utils/mapGenerator";
+import { logoToDataUrl } from "../src/lib/pdf-assets.server";
 
 process.env.NEXT_PUBLIC_MAPTILER_API_KEY = "cYbsTvD4eueAzUHeHwco";
 
@@ -50,8 +52,14 @@ const tour: Tour = {
       createdAt: new Date().toISOString(),
       mapUrl,
     };
+    const logoDataUrl = await logoToDataUrl(KEMERYA_COMPANY_INFO.logo);
+    const companyInfo: CompanyInfo = {
+      ...KEMERYA_COMPANY_INFO,
+      logo: logoDataUrl ?? "",
+      invoiceLogo: logoDataUrl ?? "",
+    };
     const buffer = await renderToBuffer(
-      React.createElement(ItineraryPDF, { tour, booking }) as never
+      React.createElement(ItineraryPDF, { tour, booking, companyInfo }) as never
     );
     console.log("PDF OK, bytes:", buffer.length);
     process.exit(0);
