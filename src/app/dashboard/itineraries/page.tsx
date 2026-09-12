@@ -27,6 +27,9 @@ import {
   Filter,
   Download,
   Eye,
+  Clock,
+  CheckCircle2,
+  Trash2,
 } from "lucide-react";
 import { cn, formatCurrency, formatDateShort } from "@/lib/utils";
 
@@ -54,6 +57,7 @@ interface ItineraryData {
   end_date: string;
   notes: string | null;
   special_requests: string | null;
+  is_approved: boolean;
   created_at: string;
 }
 
@@ -62,6 +66,7 @@ function ItinerariesPageContent() {
   const [loading, setLoading] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [dateFilter, setDateFilter] = React.useState<"all" | "today" | "week" | "month">("all");
+  const [deleting, setDeleting] = React.useState<string | null>(null);
 
   const fetchItineraries = React.useCallback(async () => {
     setLoading(true);
@@ -81,6 +86,27 @@ function ItinerariesPageContent() {
   React.useEffect(() => {
     fetchItineraries();
   }, [fetchItineraries]);
+
+  const deleteItinerary = async (id: string) => {
+    if (!window.confirm("Delete this itinerary? This action cannot be undone.")) return;
+    setDeleting(id);
+    try {
+      const res = await fetch(`/api/itineraries?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setItineraries((prev) => prev.filter((i) => i.id !== id));
+      } else {
+        window.alert(json.error || "Failed to delete itinerary");
+      }
+    } catch (e) {
+      console.error("Failed to delete itinerary:", e);
+      window.alert("Failed to delete itinerary");
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   // Filter itineraries based on search query and date filter
   const filteredItineraries = React.useMemo(() => {
@@ -194,12 +220,14 @@ function ItinerariesPageContent() {
               <TableHead>Travelers</TableHead>
               <TableHead>Dates</TableHead>
               <TableHead>Price</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-24">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-32 text-center">
+                <TableCell colSpan={9} className="h-32 text-center">
                   <div className="flex items-center justify-center gap-2">
                     <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
                     <span className="text-sm text-slate-500">Loading itineraries...</span>
@@ -208,7 +236,7 @@ function ItinerariesPageContent() {
               </TableRow>
             ) : filteredItineraries.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-32 text-center">
+                <TableCell colSpan={9} className="h-32 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <FileText className="h-8 w-8 text-slate-300" />
                     <p className="text-sm text-slate-500">
@@ -323,6 +351,45 @@ function ItinerariesPageContent() {
                         {formatCurrency(itinerary.price_per_person, itinerary.currency)}/pax
                       </p>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={
+                        itinerary.is_approved
+                          ? "flex w-fit items-center gap-1 text-emerald-700 border-emerald-200 bg-emerald-50"
+                          : "flex w-fit items-center gap-1 text-amber-700 border-amber-200 bg-amber-50"
+                      }
+                    >
+                      {itinerary.is_approved ? (
+                        <CheckCircle2 className="h-3 w-3" />
+                      ) : (
+                        <Clock className="h-3 w-3" />
+                      )}
+                      {itinerary.is_approved ? "Approved" : "Hold"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => (window.location.href = `/dashboard?edit=${itinerary.id}`)}
+                        title="View / edit"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteItinerary(itinerary.id)}
+                        disabled={deleting === itinerary.id}
+                        className="text-red-500 hover:bg-red-50 hover:text-red-600"
+                        title="Delete itinerary"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

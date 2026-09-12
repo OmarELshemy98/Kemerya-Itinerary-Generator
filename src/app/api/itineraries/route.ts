@@ -241,3 +241,63 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return NextResponse.json(
+        { ok: false, error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json(
+        { ok: false, error: "Itinerary ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Determine role to allow admins to delete any itinerary; regular users
+    // can only delete their own.
+    const serverSupabase = createServerClient();
+    const { data: profile } = await serverSupabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle();
+    const isAdmin =
+      profile?.role === "super_admin" ||
+      profile?.role === "admin" ||
+      profile?.role === "operator";
+
+    const serviceSupabase = getServiceSupabase();
+    const client = serviceSupabase || supabase;
+
+    // Use serviceSupabase (bypasses RLS) so admins can delete any itinerary,
+    // but scope the delete to the owner for regular users.
+    let query = client.from("itineraries").delete().eq("id", id);
+    if (!isAdmin) {
+      query = query.eq("user_id", userId);
+    }
+
+    const { data, error } = await query.select();
+
+    if (error) {
+      return NextResponse.json(
+        { ok: false, error: `Database error: ${error.message}` },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ ok: true, deleted: { id } });
+  } catch (e: any) {
+    return NextResponse.json(
+      { ok: false, error: String(e?.message || e) },
+      { status: 500 }
+    );
+  }
+}

@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Loader2, CheckCircle2, Users, DollarSign, Eye, Check } from "lucide-react";
+import { Search, Loader2, CheckCircle2, Users, DollarSign, Eye, Check, Trash2 } from "lucide-react";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 
 interface ApprovedItineraryData {
@@ -69,6 +69,27 @@ function ApprovedItinerariesPageContent() {
       }
     } catch (e) {
       console.error("Failed to update:", e);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const deleteItinerary = async (id: string) => {
+    if (!window.confirm("Delete this itinerary? This action cannot be undone.")) return;
+    setUpdating(id);
+    try {
+      const res = await fetch(`/api/itineraries?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setItineraries((prev) => prev.filter((i) => i.id !== id));
+      } else {
+        window.alert(json.error || "Failed to delete itinerary");
+      }
+    } catch (e) {
+      console.error("Failed to delete itinerary:", e);
+      window.alert("Failed to delete itinerary");
     } finally {
       setUpdating(null);
     }
@@ -131,7 +152,21 @@ function ApprovedItinerariesPageContent() {
                   <TableCell><div className="flex items-center gap-1.5"><Users className="h-4 w-4 text-slate-400" /><span className="text-sm font-medium">{totalT(item)}</span></div></TableCell>
                   <TableCell><p className="text-sm">{formatDateShort(item.start_date)}</p><p className="text-xs text-slate-500">→ {formatDateShort(item.end_date)}</p></TableCell>
                   <TableCell><div className="flex items-center gap-1.5"><DollarSign className="h-4 w-4 text-emerald-500" /><span className="text-sm font-semibold">{formatCurrency(item.total_price, item.currency)}</span></div></TableCell>
-                  <TableCell><Button variant="ghost" size="sm" onClick={() => (window.location.href = `/dashboard?edit=${item.id}`)}><Eye className="h-4 w-4" /></Button></TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <Button variant="ghost" size="sm" onClick={() => (window.location.href = `/dashboard?edit=${item.id}`)} title="View / edit"><Eye className="h-4 w-4" /></Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteItinerary(item.id)}
+                        disabled={updating === item.id}
+                        className="text-red-500 hover:bg-red-50 hover:text-red-600"
+                        title="Delete itinerary"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))
             )}

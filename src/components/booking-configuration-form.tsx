@@ -25,6 +25,7 @@ import {
   ArrowUp,
   ArrowDown,
   CheckCircle2,
+  Clock,
 } from "lucide-react";
 import type { Tour, BookingConfig, Currency, ItineraryDay, RouteStop, DayRoute } from "@/types";
 import {
@@ -1454,17 +1455,37 @@ export function BookingConfigurationForm({
             >
               Reset Form
             </Button>
-            <Button
-              type="button"
-              variant={isApproved ? "default" : "outline"}
-              size="sm"
-              disabled={isSubmitting}
-              className={`gap-2 ${isApproved ? "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500" : ""}`}
-              onClick={() => setValue("isApproved", !isApproved)}
-            >
-              <CheckCircle2 className={`h-4 w-4 ${isApproved ? "text-white" : "text-emerald-500"}`} />
-              {isApproved ? "Approved ✓" : "Mark as Approved"}
-            </Button>
+            <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white p-0.5">
+              <span className="pl-2 pr-0.5 text-xs font-semibold text-slate-600">Status</span>
+              <button
+                type="button"
+                onClick={() => setValue("isApproved", false)}
+                disabled={isSubmitting}
+                className={cn(
+                  "flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  !isApproved
+                    ? "bg-amber-400 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                )}
+              >
+                <Clock className="h-3.5 w-3.5" />
+                Hold
+              </button>
+              <button
+                type="button"
+                onClick={() => setValue("isApproved", true)}
+                disabled={isSubmitting}
+                className={cn(
+                  "flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  isApproved
+                    ? "bg-emerald-500 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                )}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Approved
+              </button>
+            </div>
             <Button
               type="button"
               variant="outline"
