@@ -34,6 +34,11 @@ export function itineraryRowToBooking(it: any): BookingConfig {
     },
     currency: it.currency || "USD",
     totalPrice: Number(it.total_price || 0),
+    offerPrice: (() => {
+      const raw = it.offer_price ?? bd.offerPrice;
+      const n = raw == null ? 0 : Number(raw);
+      return n > 0 ? n : undefined;
+    })(),
     startDate: it.start_date,
     endDate: it.end_date,
     clientName: it.client_name || undefined,

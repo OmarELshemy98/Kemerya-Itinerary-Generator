@@ -144,6 +144,9 @@ export interface BookingConfig {
   dayRoutes?: DayRoute[];
   /** Whether this itinerary has been approved */
   isApproved?: boolean;
+  /** Special offer price — when > 0 it replaces totalPrice everywhere
+   *  and the original price is shown struck through. */
+  offerPrice?: number;
   /** Custom terms & conditions for this specific itinerary */
   customTerms?: string[];
 }

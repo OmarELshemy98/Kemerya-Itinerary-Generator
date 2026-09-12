@@ -16,6 +16,12 @@ import { Search, Loader2, CheckCircle2, Users, DollarSign, Eye, Check, Trash2, F
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { ItineraryDownloader } from "@/components/itinerary-downloader";
 import { exportTableToExcel } from "@/lib/export-excel";
+import {
+  PriceWithOffer,
+  hasOffer,
+  activePrice,
+  discountPercent,
+} from "@/components/offer-price";
 
 interface ApprovedItineraryData {
   id: string;
@@ -34,6 +40,7 @@ interface ApprovedItineraryData {
   start_date: string;
   end_date: string;
   is_approved: boolean;
+  offer_price: number | null;
 }
 
 function ApprovedItinerariesPageContent() {
@@ -114,7 +121,9 @@ function ApprovedItinerariesPageContent() {
       "Client Phone": item.client_phone || "",
       "Travelers": `${totalT(item)} (${item.travelers_adults}A${item.travelers_children > 0 ? `, ${item.travelers_children}C` : ""}${item.travelers_infants > 0 ? `, ${item.travelers_infants}I` : ""})`,
       "Dates": `${formatDateShort(item.start_date)} → ${formatDateShort(item.end_date)}`,
-      "Price": formatCurrency(item.total_price, item.currency),
+      "Offer Price": activePrice(item.total_price, item.offer_price),
+      "Original Price": hasOffer(item.offer_price) ? item.total_price : "",
+      "Discount": hasOffer(item.offer_price) ? `${discountPercent(item.total_price, item.offer_price)}% off` : "",
     }));
     exportTableToExcel(rows, "Approved Itineraries");
   };
@@ -169,7 +178,14 @@ function ApprovedItinerariesPageContent() {
                   <TableCell><p className="text-sm">{item.client_name || "N/A"}</p></TableCell>
                   <TableCell><div className="flex items-center gap-1.5"><Users className="h-4 w-4 text-slate-400" /><span className="text-sm font-medium">{totalT(item)}</span></div></TableCell>
                   <TableCell><p className="text-sm">{formatDateShort(item.start_date)}</p><p className="text-xs text-slate-500">→ {formatDateShort(item.end_date)}</p></TableCell>
-                  <TableCell><div className="flex items-center gap-1.5"><DollarSign className="h-4 w-4 text-emerald-500" /><span className="text-sm font-semibold">{formatCurrency(item.total_price, item.currency)}</span></div></TableCell>
+                  <TableCell>
+                      <PriceWithOffer
+                        totalPrice={item.total_price}
+                        offerPrice={item.offer_price}
+                        currency={item.currency}
+                        size="sm"
+                      />
+                    </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1.5">
                       <ItineraryDownloader id={item.id} />

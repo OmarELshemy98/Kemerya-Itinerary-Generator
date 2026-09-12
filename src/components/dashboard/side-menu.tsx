@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Settings,
   Clock,
+  BadgePercent,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,12 @@ export function SideMenu({ userRole, collapsed, onToggle, mobileOpen, onMobileCl
         label: "Approved Itineraries",
         icon: <CheckCircle2 className="h-5 w-5" />,
         path: "/dashboard/approved-itineraries",
+      },
+      {
+        id: "offer-tours",
+        label: "Offers Tours",
+        icon: <BadgePercent className="h-5 w-5" />,
+        path: "/dashboard/offer-tours",
       },
     ];
 

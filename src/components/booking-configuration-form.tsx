@@ -26,6 +26,8 @@ import {
   ArrowDown,
   CheckCircle2,
   Clock,
+  Tag,
+  BadgePercent,
 } from "lucide-react";
 import type { Tour, BookingConfig, Currency, ItineraryDay, RouteStop, DayRoute } from "@/types";
 import {
@@ -443,6 +445,8 @@ const bookingSchema = z
     })).optional(),
     /** Whether this itinerary is approved */
     isApproved: z.boolean().optional().default(false),
+    /** Special offer price (0 = no offer). Replaces totalPrice when set. */
+    offerPrice: z.number().min(0).optional().default(0),
     /** Custom terms & conditions for this specific itinerary */
     customTerms: z.array(z.string()).optional(),
     /** Per-day journey map stops (simple strings per day) */
@@ -579,6 +583,7 @@ export function BookingConfigurationForm({
         customItinerary: [],
         customRouteStops: [],
         isApproved: false,
+        offerPrice: 0,
         customTerms: [],
         bookingRef: generateBookingRef(),
         ...initialValues,
@@ -595,6 +600,7 @@ export function BookingConfigurationForm({
   const startDateSel = watch("startDate");
   const customRouteStops = watch("customRouteStops");
   const isApproved = watch("isApproved");
+  const offerPrice = watch("offerPrice");
   const customTerms = watch("customTerms");
 
   React.useEffect(() => {
@@ -676,8 +682,12 @@ export function BookingConfigurationForm({
       customInclusions: values.isCustomTour ? values.customInclusions : undefined,
       customExclusions: values.isCustomTour ? values.customExclusions : undefined,
       customRouteStops: values.customRouteStops && values.customRouteStops.length > 0 ? values.customRouteStops : undefined,
-      isApproved: values.isApproved || false,
-      customTerms: values.customTerms && values.customTerms.length > 0 ? values.customTerms : undefined,
+    /** Whether this itinerary has been approved */
+    isApproved: values.isApproved || false,
+    /** Special offer price (0/undefined = no offer) */
+    offerPrice:
+      values.offerPrice && values.offerPrice > 0 ? values.offerPrice : undefined,
+    customTerms: values.customTerms && values.customTerms.length > 0 ? values.customTerms : undefined,
       // Standard mode: employee-editable inclusions/exclusions (pre-filled from tour)
       inclusions: !values.isCustomTour ? values.inclusions : undefined,
       exclusions: !values.isCustomTour ? values.exclusions : undefined,
@@ -942,6 +952,88 @@ export function BookingConfigurationForm({
                 <p className="mt-1.5 text-[10px] text-blue-600">Highlighted tier applies to your group of {totalTravelers}. Total = {formatCurrency(pickPricePerPerson(selectedTour.pricesTable, totalTravelers) * totalTravelers, currency)}</p>
               </div>
             )}
+          </Section>
+
+          {/* Special Offer / Discount — attractive & unique */}
+          <Section icon={<Tag className="h-4 w-4" />} title="Special Offer">
+            <div className="grid gap-4 lg:grid-cols-[320px,1fr]">
+              {/* Offer input */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-slate-700">
+                    Offer Price ({currency})
+                  </Label>
+                  {offerPrice != null && offerPrice > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setValue("offerPrice", 0)}
+                      className="text-[11px] font-semibold text-red-500 hover:underline"
+                    >
+                      Remove offer
+                    </button>
+                  )}
+                </div>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  placeholder="0.00"
+                  {...register("offerPrice", {
+                    setValueAs: (v) =>
+                      v === "" || v == null || Number.isNaN(Number(v)) ? 0 : Number(v),
+                  })}
+                  className="mt-1.5"
+                />
+                <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+                  Type the discounted price for this booking. The original price
+                  stays recorded, but the offer price becomes the price shown to
+                  the client. Leave empty (or 0) if there is no offer.
+                </p>
+              </div>
+
+              {/* Live offer preview */}
+              {offerPrice != null && offerPrice > 0 ? (
+                <div className="relative overflow-hidden rounded-xl border-2 border-emerald-300 bg-gradient-to-br from-emerald-50 via-white to-[#C9A962]/15 p-5">
+                  {/* corner ribbon */}
+                  <div className="absolute right-4 top-4 rotate-6 rounded-lg bg-emerald-500 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white shadow-md">
+                    Special Offer
+                  </div>
+                  <div className="flex items-center gap-2 text-emerald-700">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/15">
+                      <Tag className="h-4 w-4" />
+                    </span>
+                    <span className="text-xs font-bold uppercase tracking-widest">
+                      Offer Applied
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-end gap-3">
+                    <span className="text-lg font-semibold text-slate-400 line-through decoration-red-400 decoration-[2.5px]">
+                      {formatCurrency(totalPrice, currency)}
+                    </span>
+                    <span className="text-3xl font-black tracking-tight text-emerald-600">
+                      {formatCurrency(offerPrice, currency)}
+                    </span>
+                  </div>
+                  {totalPrice > offerPrice && (
+                    <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold text-emerald-800">
+                      <BadgePercent className="h-3.5 w-3.5" />
+                      You save {formatCurrency(totalPrice - offerPrice, currency)} (
+                      {Math.round(((totalPrice - offerPrice) / totalPrice) * 100)}%)
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-5 text-center">
+                  <BadgePercent className="h-8 w-8 text-slate-300" />
+                  <p className="mt-2 text-sm font-semibold text-slate-500">No offer on this booking</p>
+                  <p className="mt-1 max-w-xs text-xs text-slate-400">
+                    Add an offer price to highlight a discount — the original
+                    price will be crossed out everywhere and the offer price will
+                    be shown instead.
+                  </p>
+                </div>
+              )}
+            </div>
           </Section>
 
           {/* Inclusions & Exclusions — editable for standard tours */}

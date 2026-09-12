@@ -35,6 +35,12 @@ import {
 import { cn, formatCurrency, formatDateShort } from "@/lib/utils";
 import { ItineraryDownloader } from "@/components/itinerary-downloader";
 import { exportTableToExcel } from "@/lib/export-excel";
+import {
+  PriceWithOffer,
+  activePrice,
+  discountPercent,
+  hasOffer,
+} from "@/components/offer-price";
 
 interface ItineraryData {
   id: string;
@@ -61,6 +67,7 @@ interface ItineraryData {
   notes: string | null;
   special_requests: string | null;
   is_approved: boolean;
+  offer_price: number | null;
   created_at: string;
 }
 
@@ -175,7 +182,9 @@ function ItinerariesPageContent() {
         : "",
       "Travelers": `${totalTravelers(i)} (${i.travelers_adults}A${i.travelers_children > 0 ? `, ${i.travelers_children}C` : ""}${i.travelers_infants > 0 ? `, ${i.travelers_infants}I` : ""})`,
       "Dates": `${formatDateShort(i.start_date)} → ${formatDateShort(i.end_date)}`,
-      "Price": formatCurrency(i.total_price, i.currency),
+      "Price": formatCurrency(activePrice(i.total_price, i.offer_price), i.currency),
+      "Original Price": hasOffer(i.offer_price) ? formatCurrency(i.total_price, i.currency) : "",
+      "Discount": hasOffer(i.offer_price) ? `${discountPercent(i.total_price, i.offer_price)}% off` : "",
       "Status": i.is_approved ? "Approved" : "Hold",
     }));
     exportTableToExcel(rows, "Itineraries");
@@ -367,12 +376,11 @@ function ItinerariesPageContent() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      <DollarSign className="h-4 w-4 text-emerald-500" />
-                      <span className="text-sm font-semibold text-slate-900">
-                        {formatCurrency(itinerary.total_price, itinerary.currency)}
-                      </span>
-                    </div>
+                    <PriceWithOffer
+                      totalPrice={itinerary.total_price}
+                      offerPrice={itinerary.offer_price}
+                      currency={itinerary.currency}
+                    />
                     {itinerary.price_per_person && (
                       <p className="text-xs text-slate-500">
                         {formatCurrency(itinerary.price_per_person, itinerary.currency)}/pax
@@ -437,7 +445,12 @@ function ItinerariesPageContent() {
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-2xl font-bold text-emerald-600">
-              {filteredItineraries.reduce((sum, i) => sum + i.total_price, 0).toLocaleString()}{" "}
+              {filteredItineraries
+                .reduce(
+                  (sum, i) => sum + activePrice(i.total_price, i.offer_price),
+                  0
+                )
+                .toLocaleString()}{" "}
               <span className="text-sm font-normal">
                 {filteredItineraries[0]?.currency || "USD"}
               </span>

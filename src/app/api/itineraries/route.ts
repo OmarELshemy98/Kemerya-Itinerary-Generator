@@ -65,6 +65,9 @@ export async function GET(request: Request) {
       } else if (filterType === "approved") {
         // Approved page: ONLY approved itineraries
         query = query.eq("is_approved", true);
+      } else if (filterType === "offers") {
+        // Offers page: ONLY itineraries with a special offer price
+        query = query.not("offer_price", "is", null);
       } else if (filterType === "hold") {
         // Hold = NOT approved (false OR NULL for old rows)
         query = query.or("is_approved.is.null,is_approved.eq.false");
@@ -121,6 +124,7 @@ export async function GET(request: Request) {
       special_requests: row.special_requests,
       created_at: row.created_at,
       is_approved: row.is_approved ?? false,
+      offer_price: row.offer_price ?? null,
       booking_data: row.booking_data ?? {},
     }));
 
@@ -180,9 +184,12 @@ export async function POST(request: Request) {
       notes: booking.notes || null,
       special_requests: booking.specialRequests || null,
       is_approved: booking.isApproved || false,
+      offer_price:
+        booking.offerPrice && booking.offerPrice > 0 ? booking.offerPrice : null,
       booking_data: {
         bookingRef: booking.id,
         isCustomTour: booking.isCustomTour,
+        offerPrice: booking.offerPrice || null,
         tourId: (booking as any).tourId,
         customTourTitle: booking.customTourTitle,
         customTourDescription: booking.customTourDescription,

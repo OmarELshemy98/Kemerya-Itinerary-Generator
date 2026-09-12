@@ -63,6 +63,7 @@ export async function GET(
       notes: row.notes,
       special_requests: row.special_requests,
       is_approved: row.is_approved ?? false,
+      offer_price: row.offer_price ?? null,
       booking_data: row.booking_data ?? {},
     };
 
