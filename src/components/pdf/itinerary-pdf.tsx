@@ -76,6 +76,16 @@ const BRAND_COLORS = {
 };
 
 const TERMS_URL = "https://www.kemeryatours.com/page/terms-and-conditions";
+const PRIVACY_URL = "https://www.kemeryatours.com/page/privacy-policy";
+const PRIVACY_ITEMS = [
+  "Who We Are: Kemerya Tours is an Egyptian travel company providing tours, accommodation, transfers, guiding services and Nile cruises.",
+  "Information We Collect: Name, nationality, email, phone / WhatsApp, country of residence, travel dates, destinations, accommodation preferences, and passport details only when required for bookings or permits.",
+  "Children's Privacy: We never collect children's data directly — any required details must be provided by a parent or legal guardian.",
+  "How We Use Your Data: Strictly to prepare itineraries and quotations, manage bookings, process secure payments, communicate before / during / after your trip, and comply with Egyptian legal requirements.",
+  "Sharing: We never sell your data. Details are shared only with trusted partners (hotels, cruises, airlines, guides) to fulfil your booking.",
+  "Cookies & Marketing: Essential cookies keep the website running and help us understand visits. Marketing messages are sent only with your consent — you can opt out anytime.",
+  "Data Retention & Your Rights: Data is kept only as long as needed for your trip, accounting or legal duties, then securely deleted. You may request access, correction or deletion via info@kemeryatours.com (subject: Privacy Request — Kemerya Tours).",
+];
 const TERMS_ITEMS = [
   "Booking Confirmation: A booking is locked in only when Kemerya Tours confirms availability in writing, the required deposit is paid, and the official Booking Confirmation is issued. The lead traveler accepts these terms for every person included in the reservation.",
   "Deposits & Balance: A non-refundable deposit equal to 35% of the total trip cost is required upon booking confirmation. The remaining 65% balance must be paid upon arrival.",
@@ -88,11 +98,9 @@ const TERMS_ITEMS = [
 ];
 
 function getTermsItems(booking?: BookingConfig): string[] {
-  // First check if booking has custom terms
   if (booking?.customTerms && booking.customTerms.length > 0) {
     return booking.customTerms;
   }
-  // Then check localStorage for globally edited terms
   if (typeof window !== "undefined") {
     try {
       const stored = localStorage.getItem("kemerya_terms");
@@ -107,6 +115,32 @@ function getTermsItems(booking?: BookingConfig): string[] {
     }
   }
   return TERMS_ITEMS;
+}
+
+function getPrivacyItems(booking?: BookingConfig): string[] {
+  const custom = (booking as any)?.customPrivacy as string[] | undefined;
+  if (custom && custom.filter((t) => t && t.trim().length > 0).length > 0)
+    return custom.filter(Boolean);
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("kemerya_privacy");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed.filter(Boolean);
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return PRIVACY_ITEMS;
+}
+
+function getOfferMeta(booking: BookingConfig): { title: string; note: string } {
+  const b = booking as any;
+  return {
+    title: (b.offerTitle && String(b.offerTitle).trim()) || "Exclusive Limited-Time Offer",
+    note: (b.offerNote && String(b.offerNote).trim()) || "",
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -159,7 +193,7 @@ const LocationPinIcon = ({
   </Svg>
 );
 
-/** Special Offer Badge — small emerald ribbon with discount % */
+/** Special Offer Badge — small emerald ribbon with discount % (inline, top-right) */
 const OfferBadge = ({ discountPct }: { discountPct: number }) => (
   <View style={styles.offerBadge}>
     <Svg width={8} height={8} viewBox="0 0 24 24">
@@ -168,6 +202,31 @@ const OfferBadge = ({ discountPct }: { discountPct: number }) => (
       </G>
     </Svg>
     <Text style={styles.offerBadgeText}>{discountPct}% OFF</Text>
+  </View>
+);
+
+/** Sun-disc divider — simple print-safe pharaonic divider (no absolute layout) */
+const SunDivider = ({
+  color = "#C5A059",
+}: {
+  color?: string;
+}) => (
+  <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 10 }}>
+    <View style={{ flex: 1, height: 1, backgroundColor: color, opacity: 0.55 }} />
+    <View style={{ marginHorizontal: 8, flexDirection: "row", alignItems: "center" }}>
+      <Svg width={26} height={14} viewBox="0 0 26 14">
+        <G fill="none" stroke={color} strokeWidth={1.2}>
+          <Path d="M1 7 L9 7 M17 7 L25 7" />
+        </G>
+        <G fill={color}>
+          <Path d="M13 1 L18 7 L13 13 L8 7 Z" />
+        </G>
+        <G fill="#FDFBF7">
+          <Path d="M13 4.2 L15.4 7 L13 9.8 L10.6 7 Z" />
+        </G>
+      </Svg>
+    </View>
+    <View style={{ flex: 1, height: 1, backgroundColor: color, opacity: 0.55 }} />
   </View>
 );
 
@@ -216,17 +275,47 @@ const EyeOfHorusIcon = ({
   </Svg>
 );
 
+/** Pharaoh cartouche — small luxury seal shown next to section titles. */
+const CartoucheSeal = ({ size = 13 }: { size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <G fill="none" stroke="#C5A059" strokeWidth={1.6}>
+      <Path d="M7 3 H17 V19 H9 L7 21 Z" />
+      <Path d="M10 6 H14 M10 9 H14 M10 12 H14" strokeWidth={1.1} />
+    </G>
+  </Svg>
+);
+
+/** Scarab — tiny luxury emblem used in the offer banner. */
+const ScarabSeal = ({ size = 16 }: { size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <G fill="#059669">
+      <Path d="M12 7 C9.5 7 8 9 8 12 C8 15 9.5 17 12 17 C14.5 17 16 15 16 12 C16 9 14.5 7 12 7 Z" />
+      <Path d="M5 10 L8 11 M5 14 L8 13.4 M19 10 L16 11 M19 14 L16 13.4" stroke="#059669" strokeWidth={1.4} fill="none" />
+      <Path d="M12 4.5 C11 4.5 10.4 5.4 10.4 6.4 L13.6 6.4 C13.6 5.4 13 4.5 12 4.5 Z" />
+    </G>
+    <G fill="#ECFDF5">
+      <Path d="M12 9.5 C11 9.5 10.3 10.6 10.3 12 C10.3 13.4 11 14.5 12 14.5 C13 14.5 13.7 13.4 13.7 12 C13.7 10.6 13 9.5 12 9.5 Z" />
+    </G>
+  </Svg>
+);
+
 const styles = StyleSheet.create({
   // ─── Core Layout ─────────────────────────────────────────────────────────────
+  // A4 print-safe: generous outer margin so nothing is cut by the printer,
+  // thin inner frame, no full-bleed elements.
   page: {
     backgroundColor: "#FDFBF7",
-    padding: 20,
+    paddingTop: 28,
+    paddingBottom: 40,
+    paddingHorizontal: 28,
     fontFamily: "Lora",
   },
   pageFrame: {
     borderWidth: 1,
     borderColor: "#C5A059",
-    padding: 16,
+    paddingTop: 12,
+    paddingBottom: 30,
+    paddingHorizontal: 12,
     position: "relative",
   },
   headerBox: {
@@ -490,35 +579,36 @@ const styles = StyleSheet.create({
   },
   heroTourName: {
     color: BRAND_COLORS.dark,
-    fontSize: 22,
+    fontSize: 20,
     fontFamily: "Cinzel Decorative",
-    marginBottom: 10,
+    marginBottom: 8,
     lineHeight: 1.3,
   },
   heroSubtitle: {
     color: BRAND_COLORS.gold,
-    fontSize: 10,
+    fontSize: 9,
     letterSpacing: 3,
     textTransform: "uppercase",
-    marginBottom: 22,
+    marginBottom: 14,
   },
   heroGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
-    marginTop: 15,
+    gap: 6,
+    marginTop: 10,
   },
   heroStat: {
-    width: "31%",
-    paddingRight: 8,
+    width: "31.5%",
+    paddingRight: 6,
     borderRightWidth: 1,
     borderRightColor: "rgba(0,0,0,0.1)",
+    marginBottom: 6,
   },
   heroStatLast: {
-    flex: 1,
-    minWidth: "30%",
+    width: "31.5%",
     paddingRight: 0,
     borderRightWidth: 0,
+    marginBottom: 6,
   },
   heroStatLabel: {
     color: BRAND_COLORS.muted,
@@ -529,7 +619,7 @@ const styles = StyleSheet.create({
   },
   heroStatValue: {
     color: BRAND_COLORS.dark,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "bold",
   },
   // Offer price styling — struck-through old price + emerald new price
@@ -538,15 +628,74 @@ const styles = StyleSheet.create({
     textDecorationLine: "line-through" as const,
     textDecorationThickness: 1.5,
     textDecorationColor: "#EF4444", // red-400
+    fontSize: 10,
   },
+  // ── Luxury offer banner (A4 print-safe, no overlap) ──
+  offerBanner: {
+    marginTop: 10,
+    marginBottom: 2,
+    borderWidth: 1,
+    borderColor: "#059669",
+    backgroundColor: "#ECFDF5",
+    padding: 10,
+  },
+  offerBannerTop: { flexDirection: "row", alignItems: "center", marginBottom: 5 },
+  offerBannerBadge: {
+    backgroundColor: "#059669",
+    color: "#FFFFFF",
+    fontSize: 7,
+    fontWeight: "bold",
+    letterSpacing: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  offerBannerTitle: {
+    fontFamily: "Cinzel",
+    fontSize: 11,
+    color: "#065F46",
+    marginBottom: 4,
+  },
+  offerBannerPrices: { flexDirection: "row", alignItems: "flex-end", flexWrap: "wrap" },
+  offerBannerOld: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    textDecorationLine: "line-through" as const,
+    textDecorationColor: "#EF4444",
+    marginRight: 8,
+  },
+  offerBannerNew: { fontSize: 19, color: "#059669", fontWeight: "bold", marginRight: 8 },
+  offerBannerPct: { fontSize: 8, color: "#065F46", fontWeight: "bold", marginBottom: 3 },
+  offerBannerNote: { fontSize: 8.5, color: "#065F46", marginTop: 4, lineHeight: 1.5 },
+  // ── Per-day roadmap strip (vertical, wrap-safe — never overlaps) ──
+  dayRoadmap: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#E8D7B1",
+    backgroundColor: "#FFFDF5",
+    padding: 7,
+  },
+  dayRoadmapTitle: {
+    fontFamily: "Cinzel",
+    fontSize: 7.5,
+    color: "#8b7435",
+    letterSpacing: 1,
+    marginBottom: 5,
+  },
+  dayRoadmapRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 3 },
+  dayRoadmapDot: {
+    width: 7, height: 7, borderRadius: 4,
+    backgroundColor: "#C5A059", marginTop: 3, marginRight: 6,
+  },
+  dayRoadmapStop: { flex: 1, fontSize: 8.5, color: "#2C1E16", lineHeight: 1.45 },
+  dayRoadmapArrow: { fontSize: 8, color: "#C5A059", marginLeft: 13, marginBottom: 1 },
   offerPriceValue: {
     color: "#059669", // emerald-600
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: "bold",
   },
   // Summary card offer styling
   summaryStrikethrough: {
-    fontSize: 11,
+    fontSize: 9,
     color: "#9CA3AF",
     textDecorationLine: "line-through" as const,
     textDecorationThickness: 1,
@@ -609,23 +758,23 @@ const styles = StyleSheet.create({
   summaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 6,
     justifyContent: "space-between",
-    padding: 10,
+    padding: 8,
     borderWidth: 1,
     borderColor: "#E8D7B1",
     backgroundColor: "#FFFFFF",
   },
   summaryItem: {
-    width: "48%",
+    width: "48.5%",
     flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
+    alignItems: "flex-start",
+    padding: 7,
     borderWidth: 1,
     borderColor: "#C5A059",
     borderRadius: 0,
     backgroundColor: "transparent",
-    gap: 8,
+    gap: 6,
   },
   routeWrapper: {
     marginVertical: 15,
@@ -672,13 +821,13 @@ const styles = StyleSheet.create({
   destinationCard: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E8D7B1",
-    minWidth: "45%",
-    gap: 8,
+    width: "48.5%",
+    gap: 6,
   },
   destinationIcon: {
     width: 16,
@@ -699,14 +848,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   summaryItemLabel: {
-    fontSize: 8,
+    fontSize: 7.5,
     color: BRAND_COLORS.muted,
-    letterSpacing: 1,
+    letterSpacing: 0.6,
     textTransform: "uppercase",
     marginBottom: 2,
   },
   summaryItemValue: {
-    fontSize: 11,
+    fontSize: 9.5,
     color: BRAND_COLORS.text,
     fontWeight: "semibold",
   },
@@ -759,7 +908,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dayContent: {
-    padding: 20,
+    padding: 10,
   },
   dayDescription: {
     fontSize: 10,
@@ -796,11 +945,11 @@ const styles = StyleSheet.create({
   },
   twoCol: {
     flexDirection: "row",
-    gap: 16,
+    gap: 10,
   },
   col: {
     flex: 1,
-    width: "50%",
+    width: "49%",
   },
   inclusionsCard: {
     backgroundColor: "transparent",
@@ -1036,7 +1185,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   opsItem: {
-    width: "47%",
+    width: "48%",
     flexDirection: "column",
     gap: 2,
   },
@@ -1232,9 +1381,17 @@ export function ItineraryPDF({
     return found;
   };
 
-  // Build route stops - use customRouteStops if available, otherwise extract from itinerary
+  // Build route stops - customRouteStops win, else per-day editable roadmaps, else auto-extract
   const hasCustomStops = booking.customRouteStops && booking.customRouteStops.length > 0;
-  
+  const dayRoutesByDay = React.useMemo(() => {
+    const map = new Map<number, string[]>();
+    (booking.dayRoutes || []).forEach((r) => {
+      const stops = (r.stops || []).map((s) => String(s).trim()).filter(Boolean);
+      if (stops.length > 0) map.set(r.day, stops);
+    });
+    return map;
+  }, [booking.dayRoutes]);
+
   const routeStops = hasCustomStops
     ? (booking.customRouteStops || []).sort((a, b) => a.order - b.order).map((stop, i) => ({
         day: i + 1,
@@ -1242,15 +1399,16 @@ export function ItineraryPDF({
         locations: stop.name ? [stop.name] : [`Stop ${i + 1}`],
       }))
     : (itinerary || []).map((day, i) => {
-        const locations = extractDayLocations(day);
-        const dayLabel = day.title && day.title.trim() 
-          ? day.title.trim() 
+        const key = day.day || i + 1;
+        const editable = dayRoutesByDay.get(key);
+        const auto = extractDayLocations(day);
+        const dayLabel = day.title && day.title.trim()
+          ? day.title.trim()
           : `Day ${i + 1}`;
-        return {
-          day: day.day || i + 1,
-          label: dayLabel,
-          locations: locations.length > 0 ? locations : [dayLabel],
-        };
+        const locations = editable && editable.length > 0
+          ? editable
+          : auto.length > 0 ? auto : [dayLabel];
+        return { day: key, label: dayLabel, locations };
       });
 
   // Collect all unique locations for the roadmap
@@ -1401,6 +1559,41 @@ export function ItineraryPDF({
           </View>
         </View>
 
+        {/* LUXURY OFFER BANNER — attractive & creative, print-safe */}
+        {booking.offerPrice && booking.offerPrice > 0 && (() => {
+          const meta = getOfferMeta(booking);
+          const pct = Math.round(((booking.totalPrice - booking.offerPrice) / booking.totalPrice) * 100);
+          return (
+            <View style={styles.offerBanner} wrap={false}>
+              <View style={styles.offerBannerTop}>
+                <View style={{ marginRight: 6 }}>
+                  <ScarabSeal size={16} />
+                </View>
+                <Text style={styles.offerBannerBadge}>
+                  {pct > 0 ? `SPECIAL OFFER · SAVE ${pct}%` : "SPECIAL OFFER"}
+                </Text>
+              </View>
+              <Text style={styles.offerBannerTitle}>{meta.title}</Text>
+              <View style={styles.offerBannerPrices}>
+                <Text style={styles.offerBannerOld}>
+                  {formatCurrency(booking.totalPrice, booking.currency)}
+                </Text>
+                <Text style={styles.offerBannerNew}>
+                  {formatCurrency(booking.offerPrice, booking.currency)}
+                </Text>
+                {pct > 0 && (
+                  <Text style={styles.offerBannerPct}>
+                    You save {formatCurrency(booking.totalPrice - booking.offerPrice, booking.currency)}
+                  </Text>
+                )}
+              </View>
+              {meta.note ? (
+                <Text style={styles.offerBannerNote}>{meta.note}</Text>
+              ) : null}
+            </View>
+          );
+        })()}
+
         {/* JOURNEY ROUTE TIMELINE */}
         {routeStops.length > 0 && (
           <View style={styles.routeWrapper}>
@@ -1515,9 +1708,11 @@ export function ItineraryPDF({
             <View style={styles.sectionUnderline} />
           </View>
 
-          {itinerary.slice(0, 3).map((day) => (
-            <DayCard key={day.day} day={day} />
-          ))}
+          {itinerary.slice(0, 3).map((day, idx) => {
+            const key = day.day || idx + 1;
+            const stops = dayRoutesByDay.get(key);
+            return <DayCard key={day.day} day={day} roadmap={stops} />;
+          })}
 
           {itinerary.length === 0 && (
             <DayCard
@@ -1547,9 +1742,11 @@ export function ItineraryPDF({
               <View style={styles.sectionUnderline} />
             </View>
 
-            {itinerary.slice(3, 7).map((day) => (
-              <DayCard key={day.day} day={day} />
-            ))}
+            {itinerary.slice(3, 7).map((day, idx) => {
+              const key = day.day || idx + 4;
+              const stops = dayRoutesByDay.get(key);
+              return <DayCard key={day.day} day={day} roadmap={stops} />;
+            })}
           </View>
 
           <View style={styles.footer}>
@@ -1767,6 +1964,14 @@ export function ItineraryPDF({
             <View style={styles.sectionUnderline} />
           </View>
           <View style={styles.termsCard}>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}>
+              <View style={{ marginRight: 6 }}>
+                <CartoucheSeal size={13} />
+              </View>
+              <Text style={{ fontFamily: "Cinzel", fontSize: 9, color: "#1E3A8A" }}>
+                Terms & Conditions
+              </Text>
+            </View>
             {getTermsItems(booking).map((item, i) => (
               <View key={i} style={styles.termsItemRow}>
                 <Text style={styles.termsBullet}>▪</Text>
@@ -1777,6 +1982,26 @@ export function ItineraryPDF({
               Read the full terms on our website:{" "}
               <Link src={TERMS_URL} style={styles.termsLinkText}>
                 {TERMS_URL}
+              </Link>
+            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, marginBottom: 6 }}>
+              <View style={{ marginRight: 6 }}>
+                <EyeOfHorusIcon size={13} />
+              </View>
+              <Text style={{ fontFamily: "Cinzel", fontSize: 9, color: "#1E3A8A" }}>
+                Privacy Policy
+              </Text>
+            </View>
+            {getPrivacyItems(booking).map((item, i) => (
+              <View key={i} style={styles.termsItemRow}>
+                <Text style={styles.termsBullet}>▪</Text>
+                <Text style={styles.termsItemText}>{item}</Text>
+              </View>
+            ))}
+            <Text style={styles.termsItemText}>
+              Read the full privacy policy:{" "}
+              <Link src={PRIVACY_URL} style={styles.termsLinkText}>
+                {PRIVACY_URL}
               </Link>
             </Text>
           </View>
@@ -1865,7 +2090,9 @@ function SummaryCard({ label, value }: { label: string; value: React.ReactNode }
   );
 }
 
-function DayCard({ day }: { day: ItineraryDay }) {
+function DayCard({ day, roadmap }: { day: ItineraryDay; roadmap?: string[] }) {
+  const stops = (roadmap && roadmap.length > 0 ? roadmap : day.dayRoute && day.dayRoute.length > 0 ? day.dayRoute : [])
+    .map((s) => String(s).trim()).filter(Boolean);
   return (
     <>
       <View break style={styles.dayCard}>
@@ -1878,6 +2105,22 @@ function DayCard({ day }: { day: ItineraryDay }) {
         </View>
         <View style={styles.dayContent}>
           <Text style={styles.dayDescription}>{day.description}</Text>
+          {stops.length > 0 && (
+            <View style={styles.dayRoadmap} wrap={false}>
+              <Text style={styles.dayRoadmapTitle}>Today&apos;s Roadmap</Text>
+              {stops.map((stop, i) => (
+                <View key={i}>
+                  <View style={styles.dayRoadmapRow}>
+                    <View style={styles.dayRoadmapDot} />
+                    <Text style={styles.dayRoadmapStop}>{stop}</Text>
+                  </View>
+                  {i < stops.length - 1 && (
+                    <Text style={styles.dayRoadmapArrow}>↓</Text>
+                  )}
+                </View>
+              ))}
+            </View>
+          )}
           {(day.meals || day.accommodation) && (
             <View style={styles.metaRow}>
               {day.accommodation && (
@@ -1909,16 +2152,15 @@ interface TimelineStop {
 }
 
 function RouteTimeline({ stops }: { stops: TimelineStop[] }) {
-  const width = 520;
-  const padding = 50;
+  const width = 480;
+  const padding = 30;
   const usableWidth = width - padding * 2;
   const nodeSpacing = stops.length > 1 ? usableWidth / (stops.length - 1) : 0;
-  const centerY = 70;
-  const lineHeight = 24;
+  const centerY = 60;
+  const lineHeight = 20;
 
-  // Calculate required height based on locations
-  const maxLocations = Math.max(...stops.map(s => s.locations.length));
-  const height = centerY * 2 + (maxLocations * lineHeight) + 40;
+  // Calculate required height (capped: only first 2 locations render)
+  const height = centerY * 2 + 2 * lineHeight + 40;
 
   return (
     <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
@@ -1988,8 +2230,8 @@ function RouteTimeline({ stops }: { stops: TimelineStop[] }) {
               {`Day ${stop.day}`}
             </Text>
 
-            {/* Locations list */}
-            {stop.locations.map((loc, j) => (
+            {/* Locations list — clipped to 2 lines so long names never overlap */}
+            {stop.locations.slice(0, 2).map((loc, j) => (
               <Text
                 key={j}
                 style={{ fontSize: 6, fontFamily: "Lora", fill: "#2C1E16", textAnchor: "middle" }}
@@ -1999,6 +2241,17 @@ function RouteTimeline({ stops }: { stops: TimelineStop[] }) {
                 {loc.length > 20 ? loc.slice(0, 18) + "..." : loc}
               </Text>
             ))}
+
+            {/* "+N more" hint when a stop has many places */}
+            {stop.locations.length > 2 && (
+              <Text
+                style={{ fontSize: 5.5, fontFamily: "Lora", fill: "#8A8171", textAnchor: "middle" }}
+                x={x}
+                y={centerY + 28 + (2 * lineHeight)}
+              >
+                +{stop.locations.length - 2} more
+              </Text>
+            )}
 
             {/* Start/End markers */}
             {isFirst && (

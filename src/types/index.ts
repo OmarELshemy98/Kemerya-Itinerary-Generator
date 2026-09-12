@@ -109,6 +109,8 @@ export interface BookingConfig {
   customTourTitle?: string;
   customTourDescription?: string;
   customItinerary?: ItineraryDay[];
+  /** Per-day roadmap strings for a custom tour (index-aligned with customItinerary) */
+  customDayRoutes?: string[][];
   customInclusions?: string[];
   customExclusions?: string[];
   travelers: BookingTravelers;
@@ -147,8 +149,14 @@ export interface BookingConfig {
   /** Special offer price — when > 0 it replaces totalPrice everywhere
    *  and the original price is shown struck through. */
   offerPrice?: number;
+  /** Luxury offer headline shown on the PDF offer banner (editable) */
+  offerTitle?: string;
+  /** Extra offer note shown under the offer price (editable) */
+  offerNote?: string;
   /** Custom terms & conditions for this specific itinerary */
   customTerms?: string[];
+  /** Custom privacy-policy items for this specific itinerary (editable) */
+  customPrivacy?: string[];
 }
 
 export interface RouteStop {

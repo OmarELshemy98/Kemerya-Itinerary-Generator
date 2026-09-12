@@ -28,6 +28,7 @@ import {
   Clock,
   Tag,
   BadgePercent,
+  ShieldCheck,
 } from "lucide-react";
 import type { Tour, BookingConfig, Currency, ItineraryDay, RouteStop, DayRoute } from "@/types";
 import {
@@ -277,6 +278,58 @@ function RouteStopsEditor({
 /**
  * Terms Editor - Editable terms & conditions per itinerary
  */
+function PrivacyEditor({
+  items,
+  onChange,
+}: {
+  items: string[] | undefined;
+  onChange: (items: string[]) => void;
+}) {
+  const normalized = items && items.length > 0 ? items : [""];
+  return (
+    <div className="space-y-2">
+      <Label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+        <ShieldCheck className="h-3.5 w-3.5 text-slate-500" />
+        Privacy Policy items for this itinerary
+      </Label>
+      {normalized.map((item, index) => (
+        <div key={index} className="flex items-start gap-2">
+          <Textarea
+            value={item}
+            onChange={(e) => {
+              const next = [...normalized];
+              next[index] = e.target.value;
+              onChange(next);
+            }}
+            placeholder="Privacy item…"
+            rows={2}
+            className="min-h-[52px] flex-1 resize-none text-sm"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onChange(normalized.filter((_, i) => i !== index))}
+            className="h-8 w-8 shrink-0 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => onChange([...normalized, ""])}
+        className="w-full border-dashed text-xs"
+      >
+        <Plus className="mr-1.5 h-3.5 w-3.5" />
+        Add privacy item
+      </Button>
+    </div>
+  );
+}
+
 function TermsEditor({
   terms,
   onChange,
@@ -447,8 +500,13 @@ const bookingSchema = z
     isApproved: z.boolean().optional().default(false),
     /** Special offer price (0 = no offer). Replaces totalPrice when set. */
     offerPrice: z.number().min(0).optional().default(0),
+    /** Luxury offer headline + note (editable, shown on PDF offer banner) */
+    offerTitle: z.string().optional().default(""),
+    offerNote: z.string().optional().default(""),
     /** Custom terms & conditions for this specific itinerary */
     customTerms: z.array(z.string()).optional(),
+    /** Custom privacy-policy items for this specific itinerary (editable) */
+    customPrivacy: z.array(z.string()).optional(),
     /** Per-day journey map stops (simple strings per day) */
     dayRoutes: z.array(z.object({
       day: z.coerce.number().int().min(1),
@@ -582,9 +640,13 @@ export function BookingConfigurationForm({
         customExclusions: [],
         customItinerary: [],
         customRouteStops: [],
+        dayRoutes: [],
         isApproved: false,
         offerPrice: 0,
+        offerTitle: "Exclusive Limited-Time Offer",
+        offerNote: "",
         customTerms: [],
+        customPrivacy: [],
         bookingRef: generateBookingRef(),
         ...initialValues,
       },
@@ -601,7 +663,11 @@ export function BookingConfigurationForm({
   const customRouteStops = watch("customRouteStops");
   const isApproved = watch("isApproved");
   const offerPrice = watch("offerPrice");
+  const offerTitle = watch("offerTitle");
+  const offerNote = watch("offerNote");
   const customTerms = watch("customTerms");
+  const customPrivacy = watch("customPrivacy");
+  const dayRoutes = watch("dayRoutes");
 
   React.useEffect(() => {
     if (selectedTour && !isCustomMode) {
@@ -682,12 +748,14 @@ export function BookingConfigurationForm({
       customInclusions: values.isCustomTour ? values.customInclusions : undefined,
       customExclusions: values.isCustomTour ? values.customExclusions : undefined,
       customRouteStops: values.customRouteStops && values.customRouteStops.length > 0 ? values.customRouteStops : undefined,
-    /** Whether this itinerary has been approved */
-    isApproved: values.isApproved || false,
-    /** Special offer price (0/undefined = no offer) */
-    offerPrice:
-      values.offerPrice && values.offerPrice > 0 ? values.offerPrice : undefined,
-    customTerms: values.customTerms && values.customTerms.length > 0 ? values.customTerms : undefined,
+      dayRoutes: values.dayRoutes && values.dayRoutes.length > 0 ? (values.dayRoutes as any) : undefined,
+      isApproved: values.isApproved || false,
+      offerPrice:
+        values.offerPrice && values.offerPrice > 0 ? values.offerPrice : undefined,
+      offerTitle: values.offerTitle?.trim() ? values.offerTitle.trim() : undefined,
+      offerNote: values.offerNote?.trim() ? values.offerNote.trim() : undefined,
+      customTerms: values.customTerms && values.customTerms.length > 0 ? values.customTerms.filter((t) => t && t.trim()) : undefined,
+      customPrivacy: values.customPrivacy && values.customPrivacy.length > 0 ? values.customPrivacy.filter((t) => t && t.trim()) : undefined,
       // Standard mode: employee-editable inclusions/exclusions (pre-filled from tour)
       inclusions: !values.isCustomTour ? values.inclusions : undefined,
       exclusions: !values.isCustomTour ? values.exclusions : undefined,
@@ -989,6 +1057,29 @@ export function BookingConfigurationForm({
                   stays recorded, but the offer price becomes the price shown to
                   the client. Leave empty (or 0) if there is no offer.
                 </p>
+                <div className="mt-3 space-y-2">
+                  <div>
+                    <Label className="text-[11px] font-semibold text-slate-600">
+                      Offer headline (PDF banner)
+                    </Label>
+                    <Input
+                      {...register("offerTitle")}
+                      placeholder="Exclusive Limited-Time Offer"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[11px] font-semibold text-slate-600">
+                      Offer note (PDF banner)
+                    </Label>
+                    <Textarea
+                      {...register("offerNote")}
+                      placeholder="e.g. Valid for bookings confirmed this week — includes all transfers…"
+                      rows={2}
+                      className="mt-1 min-h-[52px] resize-none text-sm"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Live offer preview */}
@@ -1014,6 +1105,16 @@ export function BookingConfigurationForm({
                       {formatCurrency(offerPrice, currency)}
                     </span>
                   </div>
+                  {offerTitle?.trim() && (
+                    <p className="mt-2 text-sm font-bold text-emerald-800">
+                      {offerTitle}
+                    </p>
+                  )}
+                  {offerNote?.trim() && (
+                    <p className="mt-1 text-xs leading-relaxed text-emerald-700">
+                      {offerNote}
+                    </p>
+                  )}
                   {totalPrice > offerPrice && (
                     <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold text-emerald-800">
                       <BadgePercent className="h-3.5 w-3.5" />
@@ -1116,6 +1217,24 @@ export function BookingConfigurationForm({
                           />
                         </div>
                       )}
+                      <div>
+                        <Label className="flex items-center gap-1.5 text-xs">
+                          <Map className="h-3.5 w-3.5 text-slate-500" />
+                          Roadmap — places visited this day (editable, one per line)
+                        </Label>
+                        <Textarea
+                          defaultValue={(dayRoutes?.find((r: any) => r.day === day.day)?.stops || []).join("\n")}
+                          onChange={(e) => {
+                            const stops = e.target.value.split("\n").map((s) => s.trim()).filter(Boolean);
+                            const current = (dayRoutes || []) as any[];
+                            const without = current.filter((r: any) => r.day !== day.day);
+                            setValue("dayRoutes", stops.length > 0 ? [...without, { day: day.day, stops }] as any : without as any);
+                          }}
+                          placeholder={"Pyramids of Giza\nGreat Sphinx\nEgyptian Museum"}
+                          rows={3}
+                          className="mt-1 resize-none text-sm"
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1513,6 +1632,23 @@ export function BookingConfigurationForm({
                             className="mt-1"
                           />
                         </div>
+                        <div className="sm:col-span-3">
+                          <Label className="flex items-center gap-1.5 text-xs">
+                            <Map className="h-3.5 w-3.5 text-slate-500" />
+                            Roadmap — places visited this day (editable, one per line)
+                          </Label>
+                          <Textarea
+                            value={((dayRoutes || []) as any[]).find((r: any) => r.day === index + 1)?.stops?.join("\n") || ""}
+                            onChange={(e) => {
+                              const stops = e.target.value.split("\n").map((s) => s.trim()).filter(Boolean);
+                              const current = ((dayRoutes || []) as any[]).filter((r: any) => r.day !== index + 1);
+                              setValue("dayRoutes", stops.length > 0 ? [...current, { day: index + 1, stops }] as any : current as any);
+                            }}
+                            placeholder={"Pyramids of Giza\nGreat Sphinx\nEgyptian Museum"}
+                            rows={3}
+                            className="mt-1 resize-none text-sm"
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1534,6 +1670,18 @@ export function BookingConfigurationForm({
           {/* Custom Terms & Conditions */}
           <Section icon={<FileText className="h-4 w-4" />} title="Terms & Conditions (Custom)">
             <TermsEditor terms={customTerms || []} onChange={(terms) => setValue("customTerms", terms)} />
+          </Section>
+
+          <Separator />
+
+          {/* Custom Privacy Policy */}
+          <Section icon={<ShieldCheck className="h-4 w-4" />} title="Privacy Policy (Custom)">
+            <PrivacyEditor items={customPrivacy || []} onChange={(items) => setValue("customPrivacy", items)} />
+            <p className="text-[11px] leading-relaxed text-slate-500">
+              Leave empty to use the default Privacy Policy. Items you type here
+              appear on the PDF under Terms & Conditions, with a link to{" "}
+              <span className="font-mono">kemeryatours.com/page/privacy-policy</span>.
+            </p>
           </Section>
 
           <Separator />
