@@ -17,9 +17,10 @@ import { ItineraryPDF } from "@/components/pdf/itinerary-pdf";
 import { KEMERYA_COMPANY_INFO } from "@/data/company";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PriceWithOffer } from "@/components/offer-price";
 import { itineraryRowToBooking } from "@/lib/itinerary-view";
 import { buildItineraryFileName } from "@/components/pdf/pdf-downloader";
-import { formatDateShort, formatCurrency } from "@/lib/utils";
+import { formatDateShort } from "@/lib/utils";
 import { generateDynamicMap } from "@/utils/mapGenerator";
 import { useToursData } from "@/components/tours-data-provider";
 
@@ -193,7 +194,13 @@ export function ItineraryViewer({ id }: { id: string }) {
                       <Badge variant="outline" className="rounded-full"># {booking.id.replace(/^bk-/, "").toUpperCase()}</Badge>
                       <Badge variant="outline" className="rounded-full">{totalTravelers} Travelers</Badge>
                       <Badge variant="outline" className="rounded-full">{formatDateShort(booking.startDate)} → {formatDateShort(booking.endDate)}</Badge>
-                      <Badge variant="gold" className="rounded-full">{formatCurrency(booking.totalPrice, booking.currency)}</Badge>
+                      <Badge variant="gold" className="rounded-full">
+                        <PriceWithOffer
+                          totalPrice={booking.totalPrice}
+                          offerPrice={booking.offerPrice}
+                          currency={booking.currency}
+                        />
+                      </Badge>
                     </div>
                   </div>
                 </div>

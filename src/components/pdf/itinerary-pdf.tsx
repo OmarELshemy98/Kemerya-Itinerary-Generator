@@ -159,6 +159,19 @@ const LocationPinIcon = ({
   </Svg>
 );
 
+/** Special Offer Badge — small emerald ribbon with discount % */
+const OfferBadge = ({ discountPct }: { discountPct: number }) => (
+  <View style={styles.offerBadge}>
+    <Svg width={8} height={8} viewBox="0 0 24 24">
+      <G fill="#FFFFFF">
+        <Path d="M12 2 L15 8 H21 L16 12 L18 18 L12 15 L6 18 L8 12 L3 8 H9 Z" />
+      </G>
+    </Svg>
+    <Text style={styles.offerBadgeText}>{discountPct}% OFF</Text>
+  </View>
+);
+
+
 /** Lotus Divider — Horizontal SVG divider with central lotus/diamond motif */
 const LotusDivider = ({
   width = 400,
@@ -518,6 +531,48 @@ const styles = StyleSheet.create({
     color: BRAND_COLORS.dark,
     fontSize: 14,
     fontWeight: "bold",
+  },
+  // Offer price styling — struck-through old price + emerald new price
+  strikethroughOldPrice: {
+    color: "#9CA3AF", // slate-400
+    textDecorationLine: "line-through" as const,
+    textDecorationThickness: 1.5,
+    textDecorationColor: "#EF4444", // red-400
+  },
+  offerPriceValue: {
+    color: "#059669", // emerald-600
+    fontSize: 15,
+    fontWeight: "bold",
+  },
+  // Summary card offer styling
+  summaryStrikethrough: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    textDecorationLine: "line-through" as const,
+    textDecorationThickness: 1,
+    textDecorationColor: "#EF4444",
+  },
+    summaryOfferValue: {
+    fontSize: 12,
+    color: "#059669",
+    fontWeight: "bold",
+  },
+  offerBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "#059669", // emerald-600
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    alignSelf: "flex-start",
+    marginTop: 2,
+  },
+  offerBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 7,
+    fontWeight: "bold",
+    letterSpacing: 0.5,
   },
   section: {
     marginBottom: 14,
@@ -1253,9 +1308,31 @@ export function ItineraryPDF({
             </View>
             <View style={styles.heroStat}>
               <Text style={styles.heroStatLabel}>Total Price</Text>
-              <Text style={styles.heroStatValue}>
-                {formatCurrency(booking.totalPrice, booking.currency)}
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                {booking.offerPrice && booking.offerPrice > 0 ? (
+                  <>
+                    <Text style={[styles.heroStatValue, styles.strikethroughOldPrice]}>
+                      {formatCurrency(booking.totalPrice, booking.currency)}
+                    </Text>
+                    <Text style={styles.offerPriceValue}>
+                      {formatCurrency(booking.offerPrice, booking.currency)}
+                    </Text>
+                    {booking.totalPrice > 0 && (
+                      <OfferBadge
+                        discountPct={Math.round(
+                          ((booking.totalPrice - booking.offerPrice) /
+                            booking.totalPrice) *
+                          100
+                        )}
+                      />
+                    )}
+                  </>
+                ) : (
+                  <Text style={styles.heroStatValue}>
+                    {formatCurrency(booking.totalPrice, booking.currency)}
+                  </Text>
+                )}
+              </View>
             </View>
             <View style={styles.heroStatLast}>
               <Text style={styles.heroStatLabel}>Reference</Text>
@@ -1286,7 +1363,16 @@ export function ItineraryPDF({
             />
             <SummaryCard
               label={booking.currency === "EUR" ? "Total Amount (EUR)" : "Total Amount (USD)"}
-              value={formatCurrency(booking.totalPrice, booking.currency)}
+              value={booking.offerPrice && booking.offerPrice > 0 ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={[styles.summaryItemValue, styles.summaryStrikethrough]}>
+                    {formatCurrency(booking.totalPrice, booking.currency)}
+                  </Text>
+                  <Text style={styles.summaryOfferValue}>
+                    {formatCurrency(booking.offerPrice, booking.currency)}
+                  </Text>
+                </View>
+              ) : formatCurrency(booking.totalPrice, booking.currency)}
             />
             {booking.clientName && (
               <SummaryCard label="Client Name" value={booking.clientName} />
@@ -1752,7 +1838,7 @@ export function ItineraryPDF({
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
+function SummaryCard({ label, value }: { label: string; value: React.ReactNode }) {
   const getIcon = () => {
     const lowerLabel = label.toLowerCase();
     if (lowerLabel.includes("meeting") || lowerLabel.includes("location") || lowerLabel.includes("destination")) {
@@ -1769,7 +1855,11 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
       {getIcon()}
       <View style={styles.summaryItemTextWrap}>
         <Text style={styles.summaryItemLabel}>{label}</Text>
-        <Text style={styles.summaryItemValue}>{value}</Text>
+        {typeof value === "string" ? (
+          <Text style={styles.summaryItemValue}>{value}</Text>
+        ) : (
+          value
+        )}
       </View>
     </View>
   );
