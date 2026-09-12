@@ -30,9 +30,11 @@ import {
   Clock,
   CheckCircle2,
   Trash2,
+  FileSpreadsheet,
 } from "lucide-react";
 import { cn, formatCurrency, formatDateShort } from "@/lib/utils";
 import { ItineraryDownloader } from "@/components/itinerary-downloader";
+import { exportTableToExcel } from "@/lib/export-excel";
 
 interface ItineraryData {
   id: string;
@@ -159,6 +161,26 @@ function ItinerariesPageContent() {
   const totalTravelers = (i: ItineraryData) =>
     i.travelers_adults + i.travelers_children + i.travelers_infants;
 
+  const exportExcel = () => {
+    const rows = filteredItineraries.map((i) => ({
+      "Date Created": new Date(i.created_at).toLocaleString(),
+      "Created By": i.user_name
+        ? `${i.user_name}${i.user_email ? ` (${i.user_email})` : ""}`
+        : i.user_email || "",
+      "Tour / Itinerary": i.is_custom_tour
+        ? i.custom_tour_title || "Custom Tour"
+        : i.tour_title || "Unknown Tour",
+      "Client": i.client_name
+        ? `${i.client_name}${i.client_email ? ` | ${i.client_email}` : ""}`
+        : "",
+      "Travelers": `${totalTravelers(i)} (${i.travelers_adults}A${i.travelers_children > 0 ? `, ${i.travelers_children}C` : ""}${i.travelers_infants > 0 ? `, ${i.travelers_infants}I` : ""})`,
+      "Dates": `${formatDateShort(i.start_date)} → ${formatDateShort(i.end_date)}`,
+      "Price": formatCurrency(i.total_price, i.currency),
+      "Status": i.is_approved ? "Approved" : "Hold",
+    }));
+    exportTableToExcel(rows, "Itineraries");
+  };
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -174,6 +196,10 @@ function ItinerariesPageContent() {
             {filteredItineraries.length} itinerary
             {filteredItineraries.length !== 1 ? "ies" : ""}
           </Badge>
+          <Button variant="outline" size="sm" onClick={exportExcel} title="Export the shown data to an Excel sheet">
+            <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-600" />
+            Export in Excel Sheet
+          </Button>
         </div>
       </div>
 

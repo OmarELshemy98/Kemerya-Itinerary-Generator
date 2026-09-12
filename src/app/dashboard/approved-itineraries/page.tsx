@@ -12,9 +12,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Loader2, CheckCircle2, Users, DollarSign, Eye, Check, Trash2 } from "lucide-react";
+import { Search, Loader2, CheckCircle2, Users, DollarSign, Eye, Check, Trash2, FileSpreadsheet } from "lucide-react";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { ItineraryDownloader } from "@/components/itinerary-downloader";
+import { exportTableToExcel } from "@/lib/export-excel";
 
 interface ApprovedItineraryData {
   id: string;
@@ -105,6 +106,18 @@ function ApprovedItinerariesPageContent() {
     : itineraries;
 
   const totalT = (item: ApprovedItineraryData) => item.travelers_adults + item.travelers_children + item.travelers_infants;
+
+  const exportExcel = () => {
+    const rows = filtered.map((item) => ({
+      "Tour Name": item.is_custom_tour ? item.custom_tour_title || "Custom Tour" : item.tour_title || "Standard Tour",
+      "Client": item.client_name || "N/A",
+      "Client Phone": item.client_phone || "",
+      "Travelers": `${totalT(item)} (${item.travelers_adults}A${item.travelers_children > 0 ? `, ${item.travelers_children}C` : ""}${item.travelers_infants > 0 ? `, ${item.travelers_infants}I` : ""})`,
+      "Dates": `${formatDateShort(item.start_date)} → ${formatDateShort(item.end_date)}`,
+      "Price": formatCurrency(item.total_price, item.currency),
+    }));
+    exportTableToExcel(rows, "Approved Itineraries");
+  };
   const approvedCount = itineraries.filter((i) => i.is_approved).length;
   return (
     <div className="space-y-6">
@@ -117,6 +130,10 @@ function ApprovedItinerariesPageContent() {
           <CheckCircle2 className="h-5 w-5 text-emerald-600" />
           <span className="text-sm font-medium text-emerald-700">{approvedCount} of {itineraries.length} Approved</span>
         </div>
+        <Button variant="outline" size="sm" onClick={exportExcel} title="Export the shown data to an Excel sheet">
+          <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-600" />
+          Export in Excel Sheet
+        </Button>
       </div>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />

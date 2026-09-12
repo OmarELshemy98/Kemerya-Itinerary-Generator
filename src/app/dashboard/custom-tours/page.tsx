@@ -20,9 +20,11 @@ import {
   DollarSign,
   Eye,
   Plus,
+  FileSpreadsheet,
 } from "lucide-react";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { ItineraryDownloader } from "@/components/itinerary-downloader";
+import { exportTableToExcel } from "@/lib/export-excel";
 
 interface CustomTourData {
   id: string;
@@ -79,6 +81,18 @@ function CustomToursPageContent() {
   const totalTravelers = (tour: CustomTourData) =>
     tour.travelers_adults + tour.travelers_children + tour.travelers_infants;
 
+  const exportExcel = () => {
+    const rows = filteredTours.map((tour) => ({
+      "Tour Name": tour.custom_tour_title || "Untitled",
+      "Client": `${tour.client_name || "N/A"}${tour.client_phone ? ` | ${tour.client_phone}` : ""}`,
+      "Travelers": `${totalTravelers(tour)} (${tour.travelers_adults}A${tour.travelers_children > 0 ? `, ${tour.travelers_children}C` : ""}${tour.travelers_infants > 0 ? `, ${tour.travelers_infants}I` : ""})`,
+      "Dates": `${formatDateShort(tour.start_date)} → ${formatDateShort(tour.end_date)}`,
+      "Price": formatCurrency(tour.total_price, tour.currency),
+      "Created By": tour.user_name || tour.user_email || "",
+    }));
+    exportTableToExcel(rows, "Custom Tours");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -89,6 +103,10 @@ function CustomToursPageContent() {
         <Button variant="gold" size="sm" onClick={() => (window.location.href = "/dashboard")}>
           <Plus className="mr-2 h-4 w-4" />
           Create New Tour
+        </Button>
+        <Button variant="outline" size="sm" onClick={exportExcel} title="Export the shown data to an Excel sheet">
+          <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-600" />
+          Export in Excel Sheet
         </Button>
       </div>
       <div className="relative">
