@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { KEMERYA_COMPANY_INFO } from "@/data/company";
 import { formatDateShort, formatCurrency, cn } from "@/lib/utils";
+import { itineraryRowToBooking } from "@/lib/itinerary-view";
 
 function GreetingMessageButton({
   booking,
@@ -125,13 +126,64 @@ function WhatsAppButton({ phoneNumber }: { phoneNumber: string }) {
 }
 
 function DashboardInner() {
-  const { tours, mainCategories, subCategories, getTourById } = useToursData();
+  const { tours, mainCategories, subCategories, source, getTourById } = useToursData();
   const [selectedTour, setSelectedTour] = React.useState<Tour | null>(null);
   const [isCustomMode, setIsCustomMode] = React.useState(false);
   const [bookingConfig, setBookingConfig] = React.useState<BookingConfig | null>(null);
   const [showPDF, setShowPDF] = React.useState(false);
   const [pendingDownload, setPendingDownload] = React.useState<BookingConfig | null>(null);
   const [bookingCount, setBookingCount] = React.useState(0);
+  const [pendingItinerary, setPendingItinerary] = React.useState<any | null>(null);
+
+  // Open a saved itinerary from ?view=<id>
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const viewId = params.get("view");
+    if (!viewId) return;
+    fetch(`/api/itineraries?id=${encodeURIComponent(viewId)}`, {
+      cache: "no-store",
+    })
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.ok && json.itinerary) setPendingItinerary(json.itinerary);
+        else console.error("Itinerary view failed:", json);
+      })
+      .catch((e) => console.error("Itinerary view fetch error:", e));
+  }, []);
+
+  React.useEffect(() => {
+    if (!pendingItinerary) return;
+    const it = pendingItinerary;
+    const cfg = itineraryRowToBooking(it);
+    let tour: Tour | null = null;
+    if (!it.is_custom_tour && it.tour_id) {
+      tour = getTourById(it.tour_id) || null;
+    }
+    // For standard tours, wait until the tour catalog has finished loading so
+    // the PDF can attach itinerary days, prices and terms before opening.
+    const tourSettled = source !== "loading";
+    if (!it.is_custom_tour && it.tour_id && !tour && !tourSettled) return;
+
+    setPendingItinerary(null);
+    setBookingConfig(cfg);
+    setSelectedTour(tour);
+    setIsCustomMode(Boolean(it.is_custom_tour));
+    setShowPDF(true);
+  }, [pendingItinerary, source, getTourById]);
+
+  // Safety net: force-open the viewer even if the tour catalog never settles.
+  React.useEffect(() => {
+    if (!pendingItinerary) return;
+    const timer = setTimeout(() => {
+      const it = pendingItinerary;
+      setPendingItinerary(null);
+      setBookingConfig(itineraryRowToBooking(it));
+      setSelectedTour(!it.is_custom_tour && it.tour_id ? getTourById(it.tour_id) || null : null);
+      setIsCustomMode(Boolean(it.is_custom_tour));
+      setShowPDF(true);
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, [pendingItinerary, getTourById]);
 
   const handleTourSelect = (tour: Tour) => {
     const fullTour = getTourById(tour.id) ?? tour;

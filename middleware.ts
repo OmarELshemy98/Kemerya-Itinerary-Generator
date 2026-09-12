@@ -29,13 +29,16 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
 
   const isAuthRoute = pathname === "/login";
-  const isPublicApi = pathname.startsWith("/api/auth/") || pathname.startsWith("/api/tours");
+  const isPublicApi = pathname.startsWith("/api/auth/") || pathname.startsWith("/api/tours") || pathname.startsWith("/api/public/");
   const isDashboardRoute = pathname.startsWith("/dashboard");
+  // Shareable, link-based itinerary viewer — no login required so clients can open it.
+  const isPublicItinerary = pathname === "/itinerary" || pathname.startsWith("/itinerary/");
+  const isPublicPage = isAuthRoute || isPublicApi || isPublicItinerary;
 
   // الحالة الأولى: لو المستخدم مش مسجل دخول
   if (!session?.user) {
-    // مسموح له فقط بصفحة تسجيل الدخول أو الـ APIs العامة
-    if (isAuthRoute || isPublicApi) {
+    // مسموح له فقط بصفحة تسجيل الدخول أو الـ APIs العامة أو صفحة عرض الإتنيري
+    if (isPublicPage) {
       return response;
     }
     // طرده لصفحة تسجيل الدخول لو حاول يفتح أي مسار تاني (بما في ذلك الصفحة الرئيسية والـ dashboard)

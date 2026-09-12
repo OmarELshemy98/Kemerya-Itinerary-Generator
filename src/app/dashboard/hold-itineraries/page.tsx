@@ -24,6 +24,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
+import { ItineraryDownloader } from "@/components/itinerary-downloader";
 
 interface HoldItineraryData {
   id: string;
@@ -177,7 +178,8 @@ const approve = async (id: string, currentStatus: boolean) => {
                   <TableCell><div className="flex items-center gap-1.5"><DollarSign className="h-4 w-4 text-emerald-500" /><span className="text-sm font-semibold">{formatCurrency(item.total_price, item.currency)}</span></div></TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1.5">
-                      <Button variant="ghost" size="sm" onClick={() => (window.location.href = `/dashboard?edit=${item.id}`)} title="View / edit"><Eye className="h-4 w-4" /></Button>
+                      <ItineraryDownloader id={item.id} />
+                      <Button variant="ghost" size="sm" onClick={() => (window.location.href = `/itinerary/${item.id}`)} title="View / edit"><Eye className="h-4 w-4" /></Button>
                       <Button
                         variant="ghost"
                         size="sm"

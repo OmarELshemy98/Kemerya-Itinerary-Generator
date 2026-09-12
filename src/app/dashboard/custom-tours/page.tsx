@@ -22,6 +22,7 @@ import {
   Plus,
 } from "lucide-react";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
+import { ItineraryDownloader } from "@/components/itinerary-downloader";
 
 interface CustomTourData {
   id: string;
@@ -150,9 +151,12 @@ function CustomToursPageContent() {
                     <p className="text-xs text-slate-500">{tour.user_email}</p>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => (window.location.href = `/dashboard?edit=${tour.id}`)}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1.5">
+                      <ItineraryDownloader id={tour.id} />
+                      <Button variant="ghost" size="sm" onClick={() => (window.location.href = `/itinerary/${tour.id}`)} title="View / edit">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

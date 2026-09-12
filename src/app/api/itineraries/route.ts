@@ -27,6 +27,7 @@ export async function GET(request: Request) {
     // Get filter type from query params
     const { searchParams } = new URL(request.url);
     const filterType = searchParams.get("type"); // "custom", "approved", "hold", or null for all
+    const idParam = searchParams.get("id"); // fetch a single itinerary
 
     // Get user's role to determine if they can see all itineraries
     const serverSupabase = createServerClient();
@@ -43,25 +44,31 @@ export async function GET(request: Request) {
     const client = serviceSupabase || supabase;
 
     // Build query - simple select without join
-    let query = client
-      .from("itineraries")
-      .select("*")
-      .order("created_at", { ascending: false });
+    let query = client.from("itineraries").select("*");
+    const fetchSingle = Boolean(idParam);
+
+    if (idParam) {
+      query = query.eq("id", idParam).limit(1);
+    } else {
+      query = query.order("created_at", { ascending: false });
+    }
 
     // Non-admin users can only see their own itineraries
     if (!isAdmin) {
       query = query.eq("user_id", userId);
     }
 
-    // Apply filters based on type
-    if (filterType === "custom") {
-      query = query.eq("is_custom_tour", true);
-    } else if (filterType === "approved") {
-      // Approved page: ONLY approved itineraries
-      query = query.eq("is_approved", true);
-    } else if (filterType === "hold") {
-      // Hold = NOT approved (false OR NULL for old rows)
-      query = query.or("is_approved.is.null,is_approved.eq.false");
+    // Apply filters based on type (list endpoint only)
+    if (!idParam) {
+      if (filterType === "custom") {
+        query = query.eq("is_custom_tour", true);
+      } else if (filterType === "approved") {
+        // Approved page: ONLY approved itineraries
+        query = query.eq("is_approved", true);
+      } else if (filterType === "hold") {
+        // Hold = NOT approved (false OR NULL for old rows)
+        query = query.or("is_approved.is.null,is_approved.eq.false");
+      }
     }
 
     const { data, error } = await query;
@@ -114,7 +121,13 @@ export async function GET(request: Request) {
       special_requests: row.special_requests,
       created_at: row.created_at,
       is_approved: row.is_approved ?? false,
+      booking_data: row.booking_data ?? {},
     }));
+
+    if (fetchSingle) {
+      // Single itinerary: return it as `itinerary` so a viewer can rebuild it
+      return NextResponse.json({ ok: true, itinerary: itineraries[0] });
+    }
 
     return NextResponse.json({ ok: true, itineraries });
   } catch (e: any) {
@@ -168,6 +181,7 @@ export async function POST(request: Request) {
       special_requests: booking.specialRequests || null,
       is_approved: booking.isApproved || false,
       booking_data: {
+        bookingRef: booking.id,
         isCustomTour: booking.isCustomTour,
         tourId: (booking as any).tourId,
         customTourTitle: booking.customTourTitle,

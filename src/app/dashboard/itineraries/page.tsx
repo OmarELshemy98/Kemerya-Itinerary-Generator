@@ -32,6 +32,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn, formatCurrency, formatDateShort } from "@/lib/utils";
+import { ItineraryDownloader } from "@/components/itinerary-downloader";
 
 interface ItineraryData {
   id: string;
@@ -371,10 +372,11 @@ function ItinerariesPageContent() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1.5">
+                      <ItineraryDownloader id={itinerary.id} />
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => (window.location.href = `/dashboard?edit=${itinerary.id}`)}
+                        onClick={() => (window.location.href = `/itinerary/${itinerary.id}`)}
                         title="View / edit"
                       >
                         <Eye className="h-4 w-4" />
