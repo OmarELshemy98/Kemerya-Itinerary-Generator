@@ -241,7 +241,7 @@ function DashboardInner() {
           </div>
         </section>
       )}
-      <PDFPreviewDialog open={showPDF} onOpenChange={setShowPDF} tour={selectedTour} booking={bookingConfig} translatedData={translatedData || undefined} languageCode={selectedLanguage || undefined} />
+      <PDFPreviewDialog open={showPDF} onOpenChange={setShowPDF} tour={selectedTour} booking={bookingConfig} translatedData={translatedData || undefined} languageCode={selectedLanguage || undefined} translationError={translationError || undefined} />
       <PDFDownloader booking={pendingDownload} tour={selectedTour} onDone={() => setPendingDownload(null)} translatedData={translatedData || undefined} languageCode={selectedLanguage || undefined} />
     </div>
   );

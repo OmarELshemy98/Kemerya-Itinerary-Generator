@@ -16,6 +16,7 @@ export interface PDFPreviewDialogProps {
   booking: BookingConfig | null;
   translatedData?: Record<string, unknown>;
   languageCode?: string;
+  translationError?: string | null;
 }
 
 export function buildWhatsAppMessage(
@@ -50,6 +51,7 @@ export function PDFPreviewDialog({
   booking,
   translatedData,
   languageCode,
+  translationError,
 }: PDFPreviewDialogProps) {
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -127,6 +129,11 @@ export function PDFPreviewDialog({
           </div>
 
           <div className="flex-1 bg-slate-100">
+            {translationError && (
+              <div className="p-4 text-red-600 text-sm">
+                {translationError}
+              </div>
+            )}
             {isGenerating ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
@@ -163,3 +170,4 @@ export function PDFPreviewDialog({
     </Dialog>
   );
 }
+

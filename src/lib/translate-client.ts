@@ -144,12 +144,15 @@ export async function translateItineraryData(
       }),
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      return { success: false, error: error.message || "Translation failed" };
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      console.error("Detailed API Error:", data);
+      return {
+        success: false,
+        error: data.error || data.details || `HTTP ${response.status}: Translation failed`,
+      };
     }
 
-    const data: TranslationResponse = await response.json();
     return data;
   } catch (error) {
     console.error("Translation error:", error);
