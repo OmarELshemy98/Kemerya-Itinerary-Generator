@@ -94,6 +94,34 @@ const POPULAR_DESTINATIONS = [
   "Bahariya",
   "White Desert",
   "Fayoum",
+] as const;
+
+/**
+ * Default editable Terms & Conditions and Privacy Policy content.
+ * Pre-loaded into the (Custom) editors so the employee sees real content and
+ * can adjust it line-by-line. Mirrors kemeryatours.com:
+ *  - https://www.kemeryatours.com/page/terms-and-conditions
+ *  - https://www.kemeryatours.com/page/privacy-policy
+ */
+export const DEFAULT_TERMS: readonly string[] = [
+  "Booking Confirmation: A booking is locked in only when Kemerya Tours confirms availability in writing, the required deposit is paid, and the official Booking Confirmation is issued. The lead traveler accepts these terms for every person included in the reservation.",
+  "Deposits & Balance: A non-refundable deposit equal to 35% of the total trip cost is required upon booking confirmation. The remaining 65% balance must be paid upon arrival.",
+  "Pricing & Fees: Quotes are issued in USD or EUR. Bank conversion rates and card processing fees are the traveler's responsibility. If government agencies increase monument ticket fees, taxes, port fees, or fuel surcharges before the trip, the total will be updated to cover those mandatory charges.",
+  "Services & Suppliers: Certain travel components are provided by independent third-party suppliers (hotels, airlines, cruise operators, carriers, and site authorities). Services included are strictly those detailed in the confirmed quotation and itinerary.",
+  "Cancellations & Changes: Most bookings can be changed or canceled depending on the airline, hotel, or service provider's policy. Deposits are non-refundable; cancellation fees follow the confirmed booking terms.",
+  "Liability: Kemerya Tours' maximum financial liability for any dispute, injury, damage, or expense connected to the trip never exceeds the total amount paid for the specific booking. Indirect or consequential damages are excluded.",
+  "In-Trip Complaints: Report any issue to your guide or local representative immediately so it can be fixed on the spot; otherwise send a detailed email complaint within 15 days of finishing the trip.",
+  "Emergency & Governing Law: A 24/7 emergency line is printed on the confirmation voucher. Egyptian law governs these booking terms.",
+];
+
+export const DEFAULT_PRIVACY: readonly string[] = [
+  "Who We Are: Kemerya Tours is an Egyptian travel company providing tours, accommodation, transfers, guiding services and Nile cruises.",
+  "Information We Collect: Name, nationality, email, phone / WhatsApp, country of residence, travel dates, destinations, accommodation preferences, and passport details only when required for bookings or permits.",
+  "Children's Privacy: We never collect children's data directly — any required details must be provided by a parent or legal guardian.",
+  "How We Use Your Data: Strictly to prepare itineraries and quotations, manage bookings, process secure payments, communicate before / during / after your trip, and comply with Egyptian legal requirements.",
+  "Sharing: We never sell your data. Details are shared only with trusted partners (hotels, cruises, airlines, guides) to fulfil your booking.",
+  "Cookies & Marketing: Essential cookies keep the website running and help us understand visits. Marketing messages are sent only with your consent — you can opt out anytime.",
+  "Data Retention & Your Rights: Data is kept only as long as needed for your trip, accounting or legal duties, then securely deleted. You may request access, correction or deletion via info@kemeryatours.com (subject: Privacy Request — Kemerya Tours).",
 ];
 
 function RouteStopsEditor({
@@ -285,7 +313,14 @@ function PrivacyEditor({
   items: string[] | undefined;
   onChange: (items: string[]) => void;
 }) {
-  const normalized = items && items.length > 0 ? items : [""];
+  const normalized = items && items.length > 0 ? items : [...DEFAULT_PRIVACY];
+  const addItem = () => onChange([...normalized, ""]);
+  const removeItem = (index: number) =>
+    onChange(normalized.filter((_, i) => i !== index));
+  const updateItem = (index: number, value: string) =>
+    onChange(normalized.map((t, i) => (i === index ? value : t)));
+  const resetToDefault = () => onChange([...DEFAULT_PRIVACY]);
+
   return (
     <div className="space-y-2">
       <Label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
@@ -296,11 +331,7 @@ function PrivacyEditor({
         <div key={index} className="flex items-start gap-2">
           <Textarea
             value={item}
-            onChange={(e) => {
-              const next = [...normalized];
-              next[index] = e.target.value;
-              onChange(next);
-            }}
+            onChange={(e) => updateItem(index, e.target.value)}
             placeholder="Privacy item…"
             rows={2}
             className="min-h-[52px] flex-1 resize-none text-sm"
@@ -309,23 +340,33 @@ function PrivacyEditor({
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => onChange(normalized.filter((_, i) => i !== index))}
+            onClick={() => removeItem(index)}
             className="h-8 w-8 shrink-0 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       ))}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => onChange([...normalized, ""])}
-        className="w-full border-dashed text-xs"
-      >
-        <Plus className="mr-1.5 h-3.5 w-3.5" />
-        Add privacy item
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={addItem}
+          className="w-full border-dashed text-xs"
+        >
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          Add privacy item
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={resetToDefault}
+        >
+          Reset to Default
+        </Button>
+      </div>
     </div>
   );
 }
@@ -350,66 +391,54 @@ function TermsEditor({
   };
 
   const resetToDefault = () => {
-    const defaultTerms = [
-      "Booking Confirmation: A booking is locked in only when Kemerya Tours confirms availability in writing, the required deposit is paid, and the official Booking Confirmation is issued.",
-      "Deposits & Balance: A non-refundable deposit equal to 35% of the total trip cost is required upon booking confirmation. The remaining 65% balance must be paid upon arrival.",
-      "Pricing & Fees: Quotes are issued in USD or EUR. Bank conversion rates and card processing fees are the traveler's responsibility.",
-      "Services & Suppliers: Certain travel components are provided by independent third-party suppliers. Services included are strictly those detailed in the confirmed quotation and itinerary.",
-      "Cancellations & Changes: Most bookings can be changed or canceled depending on the airline, hotel, or service provider's policy.",
-      "Liability: Kemerya Tours' maximum financial liability never exceeds the total amount paid for the specific booking.",
-      "In-Trip Complaints: Report any issue to your guide or local representative immediately.",
-      "Emergency & Governing Law: A 24/7 emergency line is printed on the confirmation voucher. Egyptian law governs these booking terms.",
-    ];
-    onChange(defaultTerms);
+    onChange([...DEFAULT_TERMS]);
   };
+
+  // Pre-fill with the default Terms so the employee sees real, editable content
+  // instead of an empty state. Editing persists only when a change is made.
+  const visibleTerms = terms.length > 0 ? terms : [...DEFAULT_TERMS];
 
   return (
     <div className="space-y-3">
-      {terms.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 p-4 text-center">
-          <p className="text-sm text-slate-500 mb-2">No custom terms added. Default terms will be used.</p>
-          <Button type="button" variant="outline" size="sm" onClick={resetToDefault}>
-            Load Default Terms
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {terms.map((term, index) => (
-            <div key={index} className="flex gap-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#C5A059] text-xs font-bold text-white">
-                {index + 1}
-              </div>
-              <Textarea
-                value={term}
-                onChange={(e) => updateTerm(index, e.target.value)}
-                placeholder="Enter term or condition..."
-                rows={2}
-                className="flex-1 resize-none text-sm"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => removeTerm(index)}
-                className="h-8 w-8 shrink-0 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
-              >
-                ×
-              </Button>
+      <p className="text-[11px] leading-relaxed text-slate-500">
+        Edit each line — or press “Reset to Default” to restore the standard
+        Kemerya Terms &amp; Conditions (see{" "}
+        <span className="font-mono">kemeryatours.com/page/terms-and-conditions</span>).
+      </p>
+      <div className="space-y-2">
+        {visibleTerms.map((term, index) => (
+          <div key={index} className="flex gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#C5A059] text-xs font-bold text-white">
+              {index + 1}
             </div>
-          ))}
-        </div>
-      )}
+            <Textarea
+              value={term}
+              onChange={(e) => updateTerm(index, e.target.value)}
+              placeholder="Enter term or condition..."
+              rows={2}
+              className="flex-1 resize-none text-sm"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => removeTerm(index)}
+              className="h-8 w-8 shrink-0 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
+            >
+              ×
+            </Button>
+          </div>
+        ))}
+      </div>
 
       <div className="flex gap-2">
         <Button type="button" variant="outline" size="sm" onClick={addTerm} className="border-dashed">
           <Plus className="mr-2 h-4 w-4" />
           Add Term
         </Button>
-        {terms.length > 0 && (
-          <Button type="button" variant="ghost" size="sm" onClick={resetToDefault}>
-            Reset to Default
-          </Button>
-        )}
+        <Button type="button" variant="ghost" size="sm" onClick={resetToDefault}>
+          Reset to Default
+        </Button>
       </div>
     </div>
   );
@@ -890,6 +919,13 @@ export function BookingConfigurationForm({
             </div>
           </Section>
 
+          <Section icon={<Map className="h-4 w-4" />} title="Journey Route (Destinations)">
+            <RouteStopsEditor
+              stops={customRouteStops}
+              onChange={(stops) => setValue("customRouteStops", stops)}
+            />
+          </Section>
+
           {isCustomMode && (
             <>
               <Section icon={<FileText className="h-4 w-4" />} title="Custom Tour Details">
@@ -917,7 +953,149 @@ export function BookingConfigurationForm({
                     />
                   </div>
                 </div>
-              </Section>
+                              <div className="space-y-4">
+                  {/* Number of Days Input */}
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <Label className="text-xs">Number of Days</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={30}
+                        value={itineraryFields.length || ""}
+                        onChange={(e) => {
+                          const numDays = parseInt(e.target.value) || 0;
+                          const currentLength = itineraryFields.length;
+                          
+                          if (numDays > currentLength) {
+                            for (let i = currentLength; i < numDays; i++) {
+                              appendDay({
+                                day: i + 1,
+                                title: `Day ${i + 1}`,
+                                description: "",
+                              });
+                            }
+                          } else if (numDays < currentLength && numDays >= 0) {
+                            for (let i = currentLength - 1; i >= numDays; i--) {
+                              removeDay(i);
+                            }
+                          }
+                        }}
+                        placeholder="Enter number of days..."
+                        className="mt-1"
+                      />
+                      <p className="mt-1 text-[10px] text-slate-400">
+                        Enter the number of days to auto-create itinerary inputs
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Label className="text-xs">&nbsp;</Label>
+                      <div className="flex gap-1 mt-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (itineraryFields.length > 1) {
+                              removeDay(itineraryFields.length - 1);
+                            }
+                          }}
+                          disabled={itineraryFields.length <= 1}
+                          className="h-9 w-9 p-0"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            appendDay({
+                              day: itineraryFields.length + 1,
+                              title: `Day ${itineraryFields.length + 1}`,
+                              description: "",
+                            });
+                          }}
+                          className="h-9 w-9 p-0"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Itinerary Days */}
+                  {itineraryFields.length === 0 && (
+                    <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center">
+                      <p className="text-sm text-slate-500">
+                        Enter the number of days above to create itinerary inputs.
+                      </p>
+                    </div>
+                  )}
+                  {itineraryFields.map((field, index) => (
+                    <div key={field.id} className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <Badge variant="gold" className="rounded-md px-2.5 py-1 text-xs">
+                          Day {index + 1}
+                        </Badge>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeDay(index)}
+                          className="h-7 text-red-500 hover:bg-red-50 hover:text-red-600"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div className="hidden">
+                          <Input
+                            type="hidden"
+                            {...register(`customItinerary.${index}.day` as const)}
+                            value={index + 1}
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <Label className="text-xs">Day Title</Label>
+                          <Input
+                            {...register(`customItinerary.${index}.title` as const)}
+                            placeholder="Day title..."
+                            className="mt-1"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <Label className="text-xs">Day Description</Label>
+                          <Textarea
+                            {...register(`customItinerary.${index}.description` as const)}
+                            placeholder="Describe this day..."
+                            rows={3}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div className="sm:col-span-3">
+                          <Label className="flex items-center gap-1.5 text-xs">
+                            <Map className="h-3.5 w-3.5 text-slate-500" />
+                            Roadmap — places visited this day (editable, one per line)
+                          </Label>
+                          <Textarea
+                            value={((dayRoutes || []) as any[]).find((r: any) => r.day === index + 1)?.stops?.join("\n") || ""}
+                            onChange={(e) => {
+                              const stops = e.target.value.split("\n").map((s) => s.trim()).filter(Boolean);
+                              const current = ((dayRoutes || []) as any[]).filter((r: any) => r.day !== index + 1);
+                              setValue("dayRoutes", stops.length > 0 ? [...current, { day: index + 1, stops }] as any : current as any);
+                            }}
+                            placeholder={"Pyramids of Giza\nGreat Sphinx\nEgyptian Museum"}
+                            rows={3}
+                            className="mt-1 resize-none text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              
+</Section>
             </>
           )}
 
@@ -1511,159 +1689,9 @@ export function BookingConfigurationForm({
                 </div>
               </Section>
 
-              <Section icon={<Calendar className="h-4 w-4" />} title={`Custom Itinerary`}>
-                <div className="space-y-4">
-                  {/* Number of Days Input */}
-                  <div className="flex items-center gap-4">
-                    <div className="flex-1">
-                      <Label className="text-xs">Number of Days</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={30}
-                        value={itineraryFields.length || ""}
-                        onChange={(e) => {
-                          const numDays = parseInt(e.target.value) || 0;
-                          const currentLength = itineraryFields.length;
-                          
-                          if (numDays > currentLength) {
-                            for (let i = currentLength; i < numDays; i++) {
-                              appendDay({
-                                day: i + 1,
-                                title: `Day ${i + 1}`,
-                                description: "",
-                              });
-                            }
-                          } else if (numDays < currentLength && numDays >= 0) {
-                            for (let i = currentLength - 1; i >= numDays; i--) {
-                              removeDay(i);
-                            }
-                          }
-                        }}
-                        placeholder="Enter number of days..."
-                        className="mt-1"
-                      />
-                      <p className="mt-1 text-[10px] text-slate-400">
-                        Enter the number of days to auto-create itinerary inputs
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <Label className="text-xs">&nbsp;</Label>
-                      <div className="flex gap-1 mt-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            if (itineraryFields.length > 1) {
-                              removeDay(itineraryFields.length - 1);
-                            }
-                          }}
-                          disabled={itineraryFields.length <= 1}
-                          className="h-9 w-9 p-0"
-                        >
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            appendDay({
-                              day: itineraryFields.length + 1,
-                              title: `Day ${itineraryFields.length + 1}`,
-                              description: "",
-                            });
-                          }}
-                          className="h-9 w-9 p-0"
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Itinerary Days */}
-                  {itineraryFields.length === 0 && (
-                    <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center">
-                      <p className="text-sm text-slate-500">
-                        Enter the number of days above to create itinerary inputs.
-                      </p>
-                    </div>
-                  )}
-                  {itineraryFields.map((field, index) => (
-                    <div key={field.id} className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
-                      <div className="mb-3 flex items-center justify-between">
-                        <Badge variant="gold" className="rounded-md px-2.5 py-1 text-xs">
-                          Day {index + 1}
-                        </Badge>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeDay(index)}
-                          className="h-7 text-red-500 hover:bg-red-50 hover:text-red-600"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div className="hidden">
-                          <Input
-                            type="hidden"
-                            {...register(`customItinerary.${index}.day` as const)}
-                            value={index + 1}
-                          />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <Label className="text-xs">Title</Label>
-                          <Input
-                            {...register(`customItinerary.${index}.title` as const)}
-                            placeholder="Day title..."
-                            className="mt-1"
-                          />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <Label className="text-xs">Description</Label>
-                          <Textarea
-                            {...register(`customItinerary.${index}.description` as const)}
-                            placeholder="Describe this day..."
-                            rows={3}
-                            className="mt-1"
-                          />
-                        </div>
-                        <div className="sm:col-span-3">
-                          <Label className="flex items-center gap-1.5 text-xs">
-                            <Map className="h-3.5 w-3.5 text-slate-500" />
-                            Roadmap — places visited this day (editable, one per line)
-                          </Label>
-                          <Textarea
-                            value={((dayRoutes || []) as any[]).find((r: any) => r.day === index + 1)?.stops?.join("\n") || ""}
-                            onChange={(e) => {
-                              const stops = e.target.value.split("\n").map((s) => s.trim()).filter(Boolean);
-                              const current = ((dayRoutes || []) as any[]).filter((r: any) => r.day !== index + 1);
-                              setValue("dayRoutes", stops.length > 0 ? [...current, { day: index + 1, stops }] as any : current as any);
-                            }}
-                            placeholder={"Pyramids of Giza\nGreat Sphinx\nEgyptian Museum"}
-                            rows={3}
-                            className="mt-1 resize-none text-sm"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Section>
+              
             </>
           )}
-
-          {/* Journey Route Stops Editor - Always visible */}
-          <Section icon={<Map className="h-4 w-4" />} title="Journey Route (Destinations)">
-            <RouteStopsEditor
-              stops={customRouteStops}
-              onChange={(stops) => setValue("customRouteStops", stops)}
-            />
-          </Section>
 
           <Separator />
 
