@@ -342,27 +342,24 @@ const styles = StyleSheet.create({
     // Bottom clearance keeps text safely above the fixed footer band
     // (bottom:18 + ~92pt footer) with a small buffer — no wasted margin
     // beyond what's needed to guarantee zero overlap.
-    paddingTop: 26,
+    paddingTop: 30,
     paddingLeft: 40,
     paddingRight: 40,
-    paddingBottom: 116,
+    paddingBottom: 124,
     flexDirection: "column",
   },
 
   footerBand: { position: "absolute", bottom: 18, left: 38, right: 38, width: 519, flexDirection: "column" },
-  nileImageWrap: { width: "100%", height: 78, borderWidth: 1, borderColor: COLOR.royalGold, overflow: "hidden", position: "relative" },
+  nileImageWrap: { width: "100%", height: 30, borderWidth: 1, borderColor: COLOR.royalGold, overflow: "hidden", marginBottom: SPACE.xs },
   nileImage: { width: "100%", height: "100%", objectFit: "cover" },
   companyRect: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(245, 235, 211, 0.86)",
-    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLOR.royalGold,
+    backgroundColor: "rgba(253, 251, 247, 0.78)",
+    paddingVertical: SPACE.xs + 1,
     paddingHorizontal: SPACE.sm,
   },
-  companyRectRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: SPACE.md, marginBottom: 2 },
+  companyRectRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: SPACE.md },
   companyRectCell: { flexDirection: "row", alignItems: "center", gap: 3 },
   companyRectIcon: { width: 12, height: 12, justifyContent: "center", alignItems: "center" },
   companyRectText: { fontSize: 7, color: COLOR.deepBrown, fontWeight: 700, letterSpacing: 0.2 },
@@ -419,8 +416,8 @@ const styles = StyleSheet.create({
   heroCard: {
     ...CARD,
     borderWidth: 1.4,
-    padding: SPACE.sm,
-    marginBottom: SPACE.sm,
+    padding: SPACE.md,
+    marginBottom: SPACE.md,
   },
   clientBadge: {
     backgroundColor: COLOR.antiqueGold,
@@ -460,7 +457,7 @@ const styles = StyleSheet.create({
   offerPriceValue: { color: COLOR.scarabGreen, fontSize: 10.5, fontWeight: 700 },
 
   // ---- Sections -------------------------------------------------------------
-  section: { marginBottom: SPACE.sm },
+  section: { marginBottom: SPACE.md },
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: SPACE.sm, gap: SPACE.sm },
   sectionNumber: {
     width: 24,
@@ -538,7 +535,7 @@ const styles = StyleSheet.create({
   offerBadgeText: { color: "#FFFFFF", fontSize: 6.5, fontWeight: 700, letterSpacing: 0.5 },
 
   // ---- Day cards --------------------------------------------------------------
-  dayCard: { ...CARD, marginBottom: 6, overflow: "hidden" },
+  dayCard: { ...CARD, marginBottom: SPACE.sm, overflow: "hidden" },
   dayHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -558,8 +555,8 @@ const styles = StyleSheet.create({
   },
   dayBadgeText: { color: COLOR.deepBrown, fontSize: 8, letterSpacing: 0.5, fontWeight: 700 },
   dayTitle: { color: COLOR.royalGold, fontSize: 11, flex: 1 },
-  dayContent: { padding: SPACE.sm + 2 },
-  dayDescription: { fontSize: 9.3, color: COLOR.ink, lineHeight: 1.7, marginBottom: 6, textAlign: "justify" },
+  dayContent: { padding: SPACE.md },
+  dayDescription: { fontSize: 9.3, color: COLOR.ink, lineHeight: 1.7, marginBottom: SPACE.sm, textAlign: "justify" },
   dayRoadmap: { marginTop: SPACE.xs, borderWidth: 0.8, borderColor: COLOR.royalGold, backgroundColor: "rgba(255, 253, 245, 0.6)", padding: SPACE.sm },
   dayRoadmapTitle: { fontSize: 6.8, color: COLOR.warmBrown, letterSpacing: 1, marginBottom: SPACE.xs, fontWeight: 700 },
   dayRoadmapRow: { flexDirection: "row", alignItems: "flex-start", gap: SPACE.xs + 2, marginBottom: 3 },
@@ -795,8 +792,9 @@ function ParchmentPage({
       <View style={S.footerBand} fixed>
         <View style={S.nileImageWrap}>
           <Image src={NILE_SRC} style={S.nileImage} />
-          <View style={S.companyRect}>
-            <View style={S.companyRectRow}>
+        </View>
+        <View style={S.companyRect}>
+          <View style={S.companyRectRow}>
               {companyInfo?.phone ? (
                 <View style={S.companyRectCell}>
                   <View style={S.companyRectIcon}><SunDiscBullet size={8} /></View>
@@ -829,7 +827,6 @@ function ParchmentPage({
               </View>
             ) : null}
           </View>
-        </View>
         <View style={S.footerCaption}>
           <View>
             <Text style={[S.footerBrand, { fontFamily: brandFont }]}>{companyInfo?.name || "KEMERYA TOURS"}</Text>
