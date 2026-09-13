@@ -239,6 +239,67 @@ const CartoucheSeal = ({ size = 13 }: { size?: number }) => (
   </Svg>
 );
 
+// ── Native pharaonic ornaments (always render — pure <Svg>, no file I/O) ──
+// Winged sun-disc: the classic Egyptian protective emblem for page headers.
+const WingedSunDisc = ({ width = 190 }: { width?: number }) => (
+  <Svg width={width} height={26} viewBox="0 0 190 26">
+    <G>
+      {/* left wing */}
+      <Path d="M4 16 L 38 8 L 74 12 L 70 17 L 38 15 L 8 20 Z" fill={PARCHMENT_COLORS.lapis} opacity={0.85} />
+      <Path d="M4 16 L 38 8 L 74 12" fill="none" stroke={PARCHMENT_COLORS.royalGold} strokeWidth={1} />
+      <Path d="M12 18 L 40 12 M 24 19 L 48 14" stroke={PARCHMENT_COLORS.royalGold} strokeWidth={0.6} opacity={0.8} />
+      {/* right wing (mirrored) */}
+      <Path d="M186 16 L 152 8 L 116 12 L 120 17 L 152 15 L 182 20 Z" fill={PARCHMENT_COLORS.lapis} opacity={0.85} />
+      <Path d="M186 16 L 152 8 L 116 12" fill="none" stroke={PARCHMENT_COLORS.royalGold} strokeWidth={1} />
+      <Path d="M178 18 L 150 12 M 166 19 L 142 14" stroke={PARCHMENT_COLORS.royalGold} strokeWidth={0.6} opacity={0.8} />
+      {/* sun disc */}
+      <Circle cx={95} cy={12} r={8} fill={PARCHMENT_COLORS.royalGold} />
+      <Circle cx={95} cy={12} r={8} fill="none" stroke="#8B6F3A" strokeWidth={0.8} />
+      <Circle cx={95} cy={12} r={4} fill="#F39516" />
+      <Circle cx={95} cy={12} r={2} fill="#FDE68A" />
+      {/* twin cobras */}
+      <Path d="M86 16 C 84 19 82 21 80 22 M 104 16 C 106 19 108 21 110 22"
+        fill="none" stroke={PARCHMENT_COLORS.scarabGreen} strokeWidth={1.2} strokeLinecap="round" />
+    </G>
+  </Svg>
+);
+
+// Hieroglyph strip: ankh · eye · scarab · feather · cobra · djed in a row.
+const HieroglyphStrip = () => (
+  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginVertical: 4 }}>
+    <ScarabBullet size={13} />
+    <EyeOfHorusBullet size={13} />
+    <PyramidBullet size={13} />
+    <SunDiscBullet size={13} />
+    <LotusBullet size={13} />
+    <CartoucheSeal size={13} />
+  </View>
+);
+
+// GoldenDivider: gradient-feel double rule with a central ankh medallion.
+// Native Svg so it renders even when file-based <Image> dividers fail.
+const GoldenDivider = () => (
+  <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 8 }}>
+    <View style={{ flex: 1, height: 1.2, backgroundColor: PARCHMENT_COLORS.royalGold, opacity: 0.85 }} />
+    <View style={{ flex: 1, height: 0.6, backgroundColor: PARCHMENT_COLORS.royalGold, opacity: 0.4, marginTop: 2 }} />
+    <View style={{
+      width: 30, height: 30, borderRadius: 15,
+      backgroundColor: PARCHMENT_COLORS.deepLapis,
+      borderWidth: 1.2, borderColor: PARCHMENT_COLORS.royalGold,
+      justifyContent: "center", alignItems: "center", marginHorizontal: 8,
+    }}>
+      <Svg width={16} height={16} viewBox="0 0 24 24">
+        <G stroke={PARCHMENT_COLORS.royalGold} strokeWidth={1.8} fill="none" strokeLinecap="round">
+          <Path d="M12 3 C 8.5 3 6 5.8 6 8.6 C 6 11.4 8.5 13.5 12 13.5 C 15.5 13.5 18 11.4 18 8.6 C 18 5.8 15.5 3 12 3 Z" />
+          <Path d="M12 13.5 L 12 21 M 8.5 21 L 15.5 21" />
+        </G>
+      </Svg>
+    </View>
+    <View style={{ flex: 1, height: 0.6, backgroundColor: PARCHMENT_COLORS.royalGold, opacity: 0.4, marginTop: 2 }} />
+    <View style={{ flex: 1, height: 1.2, backgroundColor: PARCHMENT_COLORS.royalGold, opacity: 0.85 }} />
+  </View>
+);
+
 const styles = StyleSheet.create({
   page: {
     width: "100%",
@@ -317,29 +378,76 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   headerBox: {
-    // PROTOCOL §3 — pure Flexbox stack (no absolute) so TOUR OVERVIEW /
-    // Meeting Point rows can never collide on page 1.
+    // Premium centered hero header — pure Flexbox stack (no absolute) so
+    // logo / brand / tagline / divider stack with generous breathing room.
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "flex-start",
-    marginBottom: 10,
-    paddingBottom: 8,
-    gap: 4,
+    marginBottom: 14,
+    paddingBottom: 10,
+    paddingTop: 4,
+    gap: 6,
   },
   officialLogo: {
-    width: 118,
-    height: 118,
+    width: 250,
+    height: 90,
     objectFit: "contain",
     alignSelf: "center",
-    marginBottom: 2,
+    marginBottom: 4,
+    marginTop: 2,
   },
   brandTitle: {
-    fontSize: 21,
+    fontSize: 26,
     color: PARCHMENT_COLORS.deepBrown,
-    letterSpacing: 4.5,
-    // PROTOCOL §3 — Flexbox gap/marginTop stacking (no absolute) so the
-    // brand line can never overlap Meeting Point / TOUR OVERVIEW rows.
-    marginTop: 6,
+    letterSpacing: 5,
+    fontWeight: 700,
+    marginTop: 8,
+    marginBottom: 2,
+    textAlign: "center",
+    lineHeight: 1.25,
+  },
+  brandTagline: {
+    fontSize: 9.5,
+    color: PARCHMENT_COLORS.agedBrown,
+    letterSpacing: 3.2,
+    textTransform: "uppercase" as const,
+    textAlign: "center",
+    marginBottom: 4,
+    lineHeight: 1.5,
+  },
+  headerBoxCompact: {
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    marginBottom: 8,
+    paddingBottom: 4,
+    gap: 3,
+  },
+  officialLogoSmall: {
+    width: 140,
+    height: 50,
+    objectFit: "contain",
+    alignSelf: "center",
+  },
+  headerCartouche: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 2,
+    paddingHorizontal: 18,
+    paddingVertical: 7,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderTopColor: PARCHMENT_COLORS.royalGold,
+    borderBottomColor: PARCHMENT_COLORS.royalGold,
+  },
+  headerCartoucheText: {
+    fontSize: 8,
+    color: PARCHMENT_COLORS.lapis,
+    letterSpacing: 2.6,
+    textTransform: "uppercase" as const,
     textAlign: "center",
   },
   bookingRefBadge: {
@@ -358,8 +466,8 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   heroCard: {
-    backgroundColor: "rgba(253, 251, 247, 0.35)",
-    padding: 14,
+    backgroundColor: "rgba(253, 251, 247, 0.55)",
+    padding: 16,
     marginBottom: 16,
     marginTop: 8,
     borderWidth: 1.5,
@@ -367,20 +475,23 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   heroInnerFrame: {
-    // PROTOCOL §3 — in-flow inner frame (no position:absolute) so it can
-    // never overlap Meeting Point / TOUR OVERVIEW header rows.
+    // In-flow inner frame (no absolute): all hero rows stack via Flexbox
+    // with gap/marginTop, so Meeting Point can never collide with titles.
     margin: 4,
     borderWidth: 0.6,
     borderColor: PARCHMENT_COLORS.antiqueGold,
-    opacity: 0.7,
-    padding: 10,
+    opacity: 0.9,
+    padding: 14,
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: 4,
   },
   clientBadge: {
     backgroundColor: PARCHMENT_COLORS.antiqueGold,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    alignSelf: "flex-start",
-    marginBottom: 8,
+    alignSelf: "center",
+    marginBottom: 10,
   },
   clientBadgeText: {
     color: PARCHMENT_COLORS.deepBrown,
@@ -394,32 +505,39 @@ const styles = StyleSheet.create({
     fontSize: 8.5,
     letterSpacing: 3.5,
     textTransform: "uppercase" as const,
-    marginBottom: 8,
+    marginBottom: 4,
+    marginTop: 4,
+    textAlign: "center",
+    lineHeight: 1.5,
   },
   heroTourName: {
     color: PARCHMENT_COLORS.ink,
     fontSize: 19,
-    marginBottom: 8,
-    lineHeight: 1.3,
+    marginBottom: 4,
+    marginTop: 6,
+    lineHeight: 1.45,
+    textAlign: "center",
   },
   heroGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 4,
-    marginTop: 8,
+    gap: 8,
+    marginTop: 10,
   },
   heroStat: {
     width: "31.5%",
     paddingRight: 6,
+    paddingTop: 4,
     borderRightWidth: 0.8,
     borderRightColor: PARCHMENT_COLORS.antiqueGold,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   heroStatLast: {
     width: "31.5%",
     paddingRight: 0,
+    paddingTop: 4,
     borderRightWidth: 0,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   heroStatLabel: {
     color: PARCHMENT_COLORS.agedBrown,
@@ -451,7 +569,8 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 10,
+    marginTop: 4,
     gap: 8,
   },
   sectionNumber: {
@@ -471,6 +590,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: PARCHMENT_COLORS.deepBrown,
     letterSpacing: 0.5,
+    lineHeight: 1.4,
+    flexShrink: 1,
   },
   sectionUnderline: {
     flex: 1,
@@ -481,20 +602,21 @@ const styles = StyleSheet.create({
   summaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 0,
+    gap: 6,
     justifyContent: "space-between",
-    backgroundColor: "rgba(253, 251, 247, 0.3)",
-    borderWidth: 0.8,
-    borderColor: PARCHMENT_COLORS.antiqueGold,
-    padding: 2,
+    backgroundColor: "rgba(253, 251, 247, 0.5)",
+    borderWidth: 1,
+    borderColor: PARCHMENT_COLORS.royalGold,
+    padding: 8,
   },
   summaryItem: {
     width: "48.5%",
     flexDirection: "row",
     alignItems: "flex-start",
-    padding: 9,
-    borderBottomWidth: 0.7,
-    borderBottomColor: PARCHMENT_COLORS.paleGold,
+    padding: 10,
+    borderWidth: 0.7,
+    borderColor: PARCHMENT_COLORS.paleGold,
+    backgroundColor: "rgba(255, 253, 247, 0.4)",
     gap: 7,
   },
   summaryItemIcon: {
@@ -583,11 +705,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   dayCard: {
-    backgroundColor: "rgba(253, 251, 247, 0.35)",
-    marginBottom: 7,
+    backgroundColor: "rgba(253, 251, 247, 0.55)",
+    marginBottom: 10,
     padding: 0,
     borderWidth: 1,
-    borderColor: PARCHMENT_COLORS.antiqueGold,
+    borderColor: PARCHMENT_COLORS.royalGold,
     overflow: "hidden",
   },
   dayHeader: {
@@ -621,21 +743,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dayContent: {
-    padding: 10,
+    padding: 12,
   },
   dayDescription: {
     fontSize: 9.5,
     color: PARCHMENT_COLORS.ink,
-    lineHeight: 1.7,
-    marginBottom: 8,
+    lineHeight: 1.75,
+    marginBottom: 10,
     textAlign: "justify",
   },
   dayRoadmap: {
-    marginTop: 6,
+    marginTop: 8,
     borderWidth: 0.8,
-    borderColor: PARCHMENT_COLORS.antiqueGold,
-    backgroundColor: "rgba(255, 253, 245, 0.55)",
-    padding: 7,
+    borderColor: PARCHMENT_COLORS.royalGold,
+    backgroundColor: "rgba(255, 253, 245, 0.65)",
+    padding: 9,
   },
   dayRoadmapTitle: {
     fontSize: 7,
@@ -927,17 +1049,17 @@ const styles = StyleSheet.create({
     fontWeight: 700,
   },
   operationsCard: {
-    backgroundColor: "rgba(253, 251, 247, 0.35)",
-    padding: 22,
-    marginTop: 14,
-    borderWidth: 1,
+    backgroundColor: "rgba(253, 251, 247, 0.55)",
+    padding: 18,
+    marginTop: 12,
+    borderWidth: 1.2,
     borderStyle: "solid",
     borderColor: PARCHMENT_COLORS.royalGold,
   },
   operationsHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 10,
     gap: 10,
   },
   opsBadge: {
@@ -955,27 +1077,94 @@ const styles = StyleSheet.create({
   opsCardTitle: {
     color: PARCHMENT_COLORS.deepBrown,
     fontSize: 11.5,
+    flex: 1,
+    flexShrink: 1,
+    lineHeight: 1.4,
   },
   opsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 8,
   },
   opsItem: {
     width: "48%",
     flexDirection: "column",
-    gap: 2,
+    gap: 3,
+    paddingVertical: 4,
+    paddingRight: 4,
+    borderBottomWidth: 0.6,
+    borderBottomColor: PARCHMENT_COLORS.paleGold,
   },
   opsLabel: {
     fontSize: 7,
     color: PARCHMENT_COLORS.agedBrown,
     textTransform: "uppercase" as const,
     letterSpacing: 1,
+    marginBottom: 1,
   },
   opsValue: {
     fontSize: 9.5,
     color: PARCHMENT_COLORS.deepBrown,
     fontWeight: 600,
+    lineHeight: 1.4,
+  },
+  companyShowcase: {
+    flexDirection: "column",
+    alignItems: "center",
+    backgroundColor: PARCHMENT_COLORS.deepLapis,
+    borderWidth: 1.2,
+    borderColor: PARCHMENT_COLORS.royalGold,
+    padding: 16,
+    marginTop: 12,
+    gap: 6,
+  },
+  companyShowcaseLogo: {
+    width: 190,
+    height: 68,
+    objectFit: "contain",
+    alignSelf: "center",
+  },
+  companyShowcaseName: {
+    fontSize: 15,
+    color: PARCHMENT_COLORS.royalGold,
+    letterSpacing: 3.5,
+    fontWeight: 700,
+    textAlign: "center",
+    lineHeight: 1.4,
+  },
+  companyShowcaseTagline: {
+    fontSize: 8.5,
+    color: PARCHMENT_COLORS.paleGold,
+    letterSpacing: 1.8,
+    textTransform: "uppercase" as const,
+    textAlign: "center",
+    lineHeight: 1.5,
+  },
+  companyShowcaseAbout: {
+    fontSize: 8.5,
+    color: "#F5EBD3",
+    textAlign: "center",
+    lineHeight: 1.7,
+    marginTop: 4,
+  },
+  companyShowcaseContact: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 8,
+  },
+  companyShowcasePill: {
+    borderWidth: 0.8,
+    borderColor: PARCHMENT_COLORS.royalGold,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  companyShowcasePillText: {
+    fontSize: 7.5,
+    color: PARCHMENT_COLORS.paleGold,
+    fontWeight: 700,
+    letterSpacing: 0.4,
   },
 });
 
@@ -1000,6 +1189,7 @@ function ParchmentPage({
   pageLabel,
   rtlPageStyle,
   footerTagline,
+  brandHeaderVariant = "compact",
 }: {
   children: React.ReactNode;
   companyInfo?: CompanyInfo;
@@ -1007,6 +1197,7 @@ function ParchmentPage({
   pageLabel?: string;
   rtlPageStyle?: { direction: "rtl" };
   footerTagline?: string;
+  brandHeaderVariant?: "full" | "compact";
 }) {
   const rtl = isRTL(languageCode);
   const bodyFont = getGlobalFont(languageCode);
@@ -1027,16 +1218,31 @@ function ParchmentPage({
       <Image src={BORDER_SRC} style={styles.borderFrame} fixed={true} />
 
       <View style={[styles.contentLayer, { fontFamily: bodyFont, direction: rtl ? "rtl" : "ltr" }]}>
-        {/* PROTOCOL §1 — official logo, perfectly centered above header text.
-            Generic KemeryaLogoSvg placeholder removed. Header is a pure
-            Flexbox column (no absolute) so nothing can collide. */}
-        <View style={styles.headerBox}>
-          <Image src={LOGO_SRC} style={styles.officialLogo} />
-          <Text style={[styles.brandTitle, { fontFamily: brandFont }]}>
-            {companyInfo?.name || "KEMERYA TOURS"}
-          </Text>
-          <SvgDividerImage />
-        </View>
+        {/* Premium brand header — full hero (big logo + name + tagline +
+            winged sun-disc + dividers) on page 1 only; slim centered logo +
+            winged sun-disc strip on continuation pages. Pure Flexbox column
+            (no absolute) with generous gaps so rows stack, never collide. */}
+        {brandHeaderVariant === "full" ? (
+          <View style={styles.headerBox}>
+            <Image src={LOGO_SRC} style={styles.officialLogo} />
+            <Text style={[styles.brandTitle, { fontFamily: brandFont }]}>
+              {companyInfo?.name || "KEMERYA TOURS"}
+            </Text>
+            {companyInfo?.tagline ? (
+              <Text style={[styles.brandTagline, { fontFamily: bodyFont }]}>
+                {shapeForPdf(companyInfo.tagline)}
+              </Text>
+            ) : null}
+            <WingedSunDisc />
+            <SvgDividerImage />
+            <GoldenDivider />
+          </View>
+        ) : (
+          <View style={styles.headerBoxCompact}>
+            <Image src={LOGO_SRC} style={styles.officialLogoSmall} />
+            <WingedSunDisc width={130} />
+          </View>
+        )}
         {children}
       </View>
 
@@ -1318,7 +1524,7 @@ export function ItineraryPDF({
 
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
-      <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel="Page 1" rtlPageStyle={rtlPageStyle} footerTagline={label("footer.tagline", "Curated Egyptian Journeys · Est. Luxury")}>
+      <ParchmentPage brandHeaderVariant="full" companyInfo={companyInfo} languageCode={langCode} pageLabel="Page 1" rtlPageStyle={rtlPageStyle} footerTagline={label("footer.tagline", "Curated Egyptian Journeys · Est. Luxury")}>
         <View style={styles.bookingRefBadge}>
           <Text style={[styles.bookingRefText, cinzelStyle]}>Ref: {bookingRef}</Text>
         </View>
@@ -1813,8 +2019,7 @@ export function ItineraryPDF({
               </Text>
             </View>
             <SmallAnkhDivider />
-            {/* PROTOCOL §4 — downloaded SVG divider between Day sections
-                (flex-row Image, never a raw CSS border). */}
+            <HieroglyphStrip />
             <SvgDividerImage />
             <View style={styles.opsGrid}>
               <View style={styles.opsItem}>
@@ -1850,6 +2055,39 @@ export function ItineraryPDF({
                 <Text style={styles.opsValue}>{shapeForPdf(companyInfo.address)}</Text>
               </View>
             </View>
+          </View>
+          {/* Company showcase — fills the former empty rectangle with a rich
+              brand panel: logo, name, tagline, about + contact pills + socials.
+              Pure Flexbox (no absolute) so nothing overlaps; wraps on RTL too. */}
+          <View style={styles.companyShowcase}>
+            <Image src={LOGO_SRC} style={styles.companyShowcaseLogo} />
+            <Text style={[styles.companyShowcaseName, headingStyle]}>
+              {shapeForPdf(companyInfo.name)}
+            </Text>
+            <Text style={styles.companyShowcaseTagline}>
+              {shapeForPdf(companyInfo.tagline || "Discover Egypt with Excellence")}
+            </Text>
+            <HieroglyphStrip />
+            <Text style={styles.companyShowcaseAbout}>
+              {label(
+                "company.about",
+                "Kemerya Tours crafts tailor-made Egyptian journeys — from the Pyramids of Giza to the temples of Luxor and the Nile — with expert guides, handpicked stays and 24/7 on-trip support."
+              )}
+            </Text>
+            <View style={styles.companyShowcaseContact}>
+              <View style={styles.companyShowcasePill}>
+                <Text style={styles.companyShowcasePillText}>{companyInfo.phone}</Text>
+              </View>
+              <View style={styles.companyShowcasePill}>
+                <Text style={styles.companyShowcasePillText}>{companyInfo.email}</Text>
+              </View>
+              <View style={styles.companyShowcasePill}>
+                <Text style={styles.companyShowcasePillText}>{companyInfo.website}</Text>
+              </View>
+            </View>
+            <Text style={[styles.companyShowcaseAbout, { fontSize: 7.5 }]}>
+              {shapeForPdf(companyInfo.address)}
+            </Text>
           </View>
         </View>
       </ParchmentPage>
