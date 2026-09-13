@@ -12,9 +12,10 @@ export const dynamic = "force-dynamic";
 // JSON (strip trailing partial token → close open strings → balance
 // brackets) so a long itinerary degrades gracefully instead of failing.
 const MODEL_CANDIDATES = [
-  "gemini-3.6-flash",
-  "gemini-2.5-flash",
-  "gemini-2.5-flash-latest",
+  "gemini-2.0-flash",
+  "gemini-1.5-flash-latest",
+  "gemini-1.5-flash",
+  "gemini-1.5-pro-latest",
 ];
 
 /** Balance-aware truncation repair: close open strings/brackets. */
@@ -206,31 +207,32 @@ Translate every human-readable string VALUE (tour copy, day titles, descriptions
 Here is the JSON to translate:
 ${JSON.stringify(dataToTranslate, null, 2)}`;
 
-    // Get Gemini model (walk candidates: 404-proof + truncation-tolerant)
+    // Get Gemini model
 
-    // (model instantiated inside generateWithFallbacks per candidate)
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.6-flash",
+      systemInstruction: SYSTEM_PROMPT,
+      generationConfig: {
+        // Native JSON mode: Gemini is constrained to emit syntactically
+        // valid JSON — no markdown fences, no prose, no truncation artifacts.
+        responseMimeType: "application/json",
+        temperature: 0.3, // Lower temperature for consistent translations
+        topK: 20,
+        topP: 0.95,
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
+      },
+    });
 
     // Generate translation — truncation-tolerant parsing (FIX #2).
-    // NOTE: uses generateWithFallbacks so a 404-removed model name can never
-    // hard-fail the route; it walks MODEL_CANDIDATES (gemini-3.6-flash first).
-    const rawText = await generateWithFallbacks(
-      genAI,
-      SYSTEM_PROMPT,
-      prompt,
-      MAX_OUTPUT_TOKENS
-    );
+    const result = await model.generateContent(prompt);
+    const rawText = result.response.text();
     let translatedData: Record<string, unknown>;
     try {
       translatedData = safeParseJson(rawText);
     } catch {
       const retryPrompt = `The previous JSON output was cut off mid-way (truncated). Complete it now: return the FULL corrected JSON object with the exact same structure and keys, fully translated to ${targetLanguage}. Return ONLY valid JSON. Truncated fragment: ${rawText.slice(0, 12000)}`;
-      const retryText = await generateWithFallbacks(
-        genAI,
-        SYSTEM_PROMPT,
-        retryPrompt,
-        MAX_OUTPUT_TOKENS
-      );
-      translatedData = safeParseJson(retryText);
+      const retry = await model.generateContent(retryPrompt);
+      translatedData = safeParseJson(retry.response.text());
     }
 
     // Guarantee the ui namespace for JSX mapping translatedData?.ui?.terms.
