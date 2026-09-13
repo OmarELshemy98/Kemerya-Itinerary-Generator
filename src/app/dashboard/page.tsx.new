@@ -96,6 +96,9 @@ function DashboardInner() {
   const handleBookingSubmit = (config: BookingConfig, mode: "download" | "view") => {
     setBookingConfig(config);
     setBookingCount((c) => c + 1);
+    setSelectedLanguage(null);
+    setTranslatedData(null);
+    setTranslationError(null);
     if (mode === "view") { setShowPDF(true); } else { setPendingDownload(config); }
     fetch("/api/itineraries", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tour: selectedTour, booking: config }) }).catch(console.error);
   };

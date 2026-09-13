@@ -51,6 +51,7 @@ function DashboardInner() {
   const [translatedData, setTranslatedData] = React.useState<Record<string, unknown> | null>(null);
   const [isTranslating, setIsTranslating] = React.useState(false);
   const [translationError, setTranslationError] = React.useState<string | null>(null);
+
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const viewId = params.get("view");
@@ -108,39 +109,26 @@ function DashboardInner() {
     setTranslationError(null);
   };
 
-  const handleTranslate = (languageCode: SupportedLanguageCode | null): void => {
-    if (!languageCode) {
-      setSelectedLanguage(null);
-      setTranslatedData(null);
-      setTranslationError(null);
+  const handleTranslate = (languageCode: SupportedLanguageCode | null) => {
+    if (!languageCode || !bookingConfig || !selectedTour) {
+      if (languageCode === null) { setSelectedLanguage(null); setTranslatedData(null); setTranslationError(null); }
       return;
     }
-    if (!bookingConfig || !selectedTour) return;
-
     setSelectedLanguage(languageCode);
     setIsTranslating(true);
     setTranslationError(null);
-
-    translateItineraryData(languageCode, selectedTour, bookingConfig, KEMERYA_COMPANY_INFO)
-      .then((result) => {
-        if (result.success && result.translatedData) {
-          setTranslatedData(result.translatedData);
-        } else {
-          setTranslationError(result.error || "Translation failed");
-          setTranslatedData(null);
-        }
-      })
-      .catch((err) => {
+    (async () => {
+      try {
+        const result = await translateItineraryData(languageCode, selectedTour, bookingConfig, KEMERYA_COMPANY_INFO);
+        if (result.success && result.translatedData) { setTranslatedData(result.translatedData); }
+        else { setTranslationError(result.error || "Translation failed"); setTranslatedData(null); }
+      } catch (err) {
         const message = err instanceof Error ? err.message : "Translation request failed";
         setTranslationError(message);
         setTranslatedData(null);
-      })
-      .finally(() => {
-        setIsTranslating(false);
-      });
+      } finally { setIsTranslating(false); }
+    })();
   };
-
-
 
   const totalTravelers = React.useMemo(() => { if (!bookingConfig) return 0; return bookingConfig.travelers.adults + bookingConfig.travelers.children + bookingConfig.travelers.infants; }, [bookingConfig]);
 
@@ -169,46 +157,6 @@ function DashboardInner() {
         </section>
       )}
 
-      {/* Language Selection - BEFORE PDF preview */}
-      {bookingConfig && (
-        <section className="mb-8">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#C9A962]/15 text-[#C9A962]"><Globe className="h-4 w-4" /></div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Translate PDF</p>
-                  <p className="mt-0.5 text-xs text-slate-500">Select a language to translate the itinerary</p>
-                </div>
-              </div>
-              {selectedLanguage && (
-                <Badge variant="gold" className="self-start">
-                  {selectedLanguage} â€” {translatedData ? "Translated" : isTranslating ? "Translating..." : "Ready"}
-                </Badge>
-              )}
-            </div>
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <LanguageSelector value={selectedLanguage} onChange={handleTranslate} disabled={!bookingConfig || isTranslating} showLabel={false} />
-              {isTranslating && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <svg className="h-4 w-4 animate-spin text-[#C9A962]" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                  Translating...
-                </div>
-              )}
-              {selectedLanguage && !isTranslating && !translationError && (
-                <Button variant="outline" size="sm" onClick={() => { setSelectedLanguage(null); setTranslatedData(null); setTranslationError(null); }}>Clear</Button>
-              )}
-            </div>
-            {translationError && (
-              <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-                <svg className="h-4 w-4 shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
-                {translationError}
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
       {bookingConfig && bookingConfig.totalPrice > 0 && (
         <section className="mb-8">
           <SectionHeader icon={<Compass className="h-4 w-4" />} step="03" title="Preview & Download" subtitle="Review the itinerary summary and download the PDF." />
@@ -226,7 +174,7 @@ function DashboardInner() {
             <Separator className="my-4" />
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <SummaryLine label="Client" value={bookingConfig.clientName || "Not specified"} />
-              <SummaryLine label="Dates" value={formatDateShort(bookingConfig.startDate) + " â†’ " + formatDateShort(bookingConfig.endDate)} />
+              <SummaryLine label="Dates" value={formatDateShort(bookingConfig.startDate) + " → " + formatDateShort(bookingConfig.endDate)} />
               <SummaryLine label="Currency" value={bookingConfig.currency} />
               <SummaryLine label="Adults" value={String(bookingConfig.travelers.adults)} />
               <SummaryLine label="Children" value={String(bookingConfig.travelers.children)} />
@@ -239,8 +187,27 @@ function DashboardInner() {
               {bookingConfig.clientPhone && <GreetingMessageButton booking={bookingConfig} tour={selectedTour} />}
             </div>
           </div>
+          <Separator className="my-3 bg-emerald-100" />
+          {bookingConfig && (
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-[#C9A962]/15 text-[#C9A962]"><Globe className="h-4 w-4" /></div>
+                  <div><p className="text-sm font-semibold text-slate-900">Translate to Language</p><p className="mt-0.5 text-xs text-slate-500">Select a language to translate the itinerary PDF using AI</p></div>
+                </div>
+                {selectedLanguage && (<Badge variant="gold" className="self-start">{selectedLanguage} — {translatedData ? "Translated" : isTranslating ? "Translating..." : "Ready"}</Badge>)}
+              </div>
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <LanguageSelector value={selectedLanguage} onChange={handleTranslate} disabled={!bookingConfig || isTranslating} showLabel={false} />
+                {translationError && (<div className="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"><svg className="h-4 w-4 shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>{translationError}</div>)}
+                {isTranslating && (<div className="flex items-center gap-2 text-sm text-slate-600"><svg className="h-4 w-4 animate-spin text-[#C9A962]" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Translating with Gemini AI...</div>)}
+                {selectedLanguage && !isTranslating && !translationError && (<Button variant="outline" size="sm" onClick={() => { setSelectedLanguage(null); setTranslatedData(null); setTranslationError(null); }}>Clear Translation</Button>)}
+              </div>
+            </div>
+          )}
         </section>
       )}
+
       <PDFPreviewDialog open={showPDF} onOpenChange={setShowPDF} tour={selectedTour} booking={bookingConfig} translatedData={translatedData || undefined} languageCode={selectedLanguage || undefined} />
       <PDFDownloader booking={pendingDownload} tour={selectedTour} onDone={() => setPendingDownload(null)} translatedData={translatedData || undefined} languageCode={selectedLanguage || undefined} />
     </div>
