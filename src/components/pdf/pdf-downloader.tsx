@@ -7,10 +7,12 @@ import { ItineraryPDF } from "./itinerary-pdf";
 import { KEMERYA_COMPANY_INFO } from "@/data/company";
 import { generateDynamicMap } from "@/utils/mapGenerator";
 
-interface PDFDownloaderProps {
+export interface PDFDownloaderProps {
   booking: BookingConfig | null;
   tour: Tour | null;
   onDone?: () => void;
+  translatedData?: Record<string, unknown>;
+  languageCode?: string;
 }
 
 export function buildItineraryFileName(
@@ -33,7 +35,13 @@ export function buildItineraryFileName(
  * PDFDownloader — generates the PDF imperatively (pdf().toBlob()) and
  * triggers a direct download. Renders nothing; runs only in the browser.
  */
-export function PDFDownloader({ booking, tour, onDone }: PDFDownloaderProps) {
+export function PDFDownloader({
+  booking,
+  tour,
+  onDone,
+  translatedData,
+  languageCode,
+}: PDFDownloaderProps) {
   const startedRef = React.useRef<BookingConfig | null>(null);
 
   React.useEffect(() => {
@@ -54,7 +62,13 @@ export function PDFDownloader({ booking, tour, onDone }: PDFDownloaderProps) {
         const mapUrl = await generateDynamicMap(itineraryDays);
         const bookingWithMap: BookingConfig = { ...booking, mapUrl: mapUrl || booking.mapUrl };
         const blob = await pdf(
-          <ItineraryPDF tour={tour} booking={bookingWithMap} companyInfo={KEMERYA_COMPANY_INFO} />
+          <ItineraryPDF
+            tour={tour}
+            booking={bookingWithMap}
+            companyInfo={KEMERYA_COMPANY_INFO}
+            translatedData={translatedData}
+            languageCode={languageCode}
+          />
         ).toBlob();
         if (cancelled) return;
         const url = URL.createObjectURL(blob);

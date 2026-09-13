@@ -9,6 +9,10 @@
 export const MAPTILER_API_KEY: string | undefined =
   process.env.NEXT_PUBLIC_MAPTILER_API_KEY || undefined;
 
+/** Gemini API key for translation services */
+export const GEMINI_API_KEY: string | undefined =
+  process.env.GEMINI_API_KEY || undefined;
+
 export function requireEnv(name: string, value: string | undefined): string {
   if (!value) {
     throw new Error(

@@ -31,6 +31,19 @@ import {
   CalendarIcon,
   MapPinIcon,
 } from "./pdf-icons";
+import {
+  registerFontForLanguage,
+  isRTL,
+  getFontFamily,
+} from "@/lib/pdf-fonts";
+
+interface ItineraryPDFProps {
+  tour: Tour | null;
+  booking: BookingConfig;
+  companyInfo?: CompanyInfo;
+  translatedData?: Record<string, unknown>;
+  languageCode?: string;
+}
 
 // Fonts are served locally from /public/fonts (no external CDN) so PDF
 // generation always works, even offline / behind firewalls.
@@ -1154,19 +1167,24 @@ const styles = StyleSheet.create({
 function LuxuryPage({
   children,
   companyInfo,
+  languageCode = "en",
 }: {
   children: React.ReactNode;
   companyInfo?: CompanyInfo;
+  languageCode?: string;
 }) {
+  const rtl = isRTL(languageCode);
+  const fontFamily = getFontFamily(languageCode);
+
   return (
-    <Page size="A4" style={styles.page}>
+    <Page size="A4" style={[styles.page, { direction: rtl ? "rtl" : "ltr" }]}>
       <View style={styles.watermarkText} fixed>
         <Text>KEMERYA TOURS</Text>
       </View>
-      <View style={styles.pageFrame}>
-        <View style={styles.headerBox}>
+      <View style={[styles.pageFrame, { fontFamily }]}>
+        <View style={[styles.headerBox, { fontFamily }]}>
           <KemeryaLogoSvg />
-          <Text style={styles.brandTitle}>
+          <Text style={[styles.brandTitle, { fontFamily }]}>
             {companyInfo?.name || "KEMERYA TOURS"}
           </Text>
           <LotusDivider width={200} />
@@ -1249,6 +1267,8 @@ interface ItineraryPDFProps {
   tour: Tour | null;
   booking: BookingConfig;
   companyInfo?: CompanyInfo;
+  translatedData?: Record<string, unknown>;
+  languageCode?: string;
 }
 
 export function ItineraryPDF({
