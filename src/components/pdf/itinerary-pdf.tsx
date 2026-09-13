@@ -32,9 +32,9 @@ import {
   MapPinIcon,
 } from "./pdf-icons";
 import {
-  registerFontForLanguage,
   isRTL,
-  getFontFamily,
+  getGlobalFont,
+  isLatinDisplayLanguage,
 } from "@/lib/pdf-fonts";
 import { getTranslatedValue } from "@/lib/translate-client";
 
@@ -46,41 +46,9 @@ interface ItineraryPDFProps {
   languageCode?: string;
 }
 
-// Fonts are served locally from /public/fonts (no external CDN) so PDF
-// generation always works, even offline / behind firewalls.
+// Fonts are registered centrally in @/lib/pdf-fonts (served locally from
+// /public/fonts so PDF generation works offline / behind firewalls).
 Font.registerHyphenationCallback((word) => [word]);
-
-// Resolve font path: in the browser use /public path, in Node.js use absolute path
-const fontPath = (filename: string) => {
-  if (typeof window !== "undefined") {
-    return `/fonts/${filename}`;
-  }
-  // Node.js environment — resolve relative to project public folder
-  return `${process.cwd()}/public/fonts/${filename}`;
-};
-
-Font.register({
-  family: "Cinzel",
-  fonts: [
-    { src: fontPath("cinzel-latin-400-normal.woff") },
-    { src: fontPath("cinzel-latin-700-normal.woff"), fontWeight: 700 },
-  ],
-});
-
-// Decorative display face — headings, tour titles & day numbers only.
-Font.register({
-  family: "Cinzel Decorative",
-  fonts: [{ src: fontPath("cinzel-decorative-latin-400-normal.woff") }],
-});
-
-Font.register({
-  family: "Lora",
-  fonts: [
-    { src: fontPath("lora-latin-400-normal.woff") },
-    { src: fontPath("lora-latin-400-italic.woff"), fontStyle: "italic" },
-    { src: fontPath("lora-latin-700-normal.woff"), fontWeight: 700 },
-  ],
-});
 
 const BRAND_COLORS = {
   charcoal: "#171717", // Charcoal Black - Primary Text & Backgrounds
@@ -326,7 +294,6 @@ const styles = StyleSheet.create({
     paddingTop: 28,
     paddingBottom: 40,
     paddingHorizontal: 28,
-    fontFamily: "Lora",
   },
   pageFrame: {
     border: "1px solid #C9A962",
@@ -350,7 +317,6 @@ const styles = StyleSheet.create({
     borderBottomColor: "#C9A962",
   },
   brandTitle: {
-    fontFamily: "Cinzel",
     fontSize: 24,
     color: "#171717",
     letterSpacing: 4,
@@ -359,11 +325,9 @@ const styles = StyleSheet.create({
   coverPage: {
     backgroundColor: "#FDFBF7",
     padding: 30,
-    fontFamily: "Lora",
   },
   innerPage: {
     backgroundColor: "#FDFBF7",
-    fontFamily: "Lora",
   },
   bookingRefBadge: {
     backgroundColor: "#C9A962",
@@ -376,7 +340,6 @@ const styles = StyleSheet.create({
   bookingRefText: {
     color: "#FFFFFF",
     fontSize: 11,
-    fontFamily: "Cinzel",
     fontWeight: 700,
     letterSpacing: 1,
   },
@@ -405,14 +368,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 8.5,
     color: "#171717",
-    fontFamily: "Lora",
     lineHeight: 1.55,
     textAlign: "justify",
   },
   termsLinkText: {
     fontSize: 8.5,
     color: "#171717",
-    fontFamily: "Lora",
     textDecoration: "underline",
   },
   // --- Leave a Review block ---
@@ -428,13 +389,11 @@ const styles = StyleSheet.create({
   reviewTitle: {
     color: "#171717",
     fontSize: 13,
-    fontFamily: "Cinzel Decorative",
     letterSpacing: 0.5,
   },
   reviewSubtitle: {
     color: "#8A8171",
     fontSize: 9,
-    fontFamily: "Lora",
     textAlign: "center",
     marginTop: 5,
     lineHeight: 1.5,
@@ -448,13 +407,11 @@ const styles = StyleSheet.create({
   reviewBadgeText: {
     color: "#FFFFFF",
     fontSize: 9.5,
-    fontFamily: "Cinzel Decorative",
     letterSpacing: 0.8,
   },
   reviewLink: {
     color: "#8A8171",
     fontSize: 8,
-    fontFamily: "Lora",
     marginTop: 8,
   },
   // --- Social links footer ---
@@ -471,7 +428,6 @@ const styles = StyleSheet.create({
   socialLinkItem: {
     fontSize: 8.5,
     color: "#171717",
-    fontFamily: "Lora",
     fontWeight: "bold",
   },
   logoImg: {
@@ -508,7 +464,6 @@ const styles = StyleSheet.create({
   },
   brandName: {
     fontSize: 26,
-    fontFamily: "Cinzel Decorative",
     color: "#171717",
     letterSpacing: 1.2,
   },
@@ -604,7 +559,6 @@ const styles = StyleSheet.create({
   heroTourName: {
     color: "#171717",
     fontSize: 20,
-    fontFamily: "Cinzel Decorative",
     marginBottom: 8,
     lineHeight: 1.3,
   },
@@ -674,7 +628,6 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   offerBannerTitle: {
-    fontFamily: "Cinzel",
     fontSize: 11,
     color: "#171717",
     marginBottom: 4,
@@ -699,7 +652,6 @@ const styles = StyleSheet.create({
     padding: 7,
   },
   dayRoadmapTitle: {
-    fontFamily: "Cinzel",
     fontSize: 7.5,
     color: "#8b7435",
     letterSpacing: 1,
@@ -771,7 +723,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     color: "#171717",
-    fontFamily: "Cinzel Decorative",
     letterSpacing: 0.4,
   },
   sectionUnderline: {
@@ -856,13 +807,11 @@ const styles = StyleSheet.create({
   dayBadgeText: {
     color: "white",
     fontSize: 9,
-    fontFamily: "Cinzel Decorative",
     letterSpacing: 0.5,
   },
   dayTitle: {
     color: "#C9A962",
     fontSize: 12,
-    fontFamily: "Cinzel Decorative",
     flex: 1,
   },
   dayContent: {
@@ -871,7 +820,6 @@ const styles = StyleSheet.create({
   dayDescription: {
     fontSize: 10,
     color: "#171717",
-    fontFamily: "Lora",
     lineHeight: 1.7,
     marginBottom: 10,
     textAlign: "justify",
@@ -927,7 +875,6 @@ const styles = StyleSheet.create({
   },
   sectionCardTitle: {
     fontSize: 11,
-    fontFamily: "Cinzel Decorative",
     textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: 12,
@@ -1054,13 +1001,11 @@ const styles = StyleSheet.create({
   notesText: {
     fontSize: 9.5,
     color: "#171717",
-    fontFamily: "Lora",
     lineHeight: 1.6,
   },
   // Drop cap for the first Tour Overview paragraph
   dropCap: {
     fontSize: 30,
-    fontFamily: "Cinzel Decorative",
     color: "#C9A962",
     lineHeight: 1,
     marginRight: 3,
@@ -1117,7 +1062,6 @@ const styles = StyleSheet.create({
   opsCardTitle: {
     color: "#171717",
     fontSize: 12,
-    fontFamily: "Cinzel Decorative",
   },
   opsGrid: {
     flexDirection: "row",
@@ -1175,17 +1119,25 @@ function LuxuryPage({
   languageCode?: string;
 }) {
   const rtl = isRTL(languageCode);
-  const fontFamily = getFontFamily(languageCode);
+  // Dynamic global font — Arabic gets Cairo, Hebrew NotoSansHebrew,
+  // zh/ja Noto Sans; everything else stays on the Latin serif (Lora).
+  const bodyFont = getGlobalFont(languageCode);
+  // Cinzel is Latin-only: fall back to the language's global font otherwise.
+  const latinDisplay = isLatinDisplayLanguage(languageCode);
+  const brandFont = latinDisplay ? "Cinzel" : bodyFont;
 
   return (
-    <Page size="A4" style={[styles.page, { direction: rtl ? "rtl" : "ltr" }]}>
+    <Page
+      size="A4"
+      style={[styles.page, { direction: rtl ? "rtl" : "ltr", fontFamily: bodyFont }]}
+    >
       <View style={styles.watermarkText} fixed>
         <Text>KEMERYA TOURS</Text>
       </View>
-      <View style={[styles.pageFrame, { fontFamily }]}>
-        <View style={[styles.headerBox, { fontFamily }]}>
+      <View style={[styles.pageFrame, { fontFamily: bodyFont }]}>
+        <View style={styles.headerBox}>
           <KemeryaLogoSvg />
-          <Text style={[styles.brandTitle, { fontFamily }]}>
+          <Text style={[styles.brandTitle, { fontFamily: brandFont }]}>
             {companyInfo?.name || "KEMERYA TOURS"}
           </Text>
           <LotusDivider width={200} />
@@ -1345,12 +1297,21 @@ export function ItineraryPDF({
     : tourTitle;
 
 
+  const langCode = languageCode ?? "en";
+  const bodyFont = getGlobalFont(langCode);
+  // Cinzel faces are Latin-only — non-Latin languages use their global font.
+  const latinDisplay = isLatinDisplayLanguage(langCode);
+  const cinzelFont = latinDisplay ? "Cinzel" : bodyFont;
+  const headingFont = latinDisplay ? "Cinzel Decorative" : bodyFont;
+  const cinzelStyle = { fontFamily: cinzelFont };
+  const headingStyle = { fontFamily: headingFont };
+
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
-      <LuxuryPage companyInfo={companyInfo}>
+      <LuxuryPage companyInfo={companyInfo} languageCode={langCode}>
         {/* Minimalist Booking Ref Badge - Floating above Tour Title */}
         <View style={styles.bookingRefBadge}>
-          <Text style={styles.bookingRefText}>Ref: {bookingRef}</Text>
+          <Text style={[styles.bookingRefText, cinzelStyle]}>Ref: {bookingRef}</Text>
         </View>
 
         {/* HERO */}
@@ -1365,7 +1326,7 @@ export function ItineraryPDF({
             <Text style={styles.clientBadgeText}>Booking Reference · {bookingRef}</Text>
           </View>
           <Text style={styles.heroSubtitle}>{label("hero.subtitle", "Your Exclusive Travel Itinerary")}</Text>
-          <Text style={styles.heroTourName}>{displayTourTitle}</Text>
+          <Text style={[styles.heroTourName, headingStyle]}>{displayTourTitle}</Text>
           <View style={styles.heroGrid}>
             <View style={styles.heroStat}>
               <Text style={styles.heroStatLabel}>{label("hero.departureDate", "Departure Date")}</Text>
@@ -1428,7 +1389,7 @@ export function ItineraryPDF({
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionNumber}><Text>01</Text></View>
-            <Text style={styles.sectionTitle}>{label("section.summary", "Booking Summary")}</Text>
+            <Text style={[styles.sectionTitle, headingStyle]}>{label("section.summary", "Booking Summary")}</Text>
             <View style={styles.sectionUnderline} />
           </View>
           <View style={styles.summaryGrid}>
@@ -1498,7 +1459,7 @@ export function ItineraryPDF({
                   {pct > 0 ? `SPECIAL OFFER · SAVE ${pct}%` : "SPECIAL OFFER"}
                 </Text>
               </View>
-              <Text style={styles.offerBannerTitle}>{meta.title}</Text>
+              <Text style={[styles.offerBannerTitle, cinzelStyle]}>{meta.title}</Text>
               <View style={styles.offerBannerPrices}>
                 <Text style={styles.offerBannerOld}>
                   {formatCurrency(booking.totalPrice, booking.currency)}
@@ -1524,14 +1485,14 @@ export function ItineraryPDF({
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionNumber}><Text>02</Text></View>
-              <Text style={styles.sectionTitle}>{label("section.overview", "Tour Overview")}</Text>
+              <Text style={[styles.sectionTitle, headingStyle]}>{label("section.overview", "Tour Overview")}</Text>
               <View style={styles.sectionUnderline} />
             </View>
             {tour.overview.map((para, i) =>
               i === 0 && para.length > 0 ? (
                 <Text key={i} style={{ ...styles.notesText, marginBottom: 6 }}>
                   {/* Drop cap on the first paragraph */}
-                  <Text style={styles.dropCap}>{para.charAt(0)}</Text>
+                  <Text style={[styles.dropCap, headingStyle]}>{para.charAt(0)}</Text>
                   {para.slice(1)}
                 </Text>
               ) : (
@@ -1588,12 +1549,12 @@ export function ItineraryPDF({
       {/* =============================================== */}
       {/* PAGE 2 - ITINERARY DAYS 1-3                    */}
       {/* =============================================== */}
-      <LuxuryPage companyInfo={companyInfo}>
+      <LuxuryPage companyInfo={companyInfo} languageCode={langCode}>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionNumber}><Text>02</Text></View>
-            <Text style={styles.sectionTitle}>{label("section.roadmap", "Day-by-Day Itinerary")}</Text>
+            <Text style={[styles.sectionTitle, headingStyle]}>{label("section.roadmap", "Day-by-Day Itinerary")}</Text>
             <View style={styles.sectionUnderline} />
           </View>
 
@@ -1614,6 +1575,8 @@ export function ItineraryPDF({
                   stay: label("day.stay", "Stay"),
                   meals: label("day.meals", "Meals"),
                 }}
+                headingStyle={headingStyle}
+                cinzelStyle={cinzelStyle}
               />
             );
           })}
@@ -1626,6 +1589,8 @@ export function ItineraryPDF({
                 description:
                   "This is a fully customized tour. Your dedicated Operations Manager will design each day according to your preferences and provide a detailed schedule shortly.",
               }}
+              headingStyle={headingStyle}
+              cinzelStyle={cinzelStyle}
             />
           )}
         </View>
@@ -1637,12 +1602,12 @@ export function ItineraryPDF({
 
       {/* PAGE 3 - REMAINING ITINERARY DAYS */}
       {itinerary.length > 3 && (
-        <LuxuryPage companyInfo={companyInfo}>
+        <LuxuryPage companyInfo={companyInfo} languageCode={langCode}>
 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionNumber}><Text>02</Text></View>
-              <Text style={styles.sectionTitle}>{label("section.roadmap", "Itinerary (Continued)")}</Text>
+              <Text style={[styles.sectionTitle, headingStyle]}>{label("section.roadmap", "Itinerary (Continued)")}</Text>
               <View style={styles.sectionUnderline} />
             </View>
 
@@ -1663,6 +1628,8 @@ export function ItineraryPDF({
                     stay: label("day.stay", "Stay"),
                     meals: label("day.meals", "Meals"),
                   }}
+                  headingStyle={headingStyle}
+                  cinzelStyle={cinzelStyle}
                 />
               );
             })}
@@ -1675,13 +1642,13 @@ export function ItineraryPDF({
       )}
 
       {/* PAGE 4 - INCLUSIONS, EXCLUSIONS, PRICING, CONTACTS */}
-      <LuxuryPage companyInfo={companyInfo}>
+      <LuxuryPage companyInfo={companyInfo} languageCode={langCode}>
 
         {/* 03 - INCLUSIONS / EXCLUSIONS */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionNumber}><Text>03</Text></View>
-            <Text style={styles.sectionTitle}>
+            <Text style={[styles.sectionTitle, headingStyle]}>
               {label("section.inclusions", "Inclusions")} & {label("section.exclusions", "Exclusions")}
             </Text>
             <View style={styles.sectionUnderline} />
@@ -1689,7 +1656,7 @@ export function ItineraryPDF({
           <View style={styles.twoCol}>
             <View style={styles.col}>
               <View style={styles.inclusionsCard}>
-                <Text style={{ ...styles.sectionCardTitle, ...styles.inclusionTitleText }}>
+                <Text style={{ ...styles.sectionCardTitle, ...styles.inclusionTitleText, ...headingStyle }}>
                   {label("tour.inclusions", "What's Included")}
                 </Text>
                 {tList("inclusions", inclusions).length > 0 ? (
@@ -1712,7 +1679,7 @@ export function ItineraryPDF({
             </View>
             <View style={styles.col}>
               <View style={styles.exclusionsCard}>
-                <Text style={{ ...styles.sectionCardTitle, ...styles.exclusionTitleText }}>
+                <Text style={{ ...styles.sectionCardTitle, ...styles.exclusionTitleText, ...headingStyle }}>
                   {label("tour.exclusions", "What's Not Included")}
                 </Text>
                 {tList("exclusions", exclusions).length > 0 ? (
@@ -1740,7 +1707,7 @@ export function ItineraryPDF({
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionNumber}><Text>04</Text></View>
-            <Text style={styles.sectionTitle}>{label("section.pricing", "Pricing & Payment")}</Text>
+            <Text style={[styles.sectionTitle, headingStyle]}>{label("section.pricing", "Pricing & Payment")}</Text>
             <View style={styles.sectionUnderline} />
           </View>
           <View style={styles.pricingTable}>
@@ -1822,7 +1789,7 @@ export function ItineraryPDF({
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionNumber}><Text>05</Text></View>
-            <Text style={styles.sectionTitle}>{label("section.contact", "Operations & Contact Info")}</Text>
+            <Text style={[styles.sectionTitle, headingStyle]}>{label("section.contact", "Operations & Contact Info")}</Text>
             <View style={styles.sectionUnderline} />
           </View>
           <View style={styles.operationsCard}>
@@ -1830,7 +1797,7 @@ export function ItineraryPDF({
               <View style={styles.opsBadge}>
                 <Text style={styles.opsBadgeText}>{label("general.247", "24/7 Support")}</Text>
               </View>
-              <Text style={styles.opsCardTitle}>
+              <Text style={[styles.opsCardTitle, headingStyle]}>
                 {label("ops.roundClock", "Your Operations Team \u2014 Available Round the Clock")}
               </Text>
             </View>
@@ -1879,13 +1846,13 @@ export function ItineraryPDF({
       </LuxuryPage>
 
       {/* PAGE 5 - TERMS & POLICY + LEAVE A REVIEW */}
-      <LuxuryPage companyInfo={companyInfo}>
+      <LuxuryPage companyInfo={companyInfo} languageCode={langCode}>
 
         {/* 06 - TERMS & POLICY */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionNumber}><Text>06</Text></View>
-            <Text style={styles.sectionTitle}>{label("terms.policy", "Terms & Policy")}</Text>
+            <Text style={[styles.sectionTitle, headingStyle]}>{label("terms.policy", "Terms & Policy")}</Text>
             <View style={styles.sectionUnderline} />
           </View>
           <View style={styles.termsCard}>
@@ -1893,7 +1860,7 @@ export function ItineraryPDF({
               <View style={{ marginRight: 6 }}>
                 <CartoucheSeal size={13} />
               </View>
-              <Text style={{ fontFamily: "Cinzel", fontSize: 9, color: "#C9A962" }}>
+              <Text style={{ ...cinzelStyle, fontSize: 9, color: "#C9A962" }}>
                 {label("section.terms", "Terms & Conditions")}
               </Text>
             </View>
@@ -1913,7 +1880,7 @@ export function ItineraryPDF({
               <View style={{ marginRight: 6 }}>
                 <EyeOfHorusIcon size={13} />
               </View>
-              <Text style={{ fontFamily: "Cinzel", fontSize: 9, color: "#C9A962" }}>
+              <Text style={{ ...cinzelStyle, fontSize: 9, color: "#C9A962" }}>
                 {label("general.privacyPolicy", "Privacy Policy")}
               </Text>
             </View>
@@ -1934,13 +1901,13 @@ export function ItineraryPDF({
 
         {/* LEAVE A REVIEW */}
         <View style={styles.reviewCard}>
-          <Text style={styles.reviewTitle}>{label("review.title", "Leave a Review")}</Text>
+          <Text style={[styles.reviewTitle, headingStyle]}>{label("review.title", "Leave a Review")}</Text>
           <Text style={styles.reviewSubtitle}>
             {label("review.subtitle", "Loved your tour? Your feedback on Google Business helps travelers like you find us.")}
           </Text>
           <Link src={companyInfo.socialMedia?.googleBusiness || "https://share.google/RLldzNlk9YFVuIGbD"}>
             <View style={styles.reviewBadge}>
-              <Text style={styles.reviewBadgeText}>★ Write a Review</Text>
+              <Text style={[styles.reviewBadgeText, headingStyle]}>★ Write a Review</Text>
             </View>
           </Link>
           <Text style={styles.reviewLink}>
@@ -2028,6 +1995,8 @@ function DayCard({
   translatedMeals,
   translatedRoadmap,
   tLabels,
+  headingStyle = {},
+  cinzelStyle = {},
 }: {
   day: ItineraryDay;
   roadmap?: string[];
@@ -2037,6 +2006,8 @@ function DayCard({
   translatedMeals?: string;
   translatedRoadmap?: string;
   tLabels?: { roadmap?: string; stay?: string; meals?: string };
+  headingStyle?: Record<string, string>;
+  cinzelStyle?: Record<string, string>;
 }) {
   const stops = (translatedRoadmap ? translatedRoadmap.split(",").map((s) => s.trim()).filter(Boolean) : roadmap && roadmap.length > 0 ? roadmap : []);
   const dayTitle = translatedTitle || day.title;
@@ -2048,15 +2019,15 @@ function DayCard({
       <View break style={styles.dayCard}>
         <View style={styles.dayHeader}>
           <View style={styles.dayBadge}>
-            <Text style={styles.dayBadgeText}>DAY {day.day}</Text>
+            <Text style={[styles.dayBadgeText, headingStyle]}>DAY {day.day}</Text>
           </View>
-          <Text style={styles.dayTitle}>{dayTitle}</Text>
+          <Text style={[styles.dayTitle, headingStyle]}>{dayTitle}</Text>
         </View>
         <View style={styles.dayContent}>
           <Text style={styles.dayDescription}>{dayDescription}</Text>
           {stops.length > 0 && (
             <View style={styles.dayRoadmap} wrap={false}>
-              <Text style={styles.dayRoadmapTitle}>{tLabels?.roadmap || "Today's Roadmap"}</Text>
+              <Text style={[styles.dayRoadmapTitle, cinzelStyle]}>{tLabels?.roadmap || "Today's Roadmap"}</Text>
               {stops.map((stop, i) => (
                 <View key={i}>
                   <View style={styles.dayRoadmapRow}>

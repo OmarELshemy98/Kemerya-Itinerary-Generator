@@ -1,126 +1,123 @@
 import { Font } from "@react-pdf/renderer";
 
-// Font URLs for different scripts (using jsdelivr CDN)
-const FONT_URLS = {
-  arabic: {
-    regular: "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-arabic@5.0.8/files/noto-sans-arabic-latin-400-normal.woff2",
-    bold: "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-arabic@5.0.8/files/noto-sans-arabic-latin-700-normal.woff2",
-  },
-  chinese: {
-    regular: "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.8/files/noto-sans-sc-latin-400-normal.woff2",
-    bold: "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.8/files/noto-sans-sc-latin-700-normal.woff2",
-  },
-  japanese: {
-    regular: "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@5.0.8/files/noto-sans-jp-latin-400-normal.woff2",
-    bold: "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@5.0.8/files/noto-sans-jp-latin-700-normal.woff2",
-  },
-  korean: {
-    regular: "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-kr@5.0.8/files/noto-sans-kr-latin-400-normal.woff2",
-    bold: "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-kr@5.0.8/files/noto-sans-kr-latin-700-normal.woff2",
-  },
+/**
+ * PDF font registration for multi-language itineraries.
+ *
+ * All fonts are served LOCALLY from /public/fonts (no external CDN) so PDF
+ * generation always works, even offline / behind firewalls.
+ *
+ * IMPORTANT: Only register fonts whose files actually contain the glyphs of
+ * the target script (the old CDN URLs pointed at the *latin* subset of Noto
+ * Sans Arabic, which is why Arabic rendered as gibberish).
+ */
+
+// Resolve font path: in the browser use /public path, in Node.js use absolute path
+const fontPath = (filename: string) => {
+  if (typeof window !== "undefined") {
+    return `/fonts/${filename}`;
+  }
+  // Node.js environment — resolve relative to project public folder
+  return `${process.cwd()}/public/fonts/${filename}`;
 };
 
-// RTL language codes
-const RTL_LANGUAGES = ["ar", "he", "fa", "ur", "ps", "ku", "ug"];
+// Arabic + Latin (static Noto Naskh Arabic TTF — full Arabic & Latin glyph
+// coverage; variable TTFs are not supported by @react-pdf's fontkit build)
+Font.register({
+  family: "Cairo",
+  fonts: [
+    { src: fontPath("notonaskharabic-400.ttf"), fontWeight: 400 },
+    { src: fontPath("notonaskharabic-700.ttf"), fontWeight: 700 },
+  ],
+});
 
-// Language to script mapping
-const LANGUAGE_SCRIPT_MAP: Record<string, string> = {
-  ar: "arabic", fa: "arabic", ps: "arabic", ku: "arabic", ug: "arabic",
-  zh: "chinese", ja: "japanese", ko: "korean",
-  ru: "cyrillic", be: "cyrillic", uk: "cyrillic", bg: "cyrillic",
-  sr: "cyrillic", mk: "cyrillic", mn: "cyrillic", kk: "cyrillic", uz: "cyrillic",
-  el: "greek",
-  en: "latin", es: "latin", fr: "latin", it: "latin", de: "latin",
-  pt: "latin", nl: "latin", pl: "latin", cs: "latin", sk: "latin",
-  hu: "latin", ro: "latin", hr: "latin", sl: "latin",
-  da: "latin", sv: "latin", fi: "latin", no: "latin", nb: "latin",
-  tr: "latin", vi: "latin", th: "thai", he: "hebrew", lo: "lao",
-};
+// Hebrew (regular + bold)
+Font.register({
+  family: "NotoSansHebrew",
+  fonts: [
+    { src: fontPath("notosanshebrew-400.ttf"), fontWeight: 400 },
+    { src: fontPath("notosanshebrew-700.ttf"), fontWeight: 700 },
+  ],
+});
 
-// Map of script families to font families
-const SCRIPT_FONT_FAMILY: Record<string, string> = {
-  arabic: "Noto Sans Arabic",
-  chinese: "Noto Sans SC",
-  japanese: "Noto Sans JP",
-  korean: "Noto Sans KR",
-  cyrillic: "Roboto",
-  greek: "Roboto",
-  latin: "Lora",
-};
+// Chinese Simplified + Japanese (static CFF OTFs, full CJK coverage)
+Font.register({
+  family: "NotoSansSC",
+  fonts: [
+    { src: fontPath("notosanssc-400.otf"), fontWeight: 400 },
+    { src: fontPath("notosanssc-700.otf"), fontWeight: 700 },
+  ],
+});
+Font.register({
+  family: "NotoSansJP",
+  fonts: [
+    { src: fontPath("notosansjp-400.otf"), fontWeight: 400 },
+    { src: fontPath("notosansjp-700.otf"), fontWeight: 700 },
+  ],
+});
 
-function getScriptFamily(languageCode: string): string {
-  const normalizedCode = languageCode.toLowerCase();
-  const baseCode = normalizedCode.split("_")[0].toLowerCase();
-  return LANGUAGE_SCRIPT_MAP[baseCode] || "latin";
+// Latin faces (default + decorative display) — registered here so every
+// language path has a complete font set available.
+Font.register({
+  family: "Lora",
+  fonts: [
+    { src: fontPath("lora-latin-400-normal.woff") },
+    { src: fontPath("lora-latin-400-italic.woff"), fontStyle: "italic" },
+    { src: fontPath("lora-latin-700-normal.woff"), fontWeight: 700 },
+  ],
+});
+Font.register({
+  family: "Cinzel",
+  fonts: [
+    { src: fontPath("cinzel-latin-400-normal.woff") },
+    { src: fontPath("cinzel-latin-700-normal.woff"), fontWeight: 700 },
+  ],
+});
+// Decorative display face — headings, tour titles & day numbers only.
+Font.register({
+  family: "Cinzel Decorative",
+  fonts: [{ src: fontPath("cinzel-decorative-latin-400-normal.woff") }],
+});
+
+/**
+ * The single global font used for ALL body text in the PDF, chosen by
+ * language code. Must match the family names registered above exactly.
+ *  - ar        → Cairo   (Arabic)
+ *  - he        → NotoSansHebrew (Cairo has no Hebrew glyphs)
+ *  - zh / ja   → NotoSansSC / NotoSansJP (CJK)
+ *  - everything else (Latin, Cyrillic, Greek, Thai…) → Lora
+ */
+export function getGlobalFont(code: string): string {
+  const base = (code || "en").toLowerCase().split("-")[0];
+  if (base === "ar") return "Cairo";
+  if (base === "he") return "NotoSansHebrew";
+  if (base === "zh") return "NotoSansSC";
+  if (base === "ja") return "NotoSansJP";
+  return "Lora";
 }
 
 /**
- * Registers the appropriate font for a given language code
- * @param languageCode - ISO language code (e.g., 'ar', 'zh', 'en')
+ * Languages whose scripts the Latin display faces (Cinzel / Cinzel Decorative)
+ * can render. For every other language the global font is used for headings.
  */
-export async function registerFontForLanguage(languageCode: string): Promise<void> {
-  const scriptFamily = getScriptFamily(languageCode);
-
-  if (scriptFamily === "arabic") {
-    const urls = FONT_URLS.arabic;
-    await Font.register({
-      family: "Noto Sans Arabic",
-      fonts: [
-        { src: urls.regular, fontWeight: 400 },
-        { src: urls.bold, fontWeight: 700 },
-      ],
-    });
-  } else if (scriptFamily === "chinese") {
-    const urls = FONT_URLS.chinese;
-    await Font.register({
-      family: "Noto Sans SC",
-      fonts: [
-        { src: urls.regular, fontWeight: 400 },
-        { src: urls.bold, fontWeight: 700 },
-      ],
-    });
-  } else if (scriptFamily === "japanese") {
-    const urls = FONT_URLS.japanese;
-    await Font.register({
-      family: "Noto Sans JP",
-      fonts: [
-        { src: urls.regular, fontWeight: 400 },
-        { src: urls.bold, fontWeight: 700 },
-      ],
-    });
-  } else if (scriptFamily === "korean") {
-    const urls = FONT_URLS.korean;
-    await Font.register({
-      family: "Noto Sans KR",
-      fonts: [
-        { src: urls.regular, fontWeight: 400 },
-        { src: urls.bold, fontWeight: 700 },
-      ],
-    });
-  }
+export function isLatinDisplayLanguage(code: string): boolean {
+  const base = (code || "en").toLowerCase().split("-")[0];
+  return !["ar", "he", "zh", "ja", "ko", "ru", "th"].includes(base);
 }
+
+// RTL language codes
+const RTL_LANGUAGES = ["ar", "he", "fa", "ur", "ps", "ku", "ug"];
 
 /**
  * Determines if a language is written right-to-left (RTL)
  */
 export function isRTL(languageCode: string): boolean {
-  const normalizedCode = languageCode.toLowerCase();
-  const baseCode = normalizedCode.split("_")[0].toLowerCase();
-  return RTL_LANGUAGES.includes(baseCode);
+  const base = (languageCode || "en").toLowerCase().split("-")[0];
+  return RTL_LANGUAGES.includes(base);
 }
 
 /**
  * Gets the appropriate font family for a given language
  */
 export function getFontFamily(languageCode: string): string {
-  const scriptFamily = getScriptFamily(languageCode);
-  return SCRIPT_FONT_FAMILY[scriptFamily] || "Roboto";
-}
-
-/**
- * Checks if a specific font is available for a language
- */
-export function hasSpecialFont(languageCode: string): boolean {
-  const scriptFamily = getScriptFamily(languageCode);
-  return scriptFamily !== "latin" && scriptFamily !== "cyrillic" && scriptFamily !== "greek";
+  return getGlobalFont(languageCode);
 }
