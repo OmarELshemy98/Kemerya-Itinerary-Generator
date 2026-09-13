@@ -1,0 +1,231 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200">
+  <defs>
+    <linearGradient id="ankhGold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F3DFA2" />
+      <stop offset="35%" stop-color="#E8C774" />
+      <stop offset="65%" stop-color="#C9A962" />
+      <stop offset="100%" stop-color="#9B7E3C" />
+    </linearGradient>
+    <linearGradient id="ankhHighlight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF5D6" />
+      <stop offset="100%" stop-color="#E8C774" />
+    </linearGradient>
+    <linearGradient id="scarabGreen" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3B8B5F" />
+      <stop offset="50%" stop-color="#1F6B45" />
+      <stop offset="100%" stop-color="#0F4D2E" />
+    </linearGradient>
+    <linearGradient id="eyeBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E40AF" />
+      <stop offset="50%" stop-color="#1E3A8A" />
+      <stop offset="100%" stop-color="#172554" />
+    </linearGradient>
+    <linearGradient id="dividerLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#C9A962" stop-opacity="0.15" />
+      <stop offset="35%" stop-color="#C9A962" stop-opacity="0.95" />
+      <stop offset="50%" stop-color="#E8C774" stop-opacity="1" />
+      <stop offset="65%" stop-color="#C9A962" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#C9A962" stop-opacity="0.15" />
+    </linearGradient>
+  </defs>
+
+  <g id="ankh-divider-full" transform="translate(0, 10)">
+    <g stroke="url(#dividerLine)" stroke-width="1.4" fill="none">
+      <path d="M20 32 L 220 32" />
+      <path d="M380 32 L 580 32" />
+    </g>
+    <g stroke="url(#dividerLine)" stroke-width="0.7" fill="none" opacity="0.75">
+      <path d="M20 36 L 210 36" />
+      <path d="M390 36 L 580 36" />
+    </g>
+
+    <g id="left-ornament" transform="translate(212, 12)">
+      <g transform="translate(0, 12)">
+        <path d="M0 6 L 14 0 L 14 12 Z" fill="url(#ankhGold)" />
+      </g>
+      <g transform="translate(18, 14)">
+        <circle cx="3" cy="2" r="2" fill="url(#ankhGold)" />
+      </g>
+      <g transform="translate(24, 14)">
+        <circle cx="3" cy="2" r="1.2" fill="url(#ankhGold)" opacity="0.8" />
+      </g>
+    </g>
+
+    <g id="right-ornament" transform="translate(388, 12)">
+      <g transform="scale(-1, 1) translate(0, 12)">
+        <path d="M0 6 L 14 0 L 14 12 Z" fill="url(#ankhGold)" />
+      </g>
+      <g transform="translate(-10, 14)">
+        <circle cx="3" cy="2" r="2" fill="url(#ankhGold)" />
+      </g>
+      <g transform="translate(-18, 14)">
+        <circle cx="3" cy="2" r="1.2" fill="url(#ankhGold)" opacity="0.8" />
+      </g>
+    </g>
+
+    <g id="center-ankh" transform="translate(300, 0)">
+      <g transform="translate(-18, 0)">
+        <g id="ankh-large">
+          <g transform="translate(18, 4)">
+            <path
+              d="M18 22 C 18 22 18 44 18 44 L 18 60 M 6 60 L 30 60 M 18 40 L 4 40 L 4 30 L 18 30 M 18 40 L 32 40 L 32 30 L 18 30"
+              fill="none"
+              stroke="url(#ankhGold)"
+              stroke-width="3.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M18 2 C 10 2 4 9 4 16 C 4 23 10 30 18 30 C 26 30 32 23 32 16 C 32 9 26 2 18 2 Z"
+              fill="none"
+              stroke="url(#ankhGold)"
+              stroke-width="3.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M18 5 C 11.5 5 6.5 10.5 6.5 16 C 6.5 21.5 11.5 27 18 27 C 24.5 27 29.5 21.5 29.5 16 C 29.5 10.5 24.5 5 18 5 Z"
+              fill="url(#ankhHighlight)"
+              opacity="0.28"
+            />
+          </g>
+        </g>
+
+        <g transform="translate(-2, 30)" opacity="0.9">
+          <path d="M20 0 L 24 4 L 24 0 L 28 6 L 24 12 L 24 8 L 20 12 Z" fill="url(#ankhGold)" />
+        </g>
+        <g transform="translate(34, 30)" opacity="0.9">
+          <path d="M20 0 L 24 4 L 24 0 L 28 6 L 24 12 L 24 8 L 20 12 Z" fill="url(#ankhGold)" />
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <g id="small-ankh-divider" transform="translate(0, 110)">
+    <g stroke="url(#dividerLine)" stroke-width="1" fill="none">
+      <path d="M80 12 L 250 12" />
+      <path d="M350 12 L 520 12" />
+    </g>
+    <g transform="translate(296, 0)">
+      <path
+        d="M8 12 C 8 12 8 22 8 22 L 8 30 M 2 30 L 14 30"
+        fill="none"
+        stroke="url(#ankhGold)"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M8 1 C 3 1 0 4.5 0 8 C 0 11.5 3 15 8 15 C 13 15 16 11.5 16 8 C 16 4.5 13 1 8 1 Z"
+        fill="none"
+        stroke="url(#ankhGold)"
+        stroke-width="1.8"
+        stroke-linecap="round"
+      />
+    </g>
+  </g>
+
+  <g id="icon-row" transform="translate(20, 150)">
+    <g id="scarab-icon" transform="translate(0, 0)">
+      <g transform="translate(4, 4)">
+        <ellipse cx="10" cy="12" rx="8" ry="10" fill="url(#scarabGreen)" />
+        <path d="M2 12 C 2 6 6 2 10 2 C 14 2 18 6 18 12 C 18 18 14 22 10 22 C 6 22 2 18 2 12 Z" fill="none" stroke="url(#ankhGold)" stroke-width="1.2" />
+        <path d="M10 3 L 10 21" stroke="#0F4D2E" stroke-width="1.1" fill="none" opacity="0.85" />
+        <ellipse cx="10" cy="11" rx="4.5" ry="6" fill="#E8F8EE" opacity="0.3" />
+        <path d="M10 0 C 7.5 0 6 2 6 4 L 14 4 C 14 2 12.5 0 10 0 Z" fill="url(#scarabGreen)" />
+        <g stroke="url(#scarabGreen)" stroke-width="1.3" fill="none" opacity="0.95">
+          <path d="M0 8 L 4 9 M 0 13 L 4 12.5 M 20 8 L 16 9 M 20 13 L 16 12.5" />
+        </g>
+      </g>
+    </g>
+
+    <g id="eye-horus-icon" transform="translate(45, 4)">
+      <g transform="translate(0, 0)">
+        <path d="M0 10 C 4 2 10 0 16 0 C 22 0 28 2 32 10 C 28 18 22 20 16 20 C 10 20 4 18 0 10 Z" fill="url(#eyeBlue)" opacity="0.85" />
+        <path d="M0 10 C 4 2 10 0 16 0 C 22 0 28 2 32 10 C 28 18 22 20 16 20 C 10 20 4 18 0 10 Z" fill="none" stroke="url(#ankhGold)" stroke-width="1.1" />
+        <path d="M16 6 C 13 6 10.5 8.5 10.5 11 C 10.5 13.5 13 16 16 16" fill="none" stroke="url(#ankhHighlight)" stroke-width="1.5" stroke-linecap="round" />
+        <circle cx="16" cy="11" r="2.5" fill="url(#ankhHighlight)" />
+        <circle cx="16" cy="11" r="1.2" fill="#0F172A" />
+        <g stroke="url(#ankhGold)" stroke-width="1.1" fill="none" stroke-linecap="round">
+          <path d="M-2 14 L 5 13" />
+          <path d="M0 18 Q 4 21 7 20" />
+          <path d="M30 14 C 28 17 26 19 22 20" />
+          <path d="M16 20 C 16 22 15 25 13 26" />
+        </g>
+      </g>
+    </g>
+
+    <g id="pyramid-icon" transform="translate(92, 4)">
+      <path d="M14 0 L 28 24 L 0 24 Z" fill="url(#ankhGold)" />
+      <path d="M14 0 L 28 24 L 0 24 Z" fill="none" stroke="#8B6F3A" stroke-width="0.7" opacity="0.9" />
+      <path d="M14 0 L 14 24 M 6 12 L 22 12" stroke="#FDFBF7" stroke-width="0.6" fill="none" opacity="0.7" />
+      <path d="M14 0 L 28 24" stroke="#0F172A" stroke-width="0.45" fill="none" opacity="0.35" />
+    </g>
+
+    <g id="lotus-icon" transform="translate(130, 4)">
+      <g transform="translate(0, 2)">
+        <path d="M14 22 L 14 16 M 4 22 L 7 16 M 24 22 L 21 16" stroke="#1F6B45" stroke-width="1.2" fill="none" stroke-linecap="round" />
+        <path d="M14 2 C 11 5 9 10 9 14 C 9 16 11 17 14 17 C 17 17 19 16 19 14 C 19 10 17 5 14 2 Z" fill="#D94A7B" opacity="0.85" />
+        <path d="M5 12 C 7 8 10 6 14 5 C 11 9 10 12 10 14 C 10 15.5 12 16.5 14 17 C 10 16.5 7 15.5 5 14 C 4 13.4 4 12.6 5 12 Z" fill="#F472B6" opacity="0.7" />
+        <path d="M23 12 C 21 8 18 6 14 5 C 17 9 18 12 18 14 C 18 15.5 16 16.5 14 17 C 18 16.5 21 15.5 23 14 C 24 13.4 24 12.6 23 12 Z" fill="#F472B6" opacity="0.7" />
+        <ellipse cx="14" cy="17.5" rx="4" ry="1.5" fill="url(#scarabGreen)" opacity="0.85" />
+      </g>
+    </g>
+
+    <g id="cartouche-icon" transform="translate(172, 4)">
+      <path d="M4 0 H 22 V 18 H 9 L 4 22 Z" fill="none" stroke="url(#ankhGold)" stroke-width="1.6" />
+      <path d="M4 2 V 20 M 22 2 V 20 M 4 2 H 22" stroke="url(#ankhHighlight)" stroke-width="0.5" fill="none" opacity="0.7" />
+      <g stroke="url(#ankhGold)" stroke-width="1" fill="none" stroke-linecap="round">
+        <path d="M8 6 H 18" />
+        <path d="M8 10 H 18" />
+        <path d="M8 14 H 18" />
+      </g>
+    </g>
+
+    <g id="sun-disc-icon" transform="translate(208, 4)">
+      <circle cx="12" cy="12" r="10" fill="url(#ankhGold)" />
+      <circle cx="12" cy="12" r="10" fill="none" stroke="#8B6F3A" stroke-width="0.7" />
+      <circle cx="12" cy="12" r="4.5" fill="#F39516" opacity="0.9" />
+      <circle cx="12" cy="12" r="2.5" fill="#FDE68A" />
+      <g stroke="url(#ankhGold)" stroke-width="1.4" fill="none" stroke-linecap="round">
+        <path d="M12 -1 V 4 M 12 20 V 25 M -1 12 H 4 M 20 12 H 25" />
+        <path d="M3 3 L 6 6 M 18 18 L 21 21 M 21 3 L 18 6 M 6 18 L 3 21" />
+      </g>
+    </g>
+
+    <g id="feather-maat-icon" transform="translate(240, 4)">
+      <path d="M2 22 L 14 2 L 24 18 L 10 22 Z" fill="url(#eyeBlue)" opacity="0.8" />
+      <path d="M14 2 L 14 22" stroke="url(#ankhGold)" stroke-width="1" />
+      <g stroke="url(#ankhHighlight)" stroke-width="0.7" fill="none" opacity="0.85">
+        <path d="M14 7 L 6 11 M 14 11 L 6 16 M 14 15 L 6 20 M 14 7 L 21 10 M 14 11 L 22 15 M 14 15 L 21 19" />
+      </g>
+      <path d="M0 22 H 28" stroke="url(#ankhGold)" stroke-width="1.5" stroke-linecap="round" />
+    </g>
+
+    <g id="djed-pillar-icon" transform="translate(282, 4)">
+      <g stroke="url(#ankhGold)" stroke-width="1.3" fill="none" stroke-linecap="round">
+        <path d="M14 0 V 24 M 4 24 H 24" />
+        <path d="M6 4 H 22 M 6 9 H 22 M 6 14 H 22 M 6 19 H 22" />
+      </g>
+      <g fill="url(#ankhHighlight)" opacity="0.5">
+        <rect x="7" y="5" width="14" height="3" />
+        <rect x="7" y="10" width="14" height="3" />
+        <rect x="7" y="15" width="14" height="3" />
+      </g>
+    </g>
+
+    <g id="cobra-icon" transform="translate(322, 4)">
+      <path d="M14 22 C 14 16 10 13 10 9 C 10 5 12 2 16 2 C 20 2 22 5 22 9 L 16 8 C 16 6 15 5 14 7 C 13 9 15 11 18 12 C 20 13 21 15 20 18 C 19 20 17 22 14 22 Z" fill="url(#scarabGreen)" />
+      <path d="M14 22 C 14 16 10 13 10 9 C 10 5 12 2 16 2 C 20 2 22 5 22 9" fill="none" stroke="url(#ankhGold)" stroke-width="1" />
+      <circle cx="19" cy="5" r="0.9" fill="#EF4444" />
+      <path d="M12 22 H 16 L 17 24 L 11 24 Z" fill="#FDE68A" />
+    </g>
+
+    <g id="jackal-icon" transform="translate(362, 4)">
+      <path d="M4 12 C 4 7 7 3 12 3 C 15 3 17 5 17 7 L 19 9 L 24 11 L 24 15 L 17 14 L 17 22 L 4 22 Z" fill="url(#ankhGold)" />
+      <path d="M12 5 L 10 2 L 8 5 Z M 15 4 L 17 1 L 17 4 Z" fill="#8B6F3A" />
+      <circle cx="14" cy="8" r="0.8" fill="#0F172A" />
+      <path d="M4 22 H 25" stroke="#0F172A" stroke-width="0.6" opacity="0.5" />
+    </g>
+  </g>
+</svg>

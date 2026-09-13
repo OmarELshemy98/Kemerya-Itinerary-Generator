@@ -1,0 +1,228 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 595 842" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="goldStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E8C774" />
+      <stop offset="35%" stop-color="#C9A962" />
+      <stop offset="65%" stop-color="#D9B872" />
+      <stop offset="100%" stop-color="#A88942" />
+    </linearGradient>
+    <linearGradient id="goldFill" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#E8D7A8" />
+      <stop offset="50%" stop-color="#C9A962" />
+      <stop offset="100%" stop-color="#9B7E3C" />
+    </linearGradient>
+    <linearGradient id="lapisFill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E3A8A" />
+      <stop offset="50%" stop-color="#1E40AF" />
+      <stop offset="100%" stop-color="#172554" />
+    </linearGradient>
+    <linearGradient id="cornerGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F0D98A" />
+      <stop offset="40%" stop-color="#D9B872" />
+      <stop offset="70%" stop-color="#B89650" />
+      <stop offset="100%" stop-color="#8B6F3A" />
+    </linearGradient>
+  </defs>
+
+  <g id="outer-frame">
+    <rect x="18" y="18" width="559" height="806" fill="none" stroke="url(#goldStroke)" stroke-width="2.2" />
+    <rect x="24" y="24" width="547" height="794" fill="none" stroke="url(#goldStroke)" stroke-width="0.8" opacity="0.7" />
+    <rect x="40" y="40" width="515" height="762" fill="none" stroke="#1E3A8A" stroke-width="1.4" opacity="0.55" />
+  </g>
+
+  <g id="top-border">
+    <g transform="translate(40, 30)">
+      <g id="top-repeats" />
+    </g>
+  </g>
+
+  <g id="corner-tl" transform="translate(26, 26)">
+    <g transform="translate(0, 0)">
+      <path d="M0 32 L 0 0 L 32 0 L 28 4 L 4 4 L 4 28 Z" fill="url(#lapisFill)" opacity="0.85" />
+      <path d="M0 32 L 0 0 L 32 0" fill="none" stroke="url(#cornerGold)" stroke-width="2.2" />
+      <g stroke="url(#goldStroke)" stroke-width="0.9" fill="none">
+        <path d="M4 10 L 10 4 M4 18 L 18 4 M4 26 L 26 4" opacity="0.75" />
+      </g>
+      <g transform="translate(12, 12)">
+        <path
+          d="M4 0 C 1.8 0 0 1.8 0 4 C 0 5.8 1 7.2 2.5 7.8 L 2.5 14 L 5.5 14 L 5.5 7.8 C 7 7.2 8 5.8 8 4 C 8 1.8 6.2 0 4 0 Z"
+          fill="url(#goldFill)"
+        />
+      </g>
+    </g>
+  </g>
+
+  <g id="corner-tr" transform="translate(569, 26)">
+    <g transform="scale(-1, 1) translate(0, 0)">
+      <path d="M0 32 L 0 0 L 32 0 L 28 4 L 4 4 L 4 28 Z" fill="url(#lapisFill)" opacity="0.85" />
+      <path d="M0 32 L 0 0 L 32 0" fill="none" stroke="url(#cornerGold)" stroke-width="2.2" />
+      <g stroke="url(#goldStroke)" stroke-width="0.9" fill="none">
+        <path d="M4 10 L 10 4 M4 18 L 18 4 M4 26 L 26 4" opacity="0.75" />
+      </g>
+      <g transform="translate(12, 12)">
+        <path
+          d="M4 0 C 1.8 0 0 1.8 0 4 C 0 5.8 1 7.2 2.5 7.8 L 2.5 14 L 5.5 14 L 5.5 7.8 C 7 7.2 8 5.8 8 4 C 8 1.8 6.2 0 4 0 Z"
+          fill="url(#goldFill)"
+        />
+      </g>
+    </g>
+  </g>
+
+  <g id="corner-bl" transform="translate(26, 816)">
+    <g transform="scale(1, -1) translate(0, 0)">
+      <path d="M0 32 L 0 0 L 32 0 L 28 4 L 4 4 L 4 28 Z" fill="url(#lapisFill)" opacity="0.85" />
+      <path d="M0 32 L 0 0 L 32 0" fill="none" stroke="url(#cornerGold)" stroke-width="2.2" />
+      <g stroke="url(#goldStroke)" stroke-width="0.9" fill="none">
+        <path d="M4 10 L 10 4 M4 18 L 18 4 M4 26 L 26 4" opacity="0.75" />
+      </g>
+      <g transform="translate(12, 12)">
+        <path
+          d="M4 0 C 1.8 0 0 1.8 0 4 C 0 5.8 1 7.2 2.5 7.8 L 2.5 14 L 5.5 14 L 5.5 7.8 C 7 7.2 8 5.8 8 4 C 8 1.8 6.2 0 4 0 Z"
+          fill="url(#goldFill)"
+        />
+      </g>
+    </g>
+  </g>
+
+  <g id="corner-br" transform="translate(569, 816)">
+    <g transform="scale(-1, -1) translate(0, 0)">
+      <path d="M0 32 L 0 0 L 32 0 L 28 4 L 4 4 L 4 28 Z" fill="url(#lapisFill)" opacity="0.85" />
+      <path d="M0 32 L 0 0 L 32 0" fill="none" stroke="url(#cornerGold)" stroke-width="2.2" />
+      <g stroke="url(#goldStroke)" stroke-width="0.9" fill="none">
+        <path d="M4 10 L 10 4 M4 18 L 18 4 M4 26 L 26 4" opacity="0.75" />
+      </g>
+      <g transform="translate(12, 12)">
+        <path
+          d="M4 0 C 1.8 0 0 1.8 0 4 C 0 5.8 1 7.2 2.5 7.8 L 2.5 14 L 5.5 14 L 5.5 7.8 C 7 7.2 8 5.8 8 4 C 8 1.8 6.2 0 4 0 Z"
+          fill="url(#goldFill)"
+        />
+      </g>
+    </g>
+  </g>
+
+  <g id="top-motif-row">
+    <g id="top-pattern">
+      <g>
+        <g transform="translate(50, 30)">
+          <g id="lotus-row">
+            <g id="lotus-unit">
+              <g stroke="url(#goldStroke)" stroke-width="0.7" fill="none" opacity="0.8">
+                <path d="M0 6 Q 8 0 16 6 T 32 6" />
+                <path d="M0 6 L 0 2 L 32 2 L 32 6" />
+              </g>
+              <g transform="translate(12, -1)">
+                <path d="M4 8 C 4 5 6 2 8 2 C 10 2 12 5 12 8 L 10 9 L 6 9 Z" fill="url(#lapisFill)" opacity="0.78" />
+                <path d="M8 3 C 6.5 3.5 5.5 5 5.5 7 L 10.5 7 C 10.5 5 9.5 3.5 8 3 Z" fill="url(#goldFill)" />
+              </g>
+              <g stroke="url(#goldStroke)" stroke-width="0.5" fill="none" opacity="0.6">
+                <path d="M-3 9 Q 0 11 3 9" />
+                <path d="M29 9 Q 32 11 35 9" />
+              </g>
+            </g>
+          </g>
+        </g>
+        <g id="top-repeat-group" />
+      </g>
+    </g>
+  </g>
+
+  <g id="horizontal-bands">
+    <g id="top-band" transform="translate(40, 46)">
+      <rect x="0" y="0" width="515" height="10" fill="url(#lapisFill)" opacity="0.25" />
+      <g stroke="url(#goldStroke)" stroke-width="0.8" fill="none">
+        <path d="M0 0 L 515 0" />
+        <path d="M0 10 L 515 10" />
+      </g>
+      <g transform="translate(0, 2)">
+        <g id="band-row" />
+      </g>
+    </g>
+
+    <g id="bottom-band" transform="translate(40, 786)">
+      <rect x="0" y="0" width="515" height="10" fill="url(#lapisFill)" opacity="0.25" />
+      <g stroke="url(#goldStroke)" stroke-width="0.8" fill="none">
+        <path d="M0 0 L 515 0" />
+        <path d="M0 10 L 515 10" />
+      </g>
+      <g transform="translate(0, 2)">
+        <g id="band-row-b" />
+      </g>
+    </g>
+  </g>
+
+  <g id="column-motifs">
+    <g id="left-col" transform="translate(30, 64)">
+      <rect x="0" y="0" width="10" height="716" fill="url(#lapisFill)" opacity="0.12" />
+      <g stroke="url(#goldStroke)" stroke-width="0.7" fill="none">
+        <path d="M0 0 L 0 716" />
+        <path d="M10 0 L 10 716" />
+      </g>
+      <g id="left-col-motifs" />
+    </g>
+
+    <g id="right-col" transform="translate(555, 64)">
+      <rect x="0" y="0" width="10" height="716" fill="url(#lapisFill)" opacity="0.12" />
+      <g stroke="url(#goldStroke)" stroke-width="0.7" fill="none">
+        <path d="M0 0 L 0 716" />
+        <path d="M10 0 L 10 716" />
+      </g>
+      <g id="right-col-motifs" />
+    </g>
+  </g>
+
+  <script type="text/javascript"><![CDATA[
+    (function() {
+      var step = 36;
+      var top = document.getElementById('lotus-row');
+      var unit = document.getElementById('lotus-unit');
+      if (top && unit) {
+        for (var i = 1; i <= 13; i++) {
+          var clone = unit.cloneNode(true);
+          clone.setAttribute('transform', 'translate(' + (i * step) + ', 0)');
+          top.appendChild(clone);
+        }
+      }
+      var band = document.getElementById('band-row');
+      var bandB = document.getElementById('band-row-b');
+      function buildBand(container) {
+        if (!container) return;
+        for (var j = 0; j < 103; j++) {
+          var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.setAttribute('transform', 'translate(' + (j * 5) + ', 0)');
+          var dash = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          dash.setAttribute('x', '0');
+          dash.setAttribute('y', '3');
+          dash.setAttribute('width', '3');
+          dash.setAttribute('height', '4');
+          dash.setAttribute('fill', 'url(#goldFill)');
+          dash.setAttribute('opacity', '0.75');
+          g.appendChild(dash);
+          container.appendChild(g);
+        }
+      }
+      buildBand(band);
+      buildBand(bandB);
+      function buildCol(container) {
+        if (!container) return;
+        for (var k = 1; k < 24; k++) {
+          var cg = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          cg.setAttribute('transform', 'translate(2, ' + (k * 30) + ')');
+          var dot = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          dot.setAttribute('d', 'M3 0 C 1.4 0 0 1.4 0 3 C 0 4.6 1.4 6 3 6 C 4.6 6 6 4.6 6 3 C 6 1.4 4.6 0 3 0 Z');
+          dot.setAttribute('fill', 'url(#goldFill)');
+          dot.setAttribute('opacity', '0.85');
+          cg.appendChild(dot);
+          var line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          line.setAttribute('d', 'M3 8 L 3 20');
+          line.setAttribute('stroke', 'url(#goldStroke)');
+          line.setAttribute('stroke-width', '0.6');
+          line.setAttribute('opacity', '0.65');
+          cg.appendChild(line);
+          container.appendChild(cg);
+        }
+      }
+      buildCol(document.getElementById('left-col-motifs'));
+      buildCol(document.getElementById('right-col-motifs'));
+    })();
+  ]]></script>
+</svg>

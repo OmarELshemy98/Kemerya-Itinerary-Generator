@@ -1,0 +1,189 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 140" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="sunsetSky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1B1052" />
+      <stop offset="12%" stop-color="#3F1D7A" />
+      <stop offset="25%" stop-color="#7C2D8B" />
+      <stop offset="40%" stop-color="#C43E6B" />
+      <stop offset="55%" stop-color="#E96D4A" />
+      <stop offset="70%" stop-color="#F5A24B" />
+      <stop offset="85%" stop-color="#FAD07A" />
+      <stop offset="100%" stop-color="#F8E4A8" />
+    </linearGradient>
+
+    <linearGradient id="sunsetGlow" x1="50%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#FFF3C7" stop-opacity="0.95" />
+      <stop offset="40%" stop-color="#FFC875" stop-opacity="0.7" />
+      <stop offset="70%" stop-color="#FF8F5C" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#E96D4A" stop-opacity="0" />
+    </linearGradient>
+
+    <radialGradient id="sunDisc" cx="50%" cy="55%" r="50%">
+      <stop offset="0%" stop-color="#FFFBE6" />
+      <stop offset="35%" stop-color="#FFE08A" />
+      <stop offset="65%" stop-color="#FFA64D" />
+      <stop offset="100%" stop-color="#F76B3A" stop-opacity="0" />
+    </radialGradient>
+
+    <linearGradient id="nileWater" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F8C06B" />
+      <stop offset="12%" stop-color="#E88F4A" />
+      <stop offset="28%" stop-color="#B75464" />
+      <stop offset="45%" stop-color="#7E3A7B" />
+      <stop offset="65%" stop-color="#4E2A7A" />
+      <stop offset="82%" stop-color="#2A1F62" />
+      <stop offset="100%" stop-color="#141444" />
+    </linearGradient>
+
+    <linearGradient id="bankNear" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1A0F24" />
+      <stop offset="100%" stop-color="#0B0816" />
+    </linearGradient>
+
+    <linearGradient id="duneSilhouette" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3D1F4F" />
+      <stop offset="50%" stop-color="#4C2564" />
+      <stop offset="100%" stop-color="#2D1744" />
+    </linearGradient>
+
+    <linearGradient id="feluccaSail" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F6EFD7" />
+      <stop offset="45%" stop-color="#E9D8A8" />
+      <stop offset="100%" stop-color="#C9A962" />
+    </linearGradient>
+
+    <linearGradient id="sailShadow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-opacity="0" />
+      <stop offset="65%" stop-color="#8B5E3C" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#5E3E24" stop-opacity="0.55" />
+    </linearGradient>
+
+    <filter id="waterShimmer" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="4" />
+      <feColorMatrix values="0 0 0 0 1
+                             0 0 0 0 0.9
+                             0 0 0 0 0.5
+                             0 0 0 0.15 0" />
+      <feComposite operator="in" in2="SourceGraphic" />
+    </filter>
+  </defs>
+
+  <rect x="0" y="0" width="520" height="140" fill="url(#sunsetSky)" />
+
+  <circle cx="260" cy="62" r="70" fill="url(#sunsetGlow)" />
+
+  <circle cx="260" cy="66" r="22" fill="url(#sunDisc)" />
+  <circle cx="260" cy="66" r="15" fill="#FFF6D8" />
+  <circle cx="260" cy="66" r="9" fill="#FFFFFF" />
+
+  <g opacity="0.9">
+    <path d="M0 80 Q 60 70 120 76 T 260 74 T 400 78 T 520 72 L 520 90 L 0 90 Z" fill="url(#duneSilhouette)" opacity="0.65" />
+    <path d="M0 86 Q 70 78 140 84 T 280 82 T 420 86 T 520 80 L 520 94 L 0 94 Z" fill="#24123D" opacity="0.85" />
+  </g>
+
+  <g fill="#0A0614" opacity="0.96">
+    <path d="M0 86 Q 40 82 90 88 T 180 86 T 280 90 T 380 86 T 460 89 T 520 86 L 520 96 L 0 96 Z" opacity="0.6" />
+  </g>
+
+  <g fill="#0F0920" opacity="0.98">
+    <g transform="translate(24, 74)">
+      <ellipse cx="0" cy="18" rx="22" ry="5" />
+      <path d="M0 18 C 0 10 3 4 10 4 C 14 4 16 7 16 10 C 16 6 20 2 26 2 C 22 10 20 18 20 18 Z" />
+    </g>
+
+    <g transform="translate(68, 78)">
+      <ellipse cx="0" cy="14" rx="16" ry="3.5" />
+      <path d="M0 14 C 0 8 2 3 8 3 C 11 3 12.5 5.5 12.5 8 C 12.5 5 16 1.5 20 1.5 C 17 8 15 14 15 14 Z" />
+    </g>
+
+    <g transform="translate(450, 76)">
+      <ellipse cx="0" cy="16" rx="18" ry="4" />
+      <path d="M0 16 C 0 9 2.5 4 9 4 C 12.5 4 14 6.5 14 9 C 14 6 17.5 2 22 2 C 19 9 17 16 17 16 Z" />
+    </g>
+
+    <g transform="translate(492, 80)">
+      <ellipse cx="0" cy="12" rx="13" ry="3" />
+      <path d="M0 12 C 0 7 2 3 7 3 C 9.5 3 11 5 11 7 C 11 5 14 2 17.5 2 C 15 7 13.5 12 13.5 12 Z" />
+    </g>
+  </g>
+
+  <g opacity="0.92">
+    <path d="M0 80 Q 50 84 110 82 T 230 84 T 350 82 T 470 85 T 520 83 L 520 90 L 0 90 Z" fill="url(#duneSilhouette)" opacity="0.5" />
+  </g>
+
+  <rect x="0" y="88" width="520" height="52" fill="url(#nileWater)" />
+
+  <g opacity="0.55" filter="url(#waterShimmer)">
+    <rect x="0" y="88" width="520" height="52" fill="url(#nileWater)" />
+  </g>
+
+  <g opacity="0.85">
+    <circle cx="260" cy="98" r="18" fill="#FFD97A" opacity="0.5" />
+    <ellipse cx="260" cy="102" rx="26" ry="3" fill="#FFC560" opacity="0.45" />
+    <ellipse cx="260" cy="108" rx="38" ry="2.5" fill="#FFAD50" opacity="0.38" />
+    <ellipse cx="260" cy="116" rx="52" ry="2" fill="#E07A60" opacity="0.3" />
+    <ellipse cx="260" cy="124" rx="66" ry="1.6" fill="#A85580" opacity="0.25" />
+    <ellipse cx="260" cy="132" rx="80" ry="1.2" fill="#723B8A" opacity="0.2" />
+  </g>
+
+  <g stroke="#FFE4A6" stroke-width="0.4" fill="none" opacity="0.55">
+    <path d="M30 102 Q 90 100 150 102 T 270 100 T 390 102 T 490 100" />
+    <path d="M20 112 Q 100 110 180 112 T 340 110 T 500 112" opacity="0.75" />
+    <path d="M10 122 Q 120 120 240 122 T 480 120 T 510 122" opacity="0.5" />
+    <path d="M40 132 Q 160 130 280 132 T 500 130" opacity="0.4" />
+  </g>
+
+  <g id="felucca" transform="translate(340, 52)">
+    <g id="felucca-reflection" transform="translate(0, 72) scale(1, -1)" opacity="0.3">
+      <path d="M-22 14 L -16 20 L 60 20 L 66 14 C 50 16 10 18 -22 14 Z" fill="#F8E4A8" />
+    </g>
+
+    <path d="M-22 14 L -16 20 L 60 20 L 66 14 C 50 16 10 18 -22 14 Z" fill="#3A1F2E" />
+    <path d="M-22 14 L -16 20 L 60 20 L 66 14 C 50 16 10 18 -22 14 Z" fill="none" stroke="#6B4A2A" stroke-width="0.8" opacity="0.9" />
+
+    <path d="M-10 14 L -8 18 M 0 14 L 2 18 M 14 14 L 16 18 M 30 14 L 32 18 M 46 14 L 48 18" stroke="#8B6A44" stroke-width="0.6" opacity="0.7" />
+
+    <path d="M22 14 L 22 -50 L 24 -50 L 24 14" fill="#6B4A2A" />
+    <path d="M22 14 L 22 -50 L 24 -50 L 24 14" fill="none" stroke="#4A2F18" stroke-width="0.4" />
+
+    <path d="M24 -48 C 44 -44 64 -30 70 -4 C 50 -14 30 -26 24 -48 Z" fill="url(#feluccaSail)" />
+    <path d="M24 -48 C 44 -44 64 -30 70 -4 C 50 -14 30 -26 24 -48 Z" fill="url(#sailShadow)" />
+    <path d="M24 -48 C 44 -44 64 -30 70 -4 C 50 -14 30 -26 24 -48 Z" fill="none" stroke="#8B5E3C" stroke-width="0.8" opacity="0.85" />
+
+    <path d="M24 -48 L 46 -28 L 70 -4" stroke="#A98352" stroke-width="0.5" fill="none" opacity="0.6" />
+    <path d="M30 -40 L 54 -22 M 36 -34 L 60 -14 M 42 -28 L 66 -8" stroke="#8B6A44" stroke-width="0.35" fill="none" opacity="0.55" />
+
+    <path d="M22 -4 L -6 14" stroke="#5A3A22" stroke-width="1.2" stroke-linecap="round" />
+    <path d="M24 -4 L 52 14" stroke="#5A3A22" stroke-width="1.2" stroke-linecap="round" />
+
+    <circle cx="28" cy="12" r="1.8" fill="#1A0F24" />
+    <circle cx="28" cy="12" r="1" fill="#2A1F3A" />
+    <path d="M28 13.5 L 28 16 M 28 16 L 25 18 M 28 16 L 31 18" stroke="#1A0F24" stroke-width="0.5" />
+  </g>
+
+  <g opacity="0.75">
+    <path d="M100 110 Q 140 108 180 110 T 260 108 T 340 110 T 420 108 T 500 110" stroke="#FFD28A" stroke-width="0.45" fill="none" />
+  </g>
+
+  <g fill="#FFFFFF" opacity="0.5">
+    <circle cx="60" cy="16" r="1" />
+    <circle cx="130" cy="10" r="0.8" />
+    <circle cx="180" cy="22" r="1.2" />
+    <circle cx="210" cy="8" r="0.6" />
+    <circle cx="320" cy="14" r="1" />
+    <circle cx="380" cy="20" r="0.9" />
+    <circle cx="420" cy="10" r="0.7" />
+    <circle cx="470" cy="18" r="1.1" />
+    <circle cx="500" cy="26" r="0.8" />
+  </g>
+
+  <g opacity="0.9">
+    <ellipse cx="260" cy="50" rx="140" ry="3" fill="none" stroke="#FFB870" stroke-width="0.4" />
+    <ellipse cx="260" cy="40" rx="180" ry="2" fill="none" stroke="#FF9555" stroke-width="0.25" opacity="0.6" />
+  </g>
+
+  <rect x="0" y="0" width="520" height="6" fill="#141024" opacity="0.55" />
+  <rect x="0" y="134" width="520" height="6" fill="url(#bankNear)" />
+
+  <path d="M0 6 Q 130 2 260 6 T 520 6 L 520 0 L 0 0 Z" fill="#0B0816" opacity="0.7" />
+</svg>

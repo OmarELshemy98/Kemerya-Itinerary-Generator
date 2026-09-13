@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 595 842" preserveAspectRatio="none">
+  <defs>
+    <radialGradient id="parchmentGlow" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#F5EBD3" />
+      <stop offset="45%" stop-color="#EBD9B4" />
+      <stop offset="75%" stop-color="#D9C496" />
+      <stop offset="100%" stop-color="#BF9F6E" />
+    </radialGradient>
+    <radialGradient id="cornerStain" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#8B6F47" stop-opacity="0.35" />
+      <stop offset="70%" stop-color="#8B6F47" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#8B6F47" stop-opacity="0" />
+    </radialGradient>
+    <filter id="agedGrain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" seed="7" />
+      <feColorMatrix
+        type="matrix"
+        values="0 0 0 0 0.42
+                0 0 0 0 0.32
+                0 0 0 0 0.18
+                0 0 0 0.08 0"
+      />
+      <feComposite operator="in" in2="SourceGraphic" />
+    </filter>
+    <filter id="roughEdge" x="-2%" y="-2%" width="104%" height="104%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="13" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="6" />
+    </filter>
+    <pattern id="fineGrain" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+      <rect width="60" height="60" fill="transparent" />
+      <circle cx="8" cy="12" r="0.5" fill="#9B7B4A" opacity="0.25" />
+      <circle cx="32" cy="8" r="0.4" fill="#A88550" opacity="0.2" />
+      <circle cx="48" cy="28" r="0.6" fill="#8B6B3F" opacity="0.3" />
+      <circle cx="18" cy="40" r="0.35" fill="#B89562" opacity="0.18" />
+      <circle cx="52" cy="52" r="0.45" fill="#9B7B4A" opacity="0.22" />
+      <circle cx="26" cy="55" r="0.5" fill="#A88550" opacity="0.2" />
+      <circle cx="4" cy="34" r="0.3" fill="#8B6B3F" opacity="0.28" />
+      <circle cx="40" cy="45" r="0.4" fill="#B89562" opacity="0.15" />
+    </pattern>
+  </defs>
+
+  <g filter="url(#roughEdge)">
+    <rect x="14" y="14" width="567" height="814" fill="url(#parchmentGlow)" />
+  </g>
+
+  <rect x="14" y="14" width="567" height="814" fill="url(#fineGrain)" />
+  <rect x="14" y="14" width="567" height="814" fill="transparent" filter="url(#agedGrain)" />
+
+  <ellipse cx="55" cy="55" rx="55" ry="50" fill="url(#cornerStain)" />
+  <ellipse cx="540" cy="58" rx="58" ry="52" fill="url(#cornerStain)" />
+  <ellipse cx="58" cy="792" rx="55" ry="48" fill="url(#cornerStain)" />
+  <ellipse cx="542" cy="788" rx="56" ry="52" fill="url(#cornerStain)" />
+
+  <ellipse cx="297" cy="70" rx="160" ry="28" fill="#9B7B4A" opacity="0.08" />
+  <ellipse cx="297" cy="775" rx="170" ry="30" fill="#8B6B3F" opacity="0.09" />
+  <ellipse cx="60" cy="420" rx="26" ry="130" fill="#9B7B4A" opacity="0.07" />
+  <ellipse cx="540" cy="430" rx="28" ry="140" fill="#8B6B3F" opacity="0.08" />
+
+  <path
+    d="M80 120 Q 180 108 280 125 T 480 118 T 530 132"
+    stroke="#A88550"
+    stroke-width="0.6"
+    fill="none"
+    opacity="0.35"
+  />
+  <path
+    d="M70 720 Q 190 735 300 718 T 490 728 T 535 712"
+    stroke="#8B6B3F"
+    stroke-width="0.5"
+    fill="none"
+    opacity="0.3"
+  />
+  <path
+    d="M120 180 Q 140 320 132 480 T 124 680"
+    stroke="#A88550"
+    stroke-width="0.4"
+    fill="none"
+    opacity="0.22"
+  />
+  <path
+    d="M475 150 Q 460 300 468 460 T 472 690"
+    stroke="#9B7B4A"
+    stroke-width="0.4"
+    fill="none"
+    opacity="0.25"
+  />
+
+  <g fill="#8B6F47" opacity="0.3">
+    <circle cx="110" cy="180" r="1.2" />
+    <circle cx="142" cy="220" r="0.8" />
+    <circle cx="90" cy="295" r="1" />
+    <circle cx="500" cy="175" r="1.1" />
+    <circle cx="470" cy="255" r="0.9" />
+    <circle cx="520" cy="320" r="0.7" />
+    <circle cx="130" cy="540" r="1" />
+    <circle cx="85" cy="605" r="0.85" />
+    <circle cx="480" cy="560" r="1.1" />
+    <circle cx="515" cy="630" r="0.8" />
+    <circle cx="200" cy="80" r="0.7" />
+    <circle cx="380" cy="75" r="0.75" />
+    <circle cx="290" cy="765" r="0.9" />
+    <circle cx="160" cy="770" r="0.6" />
+    <circle cx="420" cy="768" r="0.7" />
+  </g>
+
+  <g stroke="#9B7B4A" stroke-width="0.25" fill="none" opacity="0.18">
+    <path d="M100 100 L 115 112 L 108 128" />
+    <path d="M495 95 L 508 108 L 502 125" />
+    <path d="M95 755 L 108 745 L 112 760" />
+    <path d="M490 760 L 505 750 L 510 765" />
+    <path d="M240 90 L 248 105 L 256 118" />
+    <path d="M340 85 L 348 100 L 356 115" />
+    <path d="M230 760 L 240 748 L 250 735" />
+    <path d="M350 755 L 360 743 L 370 730" />
+  </g>
+</svg>

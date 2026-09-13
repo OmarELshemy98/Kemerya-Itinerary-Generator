@@ -13,6 +13,12 @@ import {
   Svg,
   Path,
   G,
+  Circle,
+  Rect,
+  Defs,
+  LinearGradient,
+  Stop,
+  Ellipse,
 } from "@react-pdf/renderer";
 import type { Tour, BookingConfig, CompanyInfo, ItineraryDay } from "@/types";
 import { KEMERYA_COMPANY_INFO } from "@/data/company";
@@ -54,22 +60,22 @@ interface ItineraryPDFProps {
   languageCode?: string;
 }
 
-// Fonts are registered centrally in @/lib/pdf-fonts (served locally from
-// /public/fonts so PDF generation works offline / behind firewalls).
 Font.registerHyphenationCallback((word) => [word]);
 
-const BRAND_COLORS = {
-  charcoal: "#171717", // Charcoal Black - Primary Text & Backgrounds
-  gold: "#C9A962", // Royal Gold - Borders, Accents & Highlights
-  lightGold: "#E8D7B1",
-  bg: "#FDFBF7", // Premium Ivory
-  text: "#171717", // Charcoal Black - Primary Text
-  muted: "#8A8171", // Warm muted stone for secondary text
-  border: "#C9A962", // Royal Gold - Borders & Accents
-  inclusionsBg: "#FFFFFF",
-  inclusionsText: "#171717",
-  exclusionsBg: "#FFFFFF",
-  exclusionsText: "#171717",
+const PARCHMENT_COLORS = {
+  deepBrown: "#3D2B17",
+  warmBrown: "#5A4226",
+  agedBrown: "#7A6448",
+  antiqueGold: "#B8963A",
+  royalGold: "#C9A962",
+  paleGold: "#E8D7B1",
+  lapis: "#1E3A8A",
+  deepLapis: "#172554",
+  parchmentLight: "#F5EBD3",
+  parchmentMid: "#EBD9B4",
+  parchmentDark: "#BF9F6E",
+  ink: "#2C1E10",
+  scarabGreen: "#1F6B45",
 };
 
 function getOfferMeta(booking: BookingConfig): { title: string; note: string } {
@@ -79,457 +85,288 @@ function getOfferMeta(booking: BookingConfig): { title: string; note: string } {
   };
 }
 
-// ═══════════════════════════════════════════════════════════════
-// Pharaonic SVG Icons — Luxury Gold (#C5A059)
-// ═══════════════════════════════════════════════════════════════
-
-/** Ankh — Ancient Egyptian symbol of life */
-const AnkhIcon = ({
-  size = 16,
-  color = "#C5A059",
-}: {
-  size?: number;
-  color?: string;
-}) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24">
-    <G fill={color}>
-      <Path d="M12 2 L12 22 M12 4 C8 4 6 7 6 10 C6 13 8 15 12 15 C16 15 18 13 18 10 C18 7 16 4 12 4 Z" />
-    </G>
-  </Svg>
+const AnkhDivider = ({ color = PARCHMENT_COLORS.royalGold }: { color?: string }) => (
+  <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 10 }}>
+    <View style={{ flex: 1, height: 1, backgroundColor: color, opacity: 0.45 }} />
+    <View style={{ width: 3, height: 3, backgroundColor: color, opacity: 0.8, marginHorizontal: 6 }} />
+    <View style={{ marginHorizontal: 4 }}>
+      <Svg width={26} height={22} viewBox="0 0 26 22">
+        <G stroke={color} strokeWidth={1.8} fill="none" strokeLinecap="round" strokeLinejoin="round">
+          <Path d="M13 7 C 8.5 7 5.5 10 5.5 13 C 5.5 16 8.5 18.5 13 18.5 C 17.5 18.5 20.5 16 20.5 13 C 20.5 10 17.5 7 13 7 Z" />
+          <Path d="M13 14.5 L 13 20 M 8.5 20 L 17.5 20" />
+        </G>
+        <Circle cx={13} cy={13} r={1.5} fill={color} opacity={0.8} />
+      </Svg>
+    </View>
+    <View style={{ width: 3, height: 3, backgroundColor: color, opacity: 0.8, marginHorizontal: 6 }} />
+    <View style={{ flex: 1, height: 1, backgroundColor: color, opacity: 0.45 }} />
+  </View>
 );
 
-/** Pyramid — Icon of Egypt & Tourism */
-const PyramidIcon = ({
-  size = 18,
-  color = "#C5A059",
-}: {
-  size?: number;
-  color?: string;
-}) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24">
-    <G fill={color}>
-      <Path d="M12 2 L22 20 L2 20 Z" />
-      <Path d="M12 2 L12 20 M7 10 L17 10" fill="none" stroke={color} strokeWidth="0.5" />
-    </G>
-  </Svg>
-);
-
-/** Location Pin — For destinations & meeting points */
-const LocationPinIcon = ({
-  size = 14,
-  color = "#C5A059",
-}: {
-  size?: number;
-  color?: string;
-}) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24">
-    <G fill={color}>
-      <Path d="M12 2 C7 2 3 6 3 11 C3 17 12 22 12 22 C12 22 21 17 21 11 C21 6 17 2 12 2 Z M12 13.5 C10.62 13.5 9.5 12.38 9.5 11 C9.5 9.62 10.62 8.5 12 8.5 C13.38 8.5 14.5 9.62 14.5 11 C14.5 12.38 13.38 13.5 12 13.5 Z" />
-    </G>
-  </Svg>
-);
-
-/** Special Offer Badge — small emerald ribbon with discount % (inline, top-right) */
-const OfferBadge = ({ discountPct }: { discountPct: number }) => (
-  <View style={styles.offerBadge}>
-    <Svg width={8} height={8} viewBox="0 0 24 24">
-      <G fill="#FFFFFF">
-        <Path d="M12 2 L15 8 H21 L16 12 L18 18 L12 15 L6 18 L8 12 L3 8 H9 Z" />
+const SmallAnkhDivider = ({ color = PARCHMENT_COLORS.antiqueGold }: { color?: string }) => (
+  <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 6 }}>
+    <View style={{ flex: 1, height: 0.6, backgroundColor: color, opacity: 0.5 }} />
+    <Svg width={16} height={14} viewBox="0 0 16 14" style={{ marginHorizontal: 5 }}>
+      <G stroke={color} strokeWidth={1.2} fill="none" strokeLinecap="round">
+        <Path d="M8 4 C 5.5 4 3.5 6 3.5 8 C 3.5 10 5.5 11.5 8 11.5 C 10.5 11.5 12.5 10 12.5 8 C 12.5 6 10.5 4 8 4 Z" />
+        <Path d="M8 9 L 8 13 M 5 13 L 11 13" />
       </G>
     </Svg>
-    <Text style={styles.offerBadgeText}>{discountPct}% OFF</Text>
+    <View style={{ flex: 1, height: 0.6, backgroundColor: color, opacity: 0.5 }} />
   </View>
 );
 
-/** Sun-disc divider — simple print-safe pharaonic divider (no absolute layout) */
-const SunDivider = ({
-  color = "#C5A059",
-}: {
-  color?: string;
-}) => (
-  <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 10 }}>
-    <View style={{ flex: 1, height: 1, backgroundColor: color, opacity: 0.55 }} />
-    <View style={{ marginHorizontal: 8, flexDirection: "row", alignItems: "center" }}>
-      <Svg width={26} height={14} viewBox="0 0 26 14">
-        <G fill="none" stroke={color} strokeWidth={1.2}>
-          <Path d="M1 7 L9 7 M17 7 L25 7" />
-        </G>
-        <G fill={color}>
-          <Path d="M13 1 L18 7 L13 13 L8 7 Z" />
-        </G>
-        <G fill="#FDFBF7">
-          <Path d="M13 4.2 L15.4 7 L13 9.8 L10.6 7 Z" />
-        </G>
-      </Svg>
-    </View>
-    <View style={{ flex: 1, height: 1, backgroundColor: color, opacity: 0.55 }} />
-  </View>
-);
-
-
-/** Lotus Divider — Horizontal SVG divider with central lotus/diamond motif */
-const LotusDivider = ({
-  width = 400,
-  color = "#C5A059",
-}: {
-  width?: number;
-  color?: string;
-}) => (
-  <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 10 }}>
-    <View style={{ flex: 1, height: 0.5, backgroundColor: color }} />
-    <View style={{ marginHorizontal: 8 }}>
-      <Svg width={20} height={20} viewBox="0 0 20 20">
-        <G fill={color}>
-          {/* Central diamond */}
-          <Path d="M10 2 L18 10 L10 18 L2 10 Z" />
-          {/* Inner lotus petals */}
-          <Path d="M10 5 L13 10 L10 15 L7 10 Z" fill="#FDFBF7" />
-        </G>
-      </Svg>
-    </View>
-    <View style={{ flex: 1, height: 0.5, backgroundColor: color }} />
-  </View>
-);
-
-/** Eye of Horus — Protection & ancient Egyptian motif */
-const EyeOfHorusIcon = ({
-  size = 16,
-  color = "#C5A059",
-}: {
-  size?: number;
-  color?: string;
-}) => (
+const ScarabBullet = ({ size = 14 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <G>
-      {/* Eye outline */}
-      <Path d="M2 12 C5 6 9 4 12 4 C15 4 19 6 22 12 C19 18 15 20 12 20 C9 20 5 18 2 12 Z" fill={color} />
-      {/* Inner eye curve */}
-      <Path d="M12 8 C10 8 8 10 8 12 C8 14 10 16 12 16" fill="none" stroke="#FDFBF7" strokeWidth="1.5" />
-      {/* Pupil circle using path */}
-      <Path d="M12 10 C10.9 10 10 10.9 10 12 C10 13.1 10.9 14 12 14 C13.1 14 14 13.1 14 12 C14 10.9 13.1 10 12 10 Z" fill="#FDFBF7" />
+      <Ellipse cx={12} cy={13} rx={8} ry={9.5} fill={PARCHMENT_COLORS.scarabGreen} />
+      <Path d="M4 13 C 4 6.5 7.5 3 12 3 C 16.5 3 20 6.5 20 13 C 20 19.5 16.5 23 12 23 C 7.5 23 4 19.5 4 13 Z"
+        fill="none" stroke={PARCHMENT_COLORS.royalGold} strokeWidth={1.1} />
+      <Path d="M12 4 L 12 22" stroke="#0F4D2E" strokeWidth={1} fill="none" opacity={0.8} />
+      <Ellipse cx={12} cy={12} rx={4} ry={5.5} fill="#E8F8EE" opacity={0.3} />
+      <Path d="M12 1.5 C 9.5 1.5 8 3.5 8 5.5 L 16 5.5 C 16 3.5 14.5 1.5 12 1.5 Z"
+        fill={PARCHMENT_COLORS.scarabGreen} />
+      <Path
+        d="M2 9 L 6 10.2 M 2 14 L 6 13.3 M 22 9 L 18 10.2 M 22 14 L 18 13.3"
+        stroke={PARCHMENT_COLORS.scarabGreen} strokeWidth={1.3} fill="none" />
     </G>
   </Svg>
 );
 
-/** Pharaoh cartouche — small luxury seal shown next to section titles. */
+const EyeOfHorusBullet = ({ size = 14 }: { size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <G>
+      <Path d="M2 11 C 6 4 11 2 14 2 C 17 2 22 4 26 11 C 22 18 17 20 14 20 C 11 20 6 18 2 11 Z"
+        transform="translate(-1, 1)" fill={PARCHMENT_COLORS.lapis} opacity={0.88} />
+      <Path d="M2 11 C 6 4 11 2 14 2 C 17 2 22 4 26 11 C 22 18 17 20 14 20 C 11 20 6 18 2 11 Z"
+        transform="translate(-1, 1)" fill="none" stroke={PARCHMENT_COLORS.royalGold} strokeWidth={1.1} />
+      <Path d="M13 8 C 10.5 8 8.5 10 8.5 12 C 8.5 14 10.5 16 13 16" fill="none"
+        stroke={PARCHMENT_COLORS.paleGold} strokeWidth={1.4} strokeLinecap="round" />
+      <Circle cx={13} cy={12} r={2.5} fill={PARCHMENT_COLORS.paleGold} />
+      <Circle cx={13} cy={12} r={1.1} fill="#0F172A" />
+      <G stroke={PARCHMENT_COLORS.royalGold} strokeWidth={1.1} fill="none" strokeLinecap="round">
+        <Path d="M0 14 L 5 13" />
+        <Path d="M1 18 Q 4 21 7 20" />
+        <Path d="M24 14 C 22 17 20 19 17 20" />
+        <Path d="M13 20 C 13 22 12 24.5 10 25" />
+      </G>
+    </G>
+  </Svg>
+);
+
+const PyramidBullet = ({ size = 14 }: { size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <G>
+      <Path d="M12 1 L 23 22 L 1 22 Z" fill={PARCHMENT_COLORS.royalGold} />
+      <Path d="M12 1 L 23 22 L 1 22 Z" fill="none" stroke="#8B6F3A" strokeWidth={0.7} opacity={0.9} />
+      <Path d="M12 1 L 12 22" stroke="#FDFBF7" strokeWidth={0.55} fill="none" opacity={0.75} />
+      <Path d="M5 11 L 19 11" stroke="#FDFBF7" strokeWidth={0.55} fill="none" opacity={0.65} />
+      <Path d="M12 1 L 23 22" stroke="#0F172A" strokeWidth={0.45} fill="none" opacity={0.35} />
+    </G>
+  </Svg>
+);
+
+const LotusBullet = ({ size = 14 }: { size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <G>
+      <Path d="M12 2 C 9 5 7 10 7 14 C 7 16 9 17 12 17 C 15 17 17 16 17 14 C 17 10 15 5 12 2 Z"
+        fill="#C43E6B" opacity={0.85} />
+      <Path d="M4 12 C 6 8 9 6 12 5 C 9 9 8 12 8 14 C 8 15.5 10 16.5 12 17 C 8 16.5 5 15.5 4 14 C 3 13.4 3 12.6 4 12 Z"
+        fill="#F472B6" opacity={0.7} />
+      <Path d="M20 12 C 18 8 15 6 12 5 C 15 9 16 12 16 14 C 16 15.5 14 16.5 12 17 C 16 16.5 19 15.5 20 14 C 21 13.4 21 12.6 20 12 Z"
+        fill="#F472B6" opacity={0.7} />
+      <Ellipse cx={12} cy={18} rx={4.5} ry={1.6} fill={PARCHMENT_COLORS.scarabGreen} opacity={0.88} />
+      <Path d="M12 19 L 12 22 M 6 22 L 9 19 M 18 22 L 15 19"
+        stroke={PARCHMENT_COLORS.scarabGreen} strokeWidth={1.1} fill="none" strokeLinecap="round" />
+    </G>
+  </Svg>
+);
+
+const SunDiscBullet = ({ size = 14 }: { size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <G>
+      <Circle cx={12} cy={12} r={8} fill={PARCHMENT_COLORS.royalGold} />
+      <Circle cx={12} cy={12} r={8} fill="none" stroke="#8B6F3A" strokeWidth={0.7} />
+      <Circle cx={12} cy={12} r={4} fill="#F39516" opacity={0.9} />
+      <Circle cx={12} cy={12} r={2.2} fill="#FDE68A" />
+      <G stroke={PARCHMENT_COLORS.royalGold} strokeWidth={1.2} fill="none" strokeLinecap="round">
+        <Path d="M12 1 V 4 M 12 20 V 23 M 1 12 H 4 M 20 12 H 23" />
+        <Path d="M3 3 L 5.5 5.5 M 18.5 18.5 L 21 21 M 21 3 L 18.5 5.5 M 5.5 18.5 L 3 21" />
+      </G>
+    </G>
+  </Svg>
+);
+
 const CartoucheSeal = ({ size = 13 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
-    <G fill="none" stroke="#C5A059" strokeWidth={1.6}>
-      <Path d="M7 3 H17 V19 H9 L7 21 Z" />
-      <Path d="M10 6 H14 M10 9 H14 M10 12 H14" strokeWidth={1.1} />
-    </G>
-  </Svg>
-);
-
-/** Scarab — tiny luxury emblem used in the offer banner. */
-const ScarabSeal = ({ size = 16 }: { size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24">
-    <G fill="#059669">
-      <Path d="M12 7 C9.5 7 8 9 8 12 C8 15 9.5 17 12 17 C14.5 17 16 15 16 12 C16 9 14.5 7 12 7 Z" />
-      <Path d="M5 10 L8 11 M5 14 L8 13.4 M19 10 L16 11 M19 14 L16 13.4" stroke="#059669" strokeWidth={1.4} fill="none" />
-      <Path d="M12 4.5 C11 4.5 10.4 5.4 10.4 6.4 L13.6 6.4 C13.6 5.4 13 4.5 12 4.5 Z" />
-    </G>
-    <G fill="#ECFDF5">
-      <Path d="M12 9.5 C11 9.5 10.3 10.6 10.3 12 C10.3 13.4 11 14.5 12 14.5 C13 14.5 13.7 13.4 13.7 12 C13.7 10.6 13 9.5 12 9.5 Z" />
+    <G fill="none" stroke={PARCHMENT_COLORS.royalGold} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M7 3 H 17 V 19 H 9 L 7 21 Z" />
+      <G strokeWidth={1.1}>
+        <Path d="M10 6 H 14 M 10 9 H 14 M 10 12 H 14" />
+      </G>
     </G>
   </Svg>
 );
 
 const styles = StyleSheet.create({
-  // ─── Core Layout ─────────────────────────────────────────────────────────────
-  // A4 print-safe: generous outer margin so nothing is cut by the printer,
-  // thin inner frame, no full-bleed elements.
   page: {
-    backgroundColor: "#FDFBF7",
-    paddingTop: 28,
-    paddingBottom: 40,
-    paddingHorizontal: 28,
+    width: "100%",
+    height: "100%",
+    backgroundColor: PARCHMENT_COLORS.parchmentLight,
   },
-  pageFrame: {
-    border: "1px solid #C9A962",
-    paddingTop: 12,
-    paddingBottom: 30,
-    paddingHorizontal: 12,
-    position: "relative",
-  },
-  watermarkText: {
-    fontSize: 80,
-    color: "#C9A962",
-    opacity: 0.06,
-    transform: "rotate(-45deg)",
-    position: "absolute",
-  },
-  headerBox: {
-    alignItems: "center",
-    marginBottom: 12,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#C9A962",
-  },
-  brandTitle: {
-    fontSize: 24,
-    color: "#171717",
-    letterSpacing: 4,
-    marginTop: 8,
-  },
-  coverPage: {
-    backgroundColor: "#FDFBF7",
-    padding: 30,
-  },
-  innerPage: {
-    backgroundColor: "#FDFBF7",
-  },
-  bookingRefBadge: {
-    backgroundColor: "#C9A962",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 4,
-    alignSelf: "flex-start",
-    marginBottom: 20,
-  },
-  bookingRefText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: 700,
-    letterSpacing: 1,
-  },
-  // --- Terms & Policy ---
-  termsSection: {
-    marginTop: 4,
-  },
-  termsCard: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: "#C9A962",
-    padding: 14,
-  },
-  termsItemRow: {
-    flexDirection: "row",
-    gap: 6,
-    marginBottom: 6,
-  },
-  termsBullet: {
-    color: "#C9A962",
-    fontSize: 8.5,
-    fontWeight: "bold",
-  },
-  termsItemText: {
-    flex: 1,
-    fontSize: 8.5,
-    color: "#171717",
-    lineHeight: 1.55,
-    textAlign: "justify",
-  },
-  termsLinkText: {
-    fontSize: 8.5,
-    color: "#171717",
-    textDecoration: "underline",
-  },
-  // --- Leave a Review block ---
-  reviewCard: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: "#C9A962",
-    padding: 24,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  reviewTitle: {
-    color: "#171717",
-    fontSize: 13,
-    letterSpacing: 0.5,
-  },
-  reviewSubtitle: {
-    color: "#8A8171",
-    fontSize: 9,
-    textAlign: "center",
-    marginTop: 5,
-    lineHeight: 1.5,
-  },
-  reviewBadge: {
-    backgroundColor: "#C9A962",
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    marginTop: 10,
-  },
-  reviewBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 9.5,
-    letterSpacing: 0.8,
-  },
-  reviewLink: {
-    color: "#8A8171",
-    fontSize: 8,
-    marginTop: 8,
-  },
-  // --- Social links footer ---
-  socialRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 14,
-    marginTop: 12,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopStyle: "solid",
-    borderTopColor: "#C9A962",
-  },
-  socialLinkItem: {
-    fontSize: 8.5,
-    color: "#171717",
-    fontWeight: "bold",
-  },
-  logoImg: {
-    height: 55,
-    width: 220,
-    objectFit: "contain",
-    marginBottom: 8,
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: "#C9A962",
-  },
-  logoImgSmall: {
-    height: 40,
-    width: 160,
-    objectFit: "contain",
-    marginBottom: 6,
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: "#C9A962",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 24,
-    paddingBottom: 18,
-    borderBottomWidth: 3,
-    borderBottomColor: "#C9A962",
-    borderBottomStyle: "solid",
-  },
-  brandBlock: {
-    flexDirection: "column",
-    gap: 4,
-  },
-  brandName: {
-    fontSize: 26,
-    color: "#171717",
-    letterSpacing: 1.2,
-  },
-  brandTagline: {
-    fontSize: 9,
-    color: "#C9A962",
-    letterSpacing: 3,
-    textTransform: "uppercase",
-  },
-  brandLine: {
-    height: 2,
-    width: 60,
-    backgroundColor: "#C9A962",
-    marginTop: 6,
-  },
-  headerContact: {
-    textAlign: "right",
-    fontSize: 8.5,
-    color: "#8A8171",
-    lineHeight: 1.6,
-  },
-  heroCard: {
-    backgroundColor: "transparent",
-    padding: 0,
-    marginBottom: 24,
-    borderRadius: 0,
-    borderWidth: 2,
-    borderStyle: "solid",
-    borderColor: "#C9A962",
-    position: "relative",
-    overflow: "hidden",
-  },
-  heroTopBar: {
-    height: 4,
+  parchmentBg: {
     position: "absolute",
     top: 0,
     left: 0,
-    right: 0,
-    backgroundColor: "#C9A962",
+    width: 595,
+    height: 842,
   },
-  heroBottomBar: {
-    height: 4,
+  borderFrame: {
     position: "absolute",
-    bottom: 0,
+    top: 0,
     left: 0,
-    right: 0,
-    backgroundColor: "#C9A962",
+    width: 595,
+    height: 842,
   },
-  heroCornerTL: {
+  contentLayer: {
     position: "absolute",
-    top: 6,
-    left: 0,
-    width: 30,
-    height: 30,
-    borderTopWidth: 0,
+    top: 52,
+    left: 52,
+    right: 52,
+    bottom: 170,
+    width: 491,
+    flexDirection: "column",
+  },
+  footerBand: {
+    position: "absolute",
+    bottom: 28,
+    left: 40,
+    right: 40,
+    width: 515,
+    flexDirection: "column",
+  },
+  nileImageWrap: {
+    width: "100%",
+    height: 108,
+    borderWidth: 1.2,
+    borderColor: PARCHMENT_COLORS.royalGold,
+    overflow: "hidden",
+  },
+  nileImage: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  footerCaption: {
+    marginTop: 6,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  footerBrand: {
+    fontSize: 7.5,
+    color: PARCHMENT_COLORS.warmBrown,
+    fontWeight: 700,
+    letterSpacing: 2,
+    textTransform: "uppercase" as const,
+  },
+  footerPage: {
+    fontSize: 7.5,
+    color: PARCHMENT_COLORS.agedBrown,
+    fontWeight: 700,
+    letterSpacing: 1,
+  },
+  footerTagline: {
+    fontSize: 6.5,
+    color: PARCHMENT_COLORS.antiqueGold,
+    letterSpacing: 3,
+    textTransform: "uppercase" as const,
+    marginTop: 2,
+  },
+  headerBox: {
+    alignItems: "center",
+    marginBottom: 10,
+    paddingBottom: 8,
+  },
+  brandTitle: {
+    fontSize: 21,
+    color: PARCHMENT_COLORS.deepBrown,
+    letterSpacing: 4.5,
+    marginTop: 5,
+  },
+  bookingRefBadge: {
+    backgroundColor: PARCHMENT_COLORS.deepBrown,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    alignSelf: "flex-start",
+    marginBottom: 14,
     borderLeftWidth: 3,
-    borderStyle: "solid",
-    borderColor: "#171717",
+    borderLeftColor: PARCHMENT_COLORS.royalGold,
   },
-  heroCornerTR: {
+  bookingRefText: {
+    color: PARCHMENT_COLORS.royalGold,
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: 1.2,
+  },
+  heroCard: {
+    backgroundColor: "rgba(253, 251, 247, 0.35)",
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: PARCHMENT_COLORS.royalGold,
+    position: "relative",
+    overflow: "hidden",
+  },
+  heroInnerFrame: {
     position: "absolute",
-    top: 6,
-    right: 0,
-    width: 30,
-    height: 30,
-    borderTopWidth: 0,
-    borderRightWidth: 3,
-    borderStyle: "solid",
-    borderColor: "#171717",
+    top: 4,
+    left: 4,
+    right: 4,
+    bottom: 4,
+    borderWidth: 0.6,
+    borderColor: PARCHMENT_COLORS.antiqueGold,
+    opacity: 0.7,
   },
-  heroCornerBL: {
-    position: "absolute",
-    bottom: 6,
-    left: 0,
-    width: 30,
-    height: 30,
-    borderBottomWidth: 0,
-    borderLeftWidth: 3,
-    borderStyle: "solid",
-    borderColor: "#171717",
-  },
-  heroCornerBR: {
-    position: "absolute",
-    bottom: 6,
-    right: 0,
-    width: 30,
-    height: 30,
-    borderBottomWidth: 0,
-    borderRightWidth: 3,
-    borderStyle: "solid",
-    borderColor: "#171717",
-  },
-  heroTourName: {
-    color: "#171717",
-    fontSize: 20,
+  clientBadge: {
+    backgroundColor: PARCHMENT_COLORS.antiqueGold,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    alignSelf: "flex-start",
     marginBottom: 8,
-    lineHeight: 1.3,
+  },
+  clientBadgeText: {
+    color: PARCHMENT_COLORS.deepBrown,
+    fontSize: 7.5,
+    fontWeight: 700,
+    letterSpacing: 1.4,
+    textTransform: "uppercase" as const,
   },
   heroSubtitle: {
-    color: "#C9A962",
-    fontSize: 9,
-    letterSpacing: 3,
-    textTransform: "uppercase",
-    marginBottom: 14,
+    color: PARCHMENT_COLORS.lapis,
+    fontSize: 8.5,
+    letterSpacing: 3.5,
+    textTransform: "uppercase" as const,
+    marginBottom: 8,
+  },
+  heroTourName: {
+    color: PARCHMENT_COLORS.ink,
+    fontSize: 19,
+    marginBottom: 8,
+    lineHeight: 1.3,
   },
   heroGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
-    marginTop: 10,
+    gap: 4,
+    marginTop: 8,
   },
   heroStat: {
     width: "31.5%",
     paddingRight: 6,
-    borderRightWidth: 1,
-    borderRightColor: "rgba(0,0,0,0.1)",
+    borderRightWidth: 0.8,
+    borderRightColor: PARCHMENT_COLORS.antiqueGold,
     marginBottom: 6,
   },
   heroStatLast: {
@@ -539,118 +376,31 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   heroStatLabel: {
-    color: "#8A8171",
-    fontSize: 7.5,
+    color: PARCHMENT_COLORS.agedBrown,
+    fontSize: 7,
     letterSpacing: 1.5,
-    textTransform: "uppercase",
-    marginBottom: 4,
+    textTransform: "uppercase" as const,
+    marginBottom: 3,
   },
   heroStatValue: {
-    color: "#171717",
-    fontSize: 11,
-    fontWeight: "bold",
+    color: PARCHMENT_COLORS.deepBrown,
+    fontSize: 10.5,
+    fontWeight: 700,
   },
-  // Offer price styling — struck-through old price + emerald new price
   strikethroughOldPrice: {
-    color: "#9CA3AF", // slate-400
+    color: "#94714A",
     textDecorationLine: "line-through" as const,
-    textDecorationThickness: 1.5,
-    textDecorationColor: "#EF4444", // red-400
-    fontSize: 10,
+    textDecorationThickness: 1.2,
+    textDecorationColor: "#A23F2E",
+    fontSize: 9.5,
   },
-  // ── Luxury offer banner (A4 print-safe, no overlap) ──
-  offerBanner: {
-    marginTop: 10,
-    marginBottom: 2,
-    borderWidth: 1,
-    borderColor: "#C9A962",
-    backgroundColor: "#FFFFFF",
-    padding: 10,
-  },
-  offerBannerTop: { flexDirection: "row", alignItems: "center", marginBottom: 5 },
-  offerBannerBadge: {
-    backgroundColor: "#C9A962",
-    color: "#FFFFFF",
-    fontSize: 7,
-    fontWeight: "bold",
-    letterSpacing: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  offerBannerTitle: {
-    fontSize: 11,
-    color: "#171717",
-    marginBottom: 4,
-  },
-  offerBannerPrices: { flexDirection: "row", alignItems: "flex-end", flexWrap: "wrap" },
-  offerBannerOld: {
-    fontSize: 11,
-    color: "#9CA3AF",
-    textDecorationLine: "line-through" as const,
-    textDecorationColor: "#EF4444",
-    marginRight: 8,
-  },
-  offerBannerNew: { fontSize: 19, color: "#171717", fontWeight: "bold", marginRight: 8 },
-  offerBannerPct: { fontSize: 8, color: "#171717", fontWeight: "bold", marginBottom: 3 },
-  offerBannerNote: { fontSize: 8.5, color: "#171717", marginTop: 4, lineHeight: 1.5 },
-  // ── Per-day roadmap strip (vertical, wrap-safe — never overlaps) ──
-  dayRoadmap: {
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: "#E8D7B1",
-    backgroundColor: "#FFFDF5",
-    padding: 7,
-  },
-  dayRoadmapTitle: {
-    fontSize: 7.5,
-    color: "#8b7435",
-    letterSpacing: 1,
-    marginBottom: 5,
-  },
-  dayRoadmapRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 3 },
-  dayRoadmapDot: {
-    width: 7, height: 7, borderRadius: 4,
-    backgroundColor: "#C5A059", marginTop: 3, marginRight: 6,
-  },
-  dayRoadmapStop: { flex: 1, fontSize: 8.5, color: "#2C1E16", lineHeight: 1.45 },
-  dayRoadmapArrow: { fontSize: 8, color: "#C5A059", marginLeft: 13, marginBottom: 1 },
   offerPriceValue: {
-    color: "#059669", // emerald-600
-    fontSize: 12,
-    fontWeight: "bold",
-  },
-  // Summary card offer styling
-  summaryStrikethrough: {
-    fontSize: 9,
-    color: "#9CA3AF",
-    textDecorationLine: "line-through" as const,
-    textDecorationThickness: 1,
-    textDecorationColor: "#EF4444",
-  },
-    summaryOfferValue: {
-    fontSize: 12,
-    color: "#059669",
-    fontWeight: "bold",
-  },
-  offerBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: "#059669", // emerald-600
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    alignSelf: "flex-start",
-    marginTop: 2,
-  },
-  offerBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 7,
-    fontWeight: "bold",
-    letterSpacing: 0.5,
+    color: PARCHMENT_COLORS.scarabGreen,
+    fontSize: 11,
+    fontWeight: 700,
   },
   section: {
-    marginBottom: 14,
+    marginBottom: 12,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -661,143 +411,230 @@ const styles = StyleSheet.create({
   sectionNumber: {
     width: 28,
     height: 28,
-    borderRadius: 0,
-    backgroundColor: "#171717",
-    color: "#C9A962",
+    backgroundColor: PARCHMENT_COLORS.deepLapis,
+    borderWidth: 1,
+    borderColor: PARCHMENT_COLORS.royalGold,
+    color: PARCHMENT_COLORS.royalGold,
     textAlign: "center",
     textAlignVertical: "center",
-    fontSize: 12,
-    fontWeight: "bold",
+    fontSize: 11,
+    fontWeight: 700,
     lineHeight: 28,
   },
   sectionTitle: {
-    fontSize: 14,
-    color: "#171717",
-    letterSpacing: 0.4,
+    fontSize: 13,
+    color: PARCHMENT_COLORS.deepBrown,
+    letterSpacing: 0.5,
   },
   sectionUnderline: {
     flex: 1,
     height: 1,
-    backgroundColor: "#C9A962",
+    backgroundColor: PARCHMENT_COLORS.royalGold,
+    opacity: 0.75,
   },
   summaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 0,
     justifyContent: "space-between",
-    padding: 0,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(253, 251, 247, 0.3)",
+    borderWidth: 0.8,
+    borderColor: PARCHMENT_COLORS.antiqueGold,
+    padding: 2,
   },
   summaryItem: {
     width: "48.5%",
     flexDirection: "row",
     alignItems: "flex-start",
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E8D7B1",
-    backgroundColor: "transparent",
-    gap: 8,
+    padding: 9,
+    borderBottomWidth: 0.7,
+    borderBottomColor: PARCHMENT_COLORS.paleGold,
+    gap: 7,
   },
   summaryItemIcon: {
-    width: 24,
-    height: 24,
+    width: 22,
+    height: 22,
     justifyContent: "center",
     alignItems: "center",
   },
   summaryItemLabel: {
-    fontSize: 7.5,
-    color: "#8A8171",
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
+    fontSize: 7,
+    color: PARCHMENT_COLORS.agedBrown,
+    letterSpacing: 0.7,
+    textTransform: "uppercase" as const,
     marginBottom: 2,
   },
   summaryItemValue: {
-    fontSize: 9.5,
-    color: "#171717",
-    fontWeight: "semibold",
-  },
-  summaryItemBullet: {
-    width: 4,
-    height: 12,
-    backgroundColor: "#C9A962",
-    borderRadius: 0,
+    fontSize: 9,
+    color: PARCHMENT_COLORS.ink,
+    fontWeight: 600,
   },
   summaryItemTextWrap: {
     flex: 1,
     flexDirection: "column",
   },
-  dayCard: {
-    backgroundColor: "transparent",
-    borderRadius: 0,
-    marginBottom: 8,
-    padding: 10,
+  summaryStrikethrough: {
+    fontSize: 8.5,
+    color: "#94714A",
+    textDecorationLine: "line-through" as const,
+    textDecorationThickness: 1,
+    textDecorationColor: "#A23F2E",
+  },
+  summaryOfferValue: {
+    fontSize: 11,
+    color: PARCHMENT_COLORS.scarabGreen,
+    fontWeight: 700,
+  },
+  offerBanner: {
+    marginTop: 8,
+    marginBottom: 2,
     borderWidth: 1,
-    borderColor: "#C9A962",
+    borderColor: PARCHMENT_COLORS.royalGold,
+    backgroundColor: "rgba(255, 248, 224, 0.5)",
+    padding: 10,
+    position: "relative",
+  },
+  offerBannerTop: { flexDirection: "row", alignItems: "center", marginBottom: 5 },
+  offerBannerBadge: {
+    backgroundColor: PARCHMENT_COLORS.deepLapis,
+    color: PARCHMENT_COLORS.royalGold,
+    fontSize: 6.5,
+    fontWeight: 700,
+    letterSpacing: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  offerBannerTitle: {
+    fontSize: 10.5,
+    color: PARCHMENT_COLORS.deepBrown,
+    marginBottom: 4,
+  },
+  offerBannerPrices: { flexDirection: "row", alignItems: "flex-end", flexWrap: "wrap" },
+  offerBannerOld: {
+    fontSize: 10.5,
+    color: "#94714A",
+    textDecorationLine: "line-through" as const,
+    textDecorationColor: "#A23F2E",
+    marginRight: 8,
+  },
+  offerBannerNew: { fontSize: 18, color: PARCHMENT_COLORS.deepBrown, fontWeight: 700, marginRight: 8 },
+  offerBannerPct: { fontSize: 7.5, color: PARCHMENT_COLORS.deepBrown, fontWeight: 700, marginBottom: 3 },
+  offerBannerNote: { fontSize: 8, color: PARCHMENT_COLORS.warmBrown, marginTop: 4, lineHeight: 1.5 },
+  offerBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: PARCHMENT_COLORS.scarabGreen,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    alignSelf: "flex-start",
+    marginTop: 2,
+  },
+  offerBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 6.5,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+  },
+  dayCard: {
+    backgroundColor: "rgba(253, 251, 247, 0.35)",
+    marginBottom: 7,
+    padding: 0,
+    borderWidth: 1,
+    borderColor: PARCHMENT_COLORS.antiqueGold,
     overflow: "hidden",
   },
   dayHeader: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#171717",
-    color: "#C9A962",
-    padding: 10,
+    backgroundColor: PARCHMENT_COLORS.deepLapis,
+    color: PARCHMENT_COLORS.royalGold,
+    padding: 9,
     marginBottom: 0,
     gap: 10,
-    borderLeft: "4px solid #C9A962",
+    borderBottomWidth: 1.5,
+    borderBottomColor: PARCHMENT_COLORS.royalGold,
   },
   dayBadge: {
-    backgroundColor: "#C9A962",
+    backgroundColor: PARCHMENT_COLORS.royalGold,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 0,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
   },
   dayBadgeText: {
-    color: "white",
-    fontSize: 9,
-    letterSpacing: 0.5,
+    color: PARCHMENT_COLORS.deepBrown,
+    fontSize: 8.5,
+    letterSpacing: 0.6,
+    fontWeight: 700,
   },
   dayTitle: {
-    color: "#C9A962",
-    fontSize: 12,
+    color: PARCHMENT_COLORS.royalGold,
+    fontSize: 11.5,
     flex: 1,
   },
   dayContent: {
     padding: 10,
   },
   dayDescription: {
-    fontSize: 10,
-    color: "#171717",
+    fontSize: 9.5,
+    color: PARCHMENT_COLORS.ink,
     lineHeight: 1.7,
-    marginBottom: 10,
+    marginBottom: 8,
     textAlign: "justify",
   },
+  dayRoadmap: {
+    marginTop: 6,
+    borderWidth: 0.8,
+    borderColor: PARCHMENT_COLORS.antiqueGold,
+    backgroundColor: "rgba(255, 253, 245, 0.55)",
+    padding: 7,
+  },
+  dayRoadmapTitle: {
+    fontSize: 7,
+    color: PARCHMENT_COLORS.warmBrown,
+    letterSpacing: 1,
+    marginBottom: 5,
+    fontWeight: 700,
+  },
+  dayRoadmapRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 3 },
+  dayRoadmapIcon: {
+    width: 11,
+    height: 11,
+    marginTop: 2,
+    marginRight: 6,
+    flexShrink: 0,
+  },
+  dayRoadmapStop: { flex: 1, fontSize: 8.2, color: PARCHMENT_COLORS.deepBrown, lineHeight: 1.45 },
+  dayRoadmapArrow: { fontSize: 7.5, color: PARCHMENT_COLORS.antiqueGold, marginLeft: 17, marginBottom: 1 },
   metaRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: 10,
     marginTop: 6,
+    flexWrap: "wrap",
   },
   metaItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#FDFBF7",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 0,
+    backgroundColor: "rgba(255, 250, 232, 0.5)",
+    paddingHorizontal: 7,
+    paddingVertical: 3.5,
+    borderWidth: 0.6,
+    borderColor: PARCHMENT_COLORS.paleGold,
   },
   metaLabel: {
-    fontSize: 7.5,
-    color: "#8A8171",
-    textTransform: "uppercase",
+    fontSize: 7,
+    color: PARCHMENT_COLORS.agedBrown,
+    textTransform: "uppercase" as const,
     letterSpacing: 0.5,
+    fontWeight: 700,
   },
   metaValue: {
-    fontSize: 8,
-    color: "#171717",
-    fontWeight: "bold",
+    fontSize: 7.8,
+    color: PARCHMENT_COLORS.deepBrown,
+    fontWeight: 700,
   },
   twoCol: {
     flexDirection: "row",
@@ -808,215 +645,275 @@ const styles = StyleSheet.create({
     width: "49%",
   },
   inclusionsCard: {
-    backgroundColor: "transparent",
-    borderRadius: 0,
-    padding: 14,
+    backgroundColor: "rgba(253, 251, 247, 0.35)",
+    padding: 12,
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: "#C9A962",
+    borderColor: PARCHMENT_COLORS.royalGold,
   },
   exclusionsCard: {
-    backgroundColor: "transparent",
-    borderRadius: 0,
-    padding: 14,
+    backgroundColor: "rgba(253, 251, 247, 0.35)",
+    padding: 12,
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: "#C9A962",
+    borderColor: PARCHMENT_COLORS.royalGold,
   },
   sectionCardTitle: {
-    fontSize: 11,
-    textTransform: "uppercase",
+    fontSize: 10,
+    textTransform: "uppercase" as const,
     letterSpacing: 1,
-    marginBottom: 12,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   inclusionTitleText: {
-    color: "#171717",
+    color: PARCHMENT_COLORS.deepBrown,
   },
   exclusionTitleText: {
-    color: "#171717",
+    color: PARCHMENT_COLORS.deepBrown,
   },
   listItem: {
     flexDirection: "row",
-    marginBottom: 8,
-    gap: 8,
+    marginBottom: 7,
+    gap: 7,
     alignItems: "flex-start",
   },
   listItemIcon: {
-    width: 14,
-    height: 14,
+    width: 13,
+    height: 13,
     flexShrink: 0,
     marginTop: 1,
   },
   listItemText: {
-    fontSize: 9.5,
+    fontSize: 9,
     lineHeight: 1.5,
     flex: 1,
   },
   inclusionsText: {
-    color: "#171717",
+    color: PARCHMENT_COLORS.ink,
   },
   exclusionsText: {
-    color: "#171717",
+    color: PARCHMENT_COLORS.ink,
   },
   pricingTable: {
-    backgroundColor: "transparent",
-    borderRadius: 0,
-    padding: 14,
+    backgroundColor: "rgba(253, 251, 247, 0.4)",
+    padding: 12,
     borderWidth: 1,
-    borderColor: "#C9A962",
+    borderColor: PARCHMENT_COLORS.royalGold,
     overflow: "hidden",
   },
   pricingRow: {
     flexDirection: "row",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E8D7B1",
-    backgroundColor: "transparent",
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderBottomWidth: 0.7,
+    borderBottomColor: PARCHMENT_COLORS.paleGold,
   },
   pricingRowLast: {
-    backgroundColor: "transparent",
     borderBottomWidth: 0,
   },
   pricingCell: {
     flex: 1,
-    fontSize: 10,
-    color: "#171717",
+    fontSize: 9.5,
+    color: PARCHMENT_COLORS.deepBrown,
   },
   pricingCellRight: {
     flex: 1,
     textAlign: "right",
-    fontSize: 10,
-    color: "#171717",
-    fontWeight: "semibold",
+    fontSize: 9.5,
+    color: PARCHMENT_COLORS.deepBrown,
+    fontWeight: 600,
   },
   pricingHeaderCell: {
-    fontSize: 8,
-    textTransform: "uppercase",
+    fontSize: 7.5,
+    textTransform: "uppercase" as const,
     letterSpacing: 1,
-    color: "#8A8171",
-    fontWeight: "bold",
+    color: PARCHMENT_COLORS.agedBrown,
+    fontWeight: 700,
   },
   pricingTotalLabel: {
-    color: "#171717",
-    fontSize: 12,
-    fontWeight: "bold",
-    textTransform: "uppercase",
+    color: PARCHMENT_COLORS.deepBrown,
+    fontSize: 11,
+    fontWeight: 700,
+    textTransform: "uppercase" as const,
     letterSpacing: 1,
   },
   pricingTotalValue: {
-    color: "#171717",
-    fontSize: 16,
-    fontWeight: "bold",
+    color: PARCHMENT_COLORS.deepBrown,
+    fontSize: 15,
+    fontWeight: 700,
   },
   termsBlock: {
-    backgroundColor: "transparent",
-    borderRadius: 0,
-    padding: 14,
+    backgroundColor: "rgba(253, 251, 247, 0.35)",
+    padding: 12,
     borderWidth: 1,
-    borderColor: "#C9A962",
-    marginBottom: 10,
+    borderColor: PARCHMENT_COLORS.royalGold,
+    marginTop: 10,
   },
   termsTitle: {
-    fontSize: 9,
-    fontWeight: "bold",
-    color: "#C9A962",
-    textTransform: "uppercase",
+    fontSize: 8.5,
+    fontWeight: 700,
+    color: PARCHMENT_COLORS.lapis,
+    textTransform: "uppercase" as const,
     letterSpacing: 1,
-    marginBottom: 8,
+    marginBottom: 7,
   },
   termsText: {
-    fontSize: 8.5,
-    color: "#171717",
+    fontSize: 8,
+    color: PARCHMENT_COLORS.deepBrown,
     lineHeight: 1.7,
     textAlign: "justify",
   },
-  notesBlock: {
-    backgroundColor: "transparent",
-    borderRadius: 0,
-    padding: 18,
+  termsSection: {
+    marginTop: 4,
+  },
+  termsCard: {
+    backgroundColor: "rgba(253, 251, 247, 0.35)",
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: "#C9A962",
-    marginBottom: 16,
+    borderColor: PARCHMENT_COLORS.royalGold,
+    padding: 12,
+  },
+  termsItemRow: {
+    flexDirection: "row",
+    gap: 5,
+    marginBottom: 5,
+  },
+  termsBullet: {
+    color: PARCHMENT_COLORS.antiqueGold,
+    fontSize: 8,
+    fontWeight: 700,
+  },
+  termsItemText: {
+    flex: 1,
+    fontSize: 8,
+    color: PARCHMENT_COLORS.deepBrown,
+    lineHeight: 1.55,
+    textAlign: "justify",
+  },
+  termsLinkText: {
+    fontSize: 8,
+    color: PARCHMENT_COLORS.lapis,
+    textDecoration: "underline",
+  },
+  notesBlock: {
+    backgroundColor: "rgba(253, 251, 247, 0.35)",
+    padding: 16,
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: PARCHMENT_COLORS.royalGold,
+    marginBottom: 14,
   },
   notesTitle: {
-    fontSize: 9,
-    fontWeight: "bold",
-    color: "#C9A962",
-    textTransform: "uppercase",
+    fontSize: 8.5,
+    fontWeight: 700,
+    color: PARCHMENT_COLORS.lapis,
+    textTransform: "uppercase" as const,
     letterSpacing: 1,
-    marginBottom: 6,
+    marginBottom: 5,
   },
   notesText: {
-    fontSize: 9.5,
-    color: "#171717",
+    fontSize: 9,
+    color: PARCHMENT_COLORS.deepBrown,
     lineHeight: 1.6,
   },
-  // Drop cap for the first Tour Overview paragraph
   dropCap: {
-    fontSize: 30,
-    color: "#C9A962",
+    fontSize: 28,
+    color: PARCHMENT_COLORS.lapis,
     lineHeight: 1,
     marginRight: 3,
+    fontWeight: 700,
   },
-  footer: {
-    position: "absolute",
-    bottom: 25,
-    left: 40,
-    right: 40,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#C9A962",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  footerBrand: {
-    fontSize: 8,
-    color: "#8A8171",
-    fontWeight: "bold",
-  },
-  footerPage: {
-    fontSize: 8,
-    color: "#8A8171",
-  },
-  operationsCard: {
-    backgroundColor: "transparent",
-    borderRadius: 0,
-    padding: 24,
-    marginTop: 16,
+  reviewCard: {
+    backgroundColor: "rgba(253, 251, 247, 0.35)",
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: "#C9A962",
+    borderColor: PARCHMENT_COLORS.royalGold,
+    padding: 22,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  reviewTitle: {
+    color: PARCHMENT_COLORS.deepBrown,
+    fontSize: 12,
+    letterSpacing: 0.5,
+  },
+  reviewSubtitle: {
+    color: PARCHMENT_COLORS.agedBrown,
+    fontSize: 8.5,
+    textAlign: "center",
+    marginTop: 5,
+    lineHeight: 1.5,
+  },
+  reviewBadge: {
+    backgroundColor: PARCHMENT_COLORS.royalGold,
+    paddingHorizontal: 13,
+    paddingVertical: 6,
+    marginTop: 10,
+    borderWidth: 0.8,
+    borderColor: PARCHMENT_COLORS.deepBrown,
+  },
+  reviewBadgeText: {
+    color: PARCHMENT_COLORS.deepBrown,
+    fontSize: 9,
+    letterSpacing: 0.8,
+    fontWeight: 700,
+  },
+  reviewLink: {
+    color: PARCHMENT_COLORS.agedBrown,
+    fontSize: 7.5,
+    marginTop: 8,
+  },
+  socialRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 14,
+    marginTop: 10,
+    paddingTop: 9,
+    borderTopWidth: 0.8,
+    borderTopStyle: "solid",
+    borderTopColor: PARCHMENT_COLORS.antiqueGold,
+  },
+  socialLinkItem: {
+    fontSize: 8,
+    color: PARCHMENT_COLORS.deepBrown,
+    fontWeight: 700,
+  },
+  operationsCard: {
+    backgroundColor: "rgba(253, 251, 247, 0.35)",
+    padding: 22,
+    marginTop: 14,
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: PARCHMENT_COLORS.royalGold,
   },
   operationsHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: 12,
     gap: 10,
   },
   opsBadge: {
-    backgroundColor: "#C9A962",
+    backgroundColor: PARCHMENT_COLORS.lapis,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 0,
   },
   opsBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 8,
-    fontWeight: "bold",
+    color: PARCHMENT_COLORS.royalGold,
+    fontSize: 7.5,
+    fontWeight: 700,
     letterSpacing: 0.5,
-    textTransform: "uppercase",
+    textTransform: "uppercase" as const,
   },
   opsCardTitle: {
-    color: "#171717",
-    fontSize: 12,
+    color: PARCHMENT_COLORS.deepBrown,
+    fontSize: 11.5,
   },
   opsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 14,
+    gap: 12,
   },
   opsItem: {
     width: "48%",
@@ -1024,55 +921,42 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   opsLabel: {
-    fontSize: 7.5,
-    color: "#8A8171",
-    textTransform: "uppercase",
+    fontSize: 7,
+    color: PARCHMENT_COLORS.agedBrown,
+    textTransform: "uppercase" as const,
     letterSpacing: 1,
   },
   opsValue: {
-    fontSize: 10,
-    color: "#171717",
-    fontWeight: "semibold",
-  },
-  clientBadge: {
-    backgroundColor: "#C9A962",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 0,
-    alignSelf: "flex-start",
-    marginBottom: 10,
-  },
-  clientBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 8,
-    fontWeight: "bold",
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
-  },
-  pageNumber: {
-    fontSize: 8,
-    color: "#8A8171",
-  },
-  pageCount: {
-    fontSize: 8,
-    color: "#8A8171",
+    fontSize: 9.5,
+    color: PARCHMENT_COLORS.deepBrown,
+    fontWeight: 600,
   },
 });
 
-function LuxuryPage({
+function resolvePdfAsset(filename: string): string {
+  if (typeof window !== "undefined") {
+    return `/images/${filename}`;
+  }
+  return `${process.cwd()}/public/images/${filename}`;
+}
+
+const PARCHMENT_SRC = resolvePdfAsset("parchment.svg");
+const BORDER_SRC = resolvePdfAsset("border_pattern.svg");
+const NILE_SRC = resolvePdfAsset("nile_sunset.svg");
+
+function ParchmentPage({
   children,
   companyInfo,
   languageCode = "en",
+  pageLabel,
 }: {
   children: React.ReactNode;
   companyInfo?: CompanyInfo;
   languageCode?: string;
+  pageLabel?: string;
 }) {
   const rtl = isRTL(languageCode);
-  // Dynamic global font — Arabic gets Cairo, Hebrew NotoSansHebrew,
-  // zh/ja Noto Sans; everything else stays on the Latin serif (Lora).
   const bodyFont = getGlobalFont(languageCode);
-  // Cinzel is Latin-only: fall back to the language's global font otherwise.
   const latinDisplay = isLatinDisplayLanguage(languageCode);
   const brandFont = latinDisplay ? "Cinzel" : bodyFont;
 
@@ -1081,18 +965,37 @@ function LuxuryPage({
       size="A4"
       style={[styles.page, { direction: rtl ? "rtl" : "ltr", fontFamily: bodyFont }]}
     >
-      <View style={styles.watermarkText} fixed>
-        <Text>KEMERYA TOURS</Text>
-      </View>
-      <View style={[styles.pageFrame, { fontFamily: bodyFont, direction: rtl ? "rtl" : "ltr" }]}>
+      <Image src={PARCHMENT_SRC} style={styles.parchmentBg} />
+      <Image src={BORDER_SRC} style={styles.borderFrame} />
+
+      <View style={[styles.contentLayer, { fontFamily: bodyFont, direction: rtl ? "rtl" : "ltr" }]}>
         <View style={styles.headerBox}>
           <KemeryaLogoSvg />
           <Text style={[styles.brandTitle, { fontFamily: brandFont }]}>
             {companyInfo?.name || "KEMERYA TOURS"}
           </Text>
-          <LotusDivider width={200} />
+          <AnkhDivider />
         </View>
         {children}
+      </View>
+
+      <View style={styles.footerBand}>
+        <View style={styles.nileImageWrap}>
+          <Image src={NILE_SRC} style={styles.nileImage} />
+        </View>
+        <View style={styles.footerCaption}>
+          <View>
+            <Text style={[styles.footerBrand, { fontFamily: brandFont }]}>
+              {companyInfo?.name || "KEMERYA TOURS"}
+            </Text>
+            <Text style={[styles.footerTagline, { fontFamily: brandFont }]}>
+              Curated Egyptian Journeys · Est. Luxury
+            </Text>
+          </View>
+          <Text style={styles.footerPage}>
+            {pageLabel || "Page 1"}
+          </Text>
+        </View>
       </View>
     </Page>
   );
@@ -1142,7 +1045,6 @@ function getInclusions(
   tour: Tour | null,
   booking: BookingConfig
 ): string[] {
-  // Employee-edited inclusions take priority (standard mode)
   if (booking.inclusions?.length) {
     return booking.inclusions;
   }
@@ -1156,7 +1058,6 @@ function getExclusions(
   tour: Tour | null,
   booking: BookingConfig
 ): string[] {
-  // Employee-edited exclusions take priority (standard mode)
   if (booking.exclusions?.length) {
     return booking.exclusions;
   }
@@ -1164,14 +1065,6 @@ function getExclusions(
     return booking.customExclusions;
   }
   return tour?.exclusions ?? [];
-}
-
-interface ItineraryPDFProps {
-  tour: Tour | null;
-  booking: BookingConfig;
-  companyInfo?: CompanyInfo;
-  translatedData?: Record<string, unknown>;
-  languageCode?: string;
 }
 
 export function ItineraryPDF({
@@ -1199,9 +1092,6 @@ export function ItineraryPDF({
   if (booking.travelers.infants > 0) totalTravelersTextParts.push(`${booking.travelers.infants} Infant${booking.travelers.infants > 1 ? "s" : ""}`);
   const travelersText = totalTravelersTextParts.join(", ");
 
-  // ── RTL support ──────────────────────────────────────────────────────────
-  // Dynamically flip the alignment of every text style in the global
-  // stylesheet when the language is RTL (ar/he/…). LTR keeps "left".
   const rtl = isRTL(languageCode ?? "en");
   const styleBag = styles as unknown as Record<string, Record<string, unknown>>;
   for (const key of Object.keys(styleBag)) {
@@ -1216,16 +1106,10 @@ export function ItineraryPDF({
       s.textAlign = rtl ? "right" : "left";
     }
   }
-  // ── Arabic shaping ───────────────────────────────────────────────────────
-  // @react-pdf's textkit does NOT apply OpenType shaping, so Arabic renders
-  // disconnected. shapeForPdf bakes contextual forms + lam-alef ligatures
-  // into Unicode presentation-form code points (a no-op for non-Arabic text).
   const sh = shapeForPdf;
 
-  // ── Translation helpers (strict mapping over the Gemini payload) ──
   const hasTranslation = Boolean(translatedData && languageCode);
 
-  /** Translated static label (from `_labels` nested in the payload) or fallback. */
   const label = (key: string, fallback: string): string => {
     if (!translatedData) return fallback;
     const labels = translatedData["_labels"] as Record<string, string> | undefined;
@@ -1233,11 +1117,9 @@ export function ItineraryPDF({
     return typeof value === "string" && value.trim().length > 0 ? sh(value) : sh(fallback);
   };
 
-  /** Translated flat value (e.g. "tour.title", "booking.customTourTitle") or fallback. */
   const t = (key: string, fallback: string): string =>
     sh(getTranslatedValue(translatedData, key, fallback) || fallback);
 
-  /** Translated string list; maps index-wise over the fallback so any length works. */
   const tList = (key: string, fallback: string[]): string[] => {
     if (!translatedData) return fallback;
     const raw = translatedData[key];
@@ -1251,7 +1133,6 @@ export function ItineraryPDF({
     );
   };
 
-  /** Gemini returns `itinerary.days` as objects with dotted field keys. */
   const translatedDays = Array.isArray(translatedData?.["itinerary.days"])
     ? (translatedData!["itinerary.days"] as Array<Record<string, unknown>>)
     : [];
@@ -1263,8 +1144,6 @@ export function ItineraryPDF({
     return typeof value === "string" && value.trim().length > 0 ? sh(value) : undefined;
   };
 
-  // Terms & Privacy — read from the translated payload (translated by Gemini
-  // along with everything else); fall back to the resolved English content.
   const termsItems = getTranslatedArray(translatedData, "terms.items", getTermsItems(booking)).map(sh);
   const privacyItems = getTranslatedArray(
     translatedData,
@@ -1272,7 +1151,6 @@ export function ItineraryPDF({
     getPrivacyItems(booking)
   ).map(sh);
 
-  // Tour overview paragraphs (translated when available)
   const overviewParas = getTranslatedArray(translatedData, "tour.overview", tour?.overview ?? []).map(
     sh
   );
@@ -1283,10 +1161,8 @@ export function ItineraryPDF({
       : t("tour.title", tourTitle)
     : tourTitle;
 
-
   const langCode = languageCode ?? "en";
   const bodyFont = getGlobalFont(langCode);
-  // Cinzel faces are Latin-only — non-Latin languages use their global font.
   const latinDisplay = isLatinDisplayLanguage(langCode);
   const cinzelFont = latinDisplay ? "Cinzel" : bodyFont;
   const headingFont = latinDisplay ? "Cinzel Decorative" : bodyFont;
@@ -1295,25 +1171,19 @@ export function ItineraryPDF({
 
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
-      <LuxuryPage companyInfo={companyInfo} languageCode={langCode}>
-        {/* Minimalist Booking Ref Badge - Floating above Tour Title */}
+      <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel="Page 1">
         <View style={styles.bookingRefBadge}>
           <Text style={[styles.bookingRefText, cinzelStyle]}>Ref: {bookingRef}</Text>
         </View>
 
-        {/* HERO */}
         <View style={styles.heroCard}>
-          <View style={styles.heroTopBar} />
-          <View style={styles.heroBottomBar} />
-          <View style={styles.heroCornerTL} />
-          <View style={styles.heroCornerTR} />
-          <View style={styles.heroCornerBL} />
-          <View style={styles.heroCornerBR} />
+          <View style={styles.heroInnerFrame} />
           <View style={styles.clientBadge}>
             <Text style={styles.clientBadgeText}>Booking Reference · {bookingRef}</Text>
           </View>
-          <Text style={styles.heroSubtitle}>{label("hero.subtitle", "Your Exclusive Travel Itinerary")}</Text>
+          <Text style={[styles.heroSubtitle, cinzelStyle]}>{label("hero.subtitle", "Your Exclusive Travel Itinerary")}</Text>
           <Text style={[styles.heroTourName, headingStyle]}>{displayTourTitle}</Text>
+          <SmallAnkhDivider />
           <View style={styles.heroGrid}>
             <View style={styles.heroStat}>
               <Text style={styles.heroStatLabel}>{label("hero.departureDate", "Departure Date")}</Text>
@@ -1339,7 +1209,7 @@ export function ItineraryPDF({
             </View>
             <View style={styles.heroStat}>
               <Text style={styles.heroStatLabel}>{label("hero.totalPrice", "Total Price")}</Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                 {booking.offerPrice != null && booking.offerPrice > 0 ? (
                   <>
                     <Text style={[styles.heroStatValue, styles.strikethroughOldPrice]}>
@@ -1349,13 +1219,16 @@ export function ItineraryPDF({
                       {formatCurrency(booking.offerPrice, booking.currency)}
                     </Text>
                     {booking.totalPrice > 0 && (
-                      <OfferBadge
-                        discountPct={Math.round(
-                          ((booking.totalPrice - booking.offerPrice) /
-                            booking.totalPrice) *
-                          100
-                        )}
-                      />
+                      <View style={styles.offerBadge}>
+                        <Svg width={7} height={7} viewBox="0 0 24 24">
+                          <G fill="#FFFFFF">
+                            <Path d="M12 2 L15 8 H21 L16 12 L18 18 L12 15 L6 18 L8 12 L3 8 H9 Z" />
+                          </G>
+                        </Svg>
+                        <Text style={styles.offerBadgeText}>
+                          {Math.round(((booking.totalPrice - booking.offerPrice) / booking.totalPrice) * 100)}% OFF
+                        </Text>
+                      </View>
                     )}
                   </>
                 ) : (
@@ -1372,7 +1245,6 @@ export function ItineraryPDF({
           </View>
         </View>
 
-        {/* 01 - BOOKING SUMMARY */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionNumber}><Text>01</Text></View>
@@ -1432,7 +1304,6 @@ export function ItineraryPDF({
           </View>
         </View>
 
-        {/* LUXURY OFFER BANNER — attractive & creative, print-safe */}
         {booking.offerPrice != null && booking.offerPrice > 0 && (() => {
           const meta = getOfferMeta(booking);
           const pct = Math.round(((booking.totalPrice - booking.offerPrice) / booking.totalPrice) * 100);
@@ -1440,9 +1311,9 @@ export function ItineraryPDF({
             <View style={styles.offerBanner} wrap={false}>
               <View style={styles.offerBannerTop}>
                 <View style={{ marginRight: 6 }}>
-                  <ScarabSeal size={16} />
+                  <ScarabBullet size={15} />
                 </View>
-                <Text style={styles.offerBannerBadge}>
+                <Text style={[styles.offerBannerBadge, cinzelStyle]}>
                   {pct > 0 ? `SPECIAL OFFER · SAVE ${pct}%` : "SPECIAL OFFER"}
                 </Text>
               </View>
@@ -1467,7 +1338,6 @@ export function ItineraryPDF({
           );
         })()}
 
-        {/* TOUR OVERVIEW — same text as the website #overview section */}
         {!booking.isCustomTour && tour ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -1478,7 +1348,6 @@ export function ItineraryPDF({
             {overviewParas.map((para, i) =>
               i === 0 && para.length > 0 && !rtl ? (
                 <Text key={i} style={{ ...styles.notesText, marginBottom: 6 }}>
-                  {/* Drop cap on the first paragraph */}
                   <Text style={[styles.dropCap, headingStyle]}>{para.charAt(0)}</Text>
                   {para.slice(1)}
                 </Text>
@@ -1507,46 +1376,41 @@ export function ItineraryPDF({
           </View>
         ) : null}
 
-        {/* NOTES IF ANY */}
         {(booking.notes || booking.specialRequests) ? (
           <View style={styles.notesBlock}>
             {booking.notes ? (
               <>
-                <Text style={styles.notesTitle}>{label("notes.title", "Itinerary Notes")}</Text>
-              <Text style={styles.notesText}>{shapeForPdf(booking.notes)}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 5, gap: 6 }}>
+                  <PyramidBullet size={12} />
+                  <Text style={styles.notesTitle}>{label("notes.title", "Itinerary Notes")}</Text>
+                </View>
+                <Text style={styles.notesText}>{shapeForPdf(booking.notes)}</Text>
               </>
             ) : null}
             {booking.specialRequests ? (
               <>
-                <Text style={{ ...styles.notesTitle, marginTop: booking.notes ? 10 : 0 }}>
-                  {label("notes.specialRequests", "Special Requests")}
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", marginTop: booking.notes ? 10 : 0, marginBottom: 5, gap: 6 }}>
+                  <LotusBullet size={12} />
+                  <Text style={styles.notesTitle}>
+                    {label("notes.specialRequests", "Special Requests")}
+                  </Text>
+                </View>
                 <Text style={styles.notesText}>{shapeForPdf(booking.specialRequests)}</Text>
               </>
             ) : null}
           </View>
         ) : null}
+      </ParchmentPage>
 
-        {/* FOOTER PAGE 1 */}
-        <View style={styles.footer}>
-          <Text style={styles.footerPage}>Page 1</Text>
-        </View>
-      </LuxuryPage>
-
-      {/* =============================================== */}
-      {/* PAGE 2 - ITINERARY DAYS 1-3                    */}
-      {/* =============================================== */}
-      <LuxuryPage companyInfo={companyInfo} languageCode={langCode}>
-
+      <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel="Page 2">
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionNumber}><Text>02</Text></View>
+            <View style={styles.sectionNumber}><Text>03</Text></View>
             <Text style={[styles.sectionTitle, headingStyle]}>{label("section.roadmap", "Day-by-Day Itinerary")}</Text>
             <View style={styles.sectionUnderline} />
           </View>
 
           {itinerary.slice(0, 3).map((day, idx) => {
-            const key = day.day || idx + 1;
             return (
               <DayCard
                 key={day.day}
@@ -1581,25 +1445,18 @@ export function ItineraryPDF({
             />
           )}
         </View>
+      </ParchmentPage>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerPage}>Page 2</Text>
-        </View>
-      </LuxuryPage>
-
-      {/* PAGE 3 - REMAINING ITINERARY DAYS */}
       {itinerary.length > 3 && (
-        <LuxuryPage companyInfo={companyInfo} languageCode={langCode}>
-
+        <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel="Page 3">
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View style={styles.sectionNumber}><Text>02</Text></View>
+              <View style={styles.sectionNumber}><Text>03</Text></View>
               <Text style={[styles.sectionTitle, headingStyle]}>{label("section.roadmap", "Itinerary (Continued)")}</Text>
               <View style={styles.sectionUnderline} />
             </View>
 
             {itinerary.slice(3, 7).map((day, idx) => {
-              const key = day.day || idx + 4;
               return (
                 <DayCard
                   key={day.day}
@@ -1621,20 +1478,13 @@ export function ItineraryPDF({
               );
             })}
           </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerPage}>Page 3</Text>
-          </View>
-        </LuxuryPage>
+        </ParchmentPage>
       )}
 
-      {/* PAGE 4 - INCLUSIONS, EXCLUSIONS, PRICING, CONTACTS */}
-      <LuxuryPage companyInfo={companyInfo} languageCode={langCode}>
-
-        {/* 03 - INCLUSIONS / EXCLUSIONS */}
+      <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel={itinerary.length > 3 ? "Page 4" : "Page 3"}>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionNumber}><Text>03</Text></View>
+            <View style={styles.sectionNumber}><Text>04</Text></View>
             <Text style={[styles.sectionTitle, headingStyle]}>
               {label("section.inclusions", "Inclusions")} & {label("section.exclusions", "Exclusions")}
             </Text>
@@ -1643,14 +1493,15 @@ export function ItineraryPDF({
           <View style={styles.twoCol}>
             <View style={styles.col}>
               <View style={styles.inclusionsCard}>
-                <Text style={{ ...styles.sectionCardTitle, ...styles.inclusionTitleText, ...headingStyle }}>
-                  {label("tour.inclusions", "What's Included")}
-                </Text>
+                <View style={[styles.sectionCardTitle, styles.inclusionTitleText, headingStyle]}>
+                  <ScarabBullet size={13} />
+                  <Text>{label("tour.inclusions", "What's Included")}</Text>
+                </View>
                 {tList("inclusions", inclusions).length > 0 ? (
                   tList("inclusions", inclusions).map((inc, i) => (
                     <View key={i} style={styles.listItem}>
                       <View style={styles.listItemIcon}>
-                        <CheckIcon />
+                        <ScarabBullet size={13} />
                       </View>
                       <Text style={{ ...styles.listItemText, ...styles.inclusionsText }}>
                         {inc}
@@ -1666,14 +1517,15 @@ export function ItineraryPDF({
             </View>
             <View style={styles.col}>
               <View style={styles.exclusionsCard}>
-                <Text style={{ ...styles.sectionCardTitle, ...styles.exclusionTitleText, ...headingStyle }}>
-                  {label("tour.exclusions", "What's Not Included")}
-                </Text>
+                <View style={[styles.sectionCardTitle, styles.exclusionTitleText, headingStyle]}>
+                  <EyeOfHorusBullet size={13} />
+                  <Text>{label("tour.exclusions", "What's Not Included")}</Text>
+                </View>
                 {tList("exclusions", exclusions).length > 0 ? (
                   tList("exclusions", exclusions).map((exc, i) => (
                     <View key={i} style={styles.listItem}>
                       <View style={styles.listItemIcon}>
-                        <CrossIcon />
+                        <EyeOfHorusBullet size={13} />
                       </View>
                       <Text style={{ ...styles.listItemText, ...styles.exclusionsText }}>
                         {exc}
@@ -1690,15 +1542,14 @@ export function ItineraryPDF({
           </View>
         </View>
 
-        {/* 04 - PRICING */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionNumber}><Text>04</Text></View>
+            <View style={styles.sectionNumber}><Text>05</Text></View>
             <Text style={[styles.sectionTitle, headingStyle]}>{label("section.pricing", "Pricing & Payment")}</Text>
             <View style={styles.sectionUnderline} />
           </View>
           <View style={styles.pricingTable}>
-            <View style={{ ...styles.pricingRow, backgroundColor: "#FDFBF7" }}>
+            <View style={{ ...styles.pricingRow, backgroundColor: "rgba(232, 215, 177, 0.25)" }}>
               <Text style={{ ...styles.pricingCell, ...styles.pricingHeaderCell }}>{label("pricing.description", "Description")}</Text>
               <Text style={{ ...styles.pricingCellRight, ...styles.pricingHeaderCell }}>{label("pricing.amount", "Amount")} ({booking.currency})</Text>
             </View>
@@ -1761,7 +1612,10 @@ export function ItineraryPDF({
           </View>
 
           <View style={styles.termsBlock}>
-            <Text style={styles.termsTitle}>{label("section.terms", "Payment & Booking Terms")}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 7, gap: 6 }}>
+              <SunDiscBullet size={12} />
+              <Text style={styles.termsTitle}>{label("section.terms", "Payment & Booking Terms")}</Text>
+            </View>
             <Text style={styles.termsText}>
               • A 30% non-refundable deposit is required to confirm the booking.{"\n"}
               • The remaining balance must be paid no later than 14 days prior to departure.{"\n"}
@@ -1772,10 +1626,9 @@ export function ItineraryPDF({
           </View>
         </View>
 
-        {/* 05 - OPERATIONS CONTACTS */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionNumber}><Text>05</Text></View>
+            <View style={styles.sectionNumber}><Text>06</Text></View>
             <Text style={[styles.sectionTitle, headingStyle]}>{label("section.contact", "Operations & Contact Info")}</Text>
             <View style={styles.sectionUnderline} />
           </View>
@@ -1788,6 +1641,7 @@ export function ItineraryPDF({
                 {label("ops.roundClock", "Your Operations Team \u2014 Available Round the Clock")}
               </Text>
             </View>
+            <SmallAnkhDivider />
             <View style={styles.opsGrid}>
               <View style={styles.opsItem}>
                 <Text style={styles.opsLabel}>{label("ops.manager", "Operations Manager")}</Text>
@@ -1824,21 +1678,12 @@ export function ItineraryPDF({
             </View>
           </View>
         </View>
+      </ParchmentPage>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerPage}>
-            Page {itinerary.length > 3 ? "4" : "3"}
-          </Text>
-        </View>
-      </LuxuryPage>
-
-      {/* PAGE 5 - TERMS & POLICY + LEAVE A REVIEW */}
-      <LuxuryPage companyInfo={companyInfo} languageCode={langCode}>
-
-        {/* 06 - TERMS & POLICY */}
+      <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel={itinerary.length > 3 ? "Page 5" : "Page 4"}>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionNumber}><Text>06</Text></View>
+            <View style={styles.sectionNumber}><Text>07</Text></View>
             <Text style={[styles.sectionTitle, headingStyle]}>{label("terms.policy", "Terms & Policy")}</Text>
             <View style={styles.sectionUnderline} />
           </View>
@@ -1847,13 +1692,13 @@ export function ItineraryPDF({
               <View style={{ marginRight: 6 }}>
                 <CartoucheSeal size={13} />
               </View>
-              <Text style={{ ...cinzelStyle, fontSize: 9, color: "#C9A962" }}>
+              <Text style={{ ...cinzelStyle, fontSize: 9, color: PARCHMENT_COLORS.deepLapis, fontWeight: 700 }}>
                 {label("section.terms", "Terms & Conditions")}
               </Text>
             </View>
             {termsItems.map((item, i) => (
               <View key={i} style={styles.termsItemRow}>
-                <Text style={styles.termsBullet}>▪</Text>
+                <SunDiscBullet size={10} />
                 <Text style={styles.termsItemText}>{item}</Text>
               </View>
             ))}
@@ -1863,17 +1708,18 @@ export function ItineraryPDF({
                 {TERMS_URL}
               </Link>
             </Text>
+            <AnkhDivider color={PARCHMENT_COLORS.antiqueGold} />
             <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, marginBottom: 6 }}>
               <View style={{ marginRight: 6 }}>
-                <EyeOfHorusIcon size={13} />
+                <EyeOfHorusBullet size={13} />
               </View>
-              <Text style={{ ...cinzelStyle, fontSize: 9, color: "#C9A962" }}>
+              <Text style={{ ...cinzelStyle, fontSize: 9, color: PARCHMENT_COLORS.deepLapis, fontWeight: 700 }}>
                 {label("general.privacyPolicy", "Privacy Policy")}
               </Text>
             </View>
             {privacyItems.map((item, i) => (
               <View key={i} style={styles.termsItemRow}>
-                <Text style={styles.termsBullet}>▪</Text>
+                <PyramidBullet size={10} />
                 <Text style={styles.termsItemText}>{item}</Text>
               </View>
             ))}
@@ -1886,9 +1732,9 @@ export function ItineraryPDF({
           </View>
         </View>
 
-        {/* LEAVE A REVIEW */}
         <View style={styles.reviewCard}>
           <Text style={[styles.reviewTitle, headingStyle]}>{label("review.title", "Leave a Review")}</Text>
+          <SmallAnkhDivider />
           <Text style={styles.reviewSubtitle}>
             {label("review.subtitle", "Loved your tour? Your feedback on Google Business helps travelers like you find us.")}
           </Text>
@@ -1904,7 +1750,6 @@ export function ItineraryPDF({
           </Text>
         </View>
 
-        {/* SOCIAL MEDIA LINKS */}
         <View style={styles.socialRow}>
           {companyInfo.socialMedia?.facebook ? (
             <Link src={companyInfo.socialMedia.facebook} style={styles.socialLinkItem}>
@@ -1932,13 +1777,7 @@ export function ItineraryPDF({
             </Link>
           ) : null}
         </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerPage}>
-            Page {itinerary.length > 3 ? "5" : "4"}
-          </Text>
-        </View>
-      </LuxuryPage>
+      </ParchmentPage>
     </Document>
   );
 }
@@ -1954,6 +1793,9 @@ function SummaryCard({ label, value }: { label: string; value: React.ReactNode }
     }
     if (lowerLabel.includes("meeting") || lowerLabel.includes("location") || lowerLabel.includes("destination") || lowerLabel.includes("pickup")) {
       return <MapPinIcon />;
+    }
+    if (lowerLabel.includes("amount") || lowerLabel.includes("price") || lowerLabel.includes("email") || lowerLabel.includes("phone") || lowerLabel.includes("whatsapp")) {
+      return <SunDiscBullet size={18} />;
     }
     return <View style={styles.summaryItemIcon} />;
   };
@@ -2010,6 +1852,12 @@ function DayCard({
       <View break style={styles.dayCard}>
         <View style={styles.dayHeader}>
           <View style={styles.dayBadge}>
+            <Svg width={11} height={11} viewBox="0 0 24 24" style={{ marginRight: 4 }}>
+              <G stroke={PARCHMENT_COLORS.deepBrown} strokeWidth={1.8} fill="none" strokeLinecap="round">
+                <Path d="M12 5 C 9 5 6.5 7.5 6.5 10.5 C 6.5 13 8.5 15 12 15 C 15.5 15 17.5 13 17.5 10.5 C 17.5 7.5 15 5 12 5 Z" />
+                <Path d="M12 13 L 12 18.5 M 9 18.5 L 15 18.5" />
+              </G>
+            </Svg>
             <Text style={[styles.dayBadgeText, headingStyle]}>DAY {day.day}</Text>
           </View>
           <Text style={[styles.dayTitle, headingStyle]}>{dayTitle}</Text>
@@ -2018,11 +1866,16 @@ function DayCard({
           <Text style={styles.dayDescription}>{dayDescription}</Text>
           {stops.length > 0 && (
             <View style={styles.dayRoadmap} wrap={false}>
-              <Text style={[styles.dayRoadmapTitle, cinzelStyle]}>{tLabels?.roadmap || "Today's Roadmap"}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 5 }}>
+                <PyramidBullet size={10} />
+                <Text style={[styles.dayRoadmapTitle, cinzelStyle]}>{tLabels?.roadmap || "Today's Roadmap"}</Text>
+              </View>
               {stops.map((stop, i) => (
                 <View key={i}>
                   <View style={styles.dayRoadmapRow}>
-                    <View style={styles.dayRoadmapDot} />
+                    <View style={styles.dayRoadmapIcon}>
+                      <LotusBullet size={11} />
+                    </View>
                     <Text style={styles.dayRoadmapStop}>{stop}</Text>
                   </View>
                   {i < stops.length - 1 && (
@@ -2036,12 +1889,22 @@ function DayCard({
             <View style={styles.metaRow}>
               {accommodation ? (
                 <View style={styles.metaItem}>
+                  <Svg width={10} height={10} viewBox="0 0 24 24">
+                    <G fill={PARCHMENT_COLORS.lapis} opacity={0.85}>
+                      <Path d="M2 20 V 10 L 12 4 L 22 10 V 20 H 16 V 13 H 8 V 20 Z" />
+                    </G>
+                  </Svg>
                   <Text style={styles.metaLabel}>{tLabels?.stay || "Stay"} ·</Text>
                   <Text style={styles.metaValue}>{accommodationText}</Text>
                 </View>
               ) : null}
               {mealsJoined ? (
                 <View style={styles.metaItem}>
+                  <Svg width={10} height={10} viewBox="0 0 24 24">
+                    <G fill="none" stroke={PARCHMENT_COLORS.lapis} strokeWidth={2} strokeLinecap="round">
+                      <Path d="M4 3 V 19 C 4 20 5 21 6 21 M 8 3 V 19 C 8 20 9 21 10 21 M 14 3 C 12 4 12 7 14 9 C 16 7 16 4 14 3 Z M 14 9 V 21" />
+                    </G>
+                  </Svg>
                   <Text style={styles.metaLabel}>{tLabels?.meals || "Meals"} ·</Text>
                   <Text style={styles.metaValue}>{mealsText}</Text>
                 </View>
@@ -2050,154 +1913,7 @@ function DayCard({
           ) : null}
         </View>
       </View>
-      <LotusDivider />
+      <SmallAnkhDivider />
     </>
-  );
-}
-
-// Route Timeline Component - SVG journey path with checkpoints
-interface TimelineStop {
-  day: number;
-  label: string;
-  locations: string[];
-}
-
-function RouteTimeline({ stops }: { stops: TimelineStop[] }) {
-  const width = 480;
-  const padding = 30;
-  const usableWidth = width - padding * 2;
-  const nodeSpacing = stops.length > 1 ? usableWidth / (stops.length - 1) : 0;
-  const centerY = 60;
-  const lineHeight = 20;
-
-  // Calculate required height (capped: only first 2 locations render)
-  const height = centerY * 2 + 2 * lineHeight + 40;
-
-  return (
-    <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-      {/* Background with papyrus-like texture */}
-      <Path
-        d={`M 0 0 L ${width} 0 L ${width} ${height} L 0 ${height} Z`}
-        fill="#FDFBF7"
-      />
-      
-      {/* Decorative border */}
-      <Path
-        d={`M 5 5 L ${width - 5} 5 L ${width - 5} ${height - 5} L 5 ${height - 5} Z`}
-        fill="none"
-        stroke="#C5A059"
-        strokeWidth={1}
-        strokeDasharray="4,2"
-      />
-
-      {/* Main route line - golden gradient effect */}
-      <Path
-        d={`M ${padding} ${centerY} L ${width - padding} ${centerY}`}
-        stroke="#C5A059"
-        strokeWidth={3}
-      />
-      <Path
-        d={`M ${padding} ${centerY + 2} L ${width - padding} ${centerY + 2}`}
-        stroke="#E8D7B1"
-        strokeWidth={1}
-      />
-
-      {/* Checkpoints */}
-      {stops.map((stop, i) => {
-        const x = padding + i * nodeSpacing;
-        const isFirst = i === 0;
-        const isLast = i === stops.length - 1;
-
-        return (
-          <G key={i}>
-            {/* Outer glow circle */}
-            <Path
-              d={`M ${x} ${centerY - 16} A 16 16 0 1 1 ${x} ${centerY + 16} A 16 16 0 1 1 ${x} ${centerY - 16} Z`}
-              fill={isFirst || isLast ? "#171717" : "#C9A962"}
-              opacity={0.2}
-            />
-            {/* Main circle */}
-            <Path
-              d={`M ${x} ${centerY - 12} A 12 12 0 1 1 ${x} ${centerY + 12} A 12 12 0 1 1 ${x} ${centerY - 12} Z`}
-              fill={isFirst || isLast ? "#171717" : "#C9A962"}
-              stroke="#FDFBF7"
-              strokeWidth={2}
-            />
-            {/* Day number inside circle */}
-            <Text
-              style={{ fontSize: 9, fontFamily: "Cinzel", fill: "#FFFFFF", textAnchor: "middle" }}
-              x={x}
-              y={centerY + 3}
-            >
-              {String(stop.day)}
-            </Text>
-            
-            {/* Day label above */}
-            <Text
-              style={{ fontSize: 7, fontFamily: "Cinzel", fill: "#171717", textAnchor: "middle" }}
-              x={x}
-              y={centerY - 22}
-            >
-              {`Day ${stop.day}`}
-            </Text>
-
-            {/* Locations list — clipped to 2 lines so long names never overlap */}
-            {stop.locations.slice(0, 2).map((loc, j) => (
-              <Text
-                key={j}
-                style={{ fontSize: 6, fontFamily: "Lora", fill: "#2C1E16", textAnchor: "middle" }}
-                x={x}
-                y={centerY + 28 + (j * lineHeight)}
-              >
-                {loc.length > 20 ? loc.slice(0, 18) + "..." : loc}
-              </Text>
-            ))}
-
-            {/* "+N more" hint when a stop has many places */}
-            {stop.locations.length > 2 && (
-              <Text
-                style={{ fontSize: 5.5, fontFamily: "Lora", fill: "#8A8171", textAnchor: "middle" }}
-                x={x}
-                y={centerY + 28 + (2 * lineHeight)}
-              >
-                +{stop.locations.length - 2} more
-              </Text>
-            )}
-
-            {/* Start/End markers */}
-            {isFirst && (
-              <G>
-                <Path
-                  d={`M ${x - 8} ${centerY - 28} L ${x + 8} ${centerY - 28} L ${x} ${centerY - 38} Z`}
-                  fill="#171717"
-                />
-                <Text
-                  style={{ fontSize: 6, fontFamily: "Cinzel", fill: "#171717", textAnchor: "middle" }}
-                  x={x}
-                  y={centerY - 42}
-                >
-                  START
-                </Text>
-              </G>
-            )}
-            {isLast && (
-              <G>
-                <Path
-                  d={`M ${x - 8} ${centerY - 28} L ${x + 8} ${centerY - 28} L ${x} ${centerY - 38} Z`}
-                  fill="#171717"
-                />
-                <Text
-                  style={{ fontSize: 6, fontFamily: "Cinzel", fill: "#171717", textAnchor: "middle" }}
-                  x={x}
-                  y={centerY - 42}
-                >
-                  END
-                </Text>
-              </G>
-            )}
-          </G>
-        );
-      })}
-    </Svg>
   );
 }
