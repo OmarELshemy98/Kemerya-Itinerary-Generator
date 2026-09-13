@@ -56,8 +56,9 @@ Here is the JSON to translate:
 ${JSON.stringify(dataToTranslate, null, 2)}`;
 
     // Get Gemini model
+
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-1.5-flash-latest",
       systemInstruction: SYSTEM_PROMPT,
       generationConfig: {
         temperature: 0.3, // Lower temperature for consistent translations
@@ -69,17 +70,10 @@ ${JSON.stringify(dataToTranslate, null, 2)}`;
 
     // Generate translation
     const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
-
-    // Clean up response - remove markdown code blocks if present
-    const cleanedJson = text
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
-
-    // Parse the translated JSON
-    const translatedData = JSON.parse(cleanedJson);
+    let responseText = result.response.text();
+    // Strip markdown formatting if Gemini returns it
+    responseText = responseText.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+    const translatedData = JSON.parse(responseText);
 
     return NextResponse.json({
       success: true,
@@ -90,11 +84,7 @@ ${JSON.stringify(dataToTranslate, null, 2)}`;
   } catch (error) {
     console.error("Translation API Error:", error);
     return NextResponse.json(
-      {
-        error: "Translation failed",
-        message:
-          error instanceof Error ? error.message : "Unknown error occurred",
-      },
+      { success: false, error: error instanceof Error ? error.message : "Unknown error occurred" },
       { status: 500 }
     );
   }
