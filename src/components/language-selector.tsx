@@ -107,7 +107,7 @@ export function LanguageSelector({
       {/* Dropdown */}
       {isOpen && (
         <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
-          <div className="max-h-60 overflow-auto">
+          <div className="max-h-80 overflow-auto">
             {SUPPORTED_LANGUAGES.map((lang) => (
               <button
                 key={lang.code}

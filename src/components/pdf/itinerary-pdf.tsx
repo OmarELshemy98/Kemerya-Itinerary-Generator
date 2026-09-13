@@ -36,7 +36,15 @@ import {
   getGlobalFont,
   isLatinDisplayLanguage,
 } from "@/lib/pdf-fonts";
-import { getTranslatedValue } from "@/lib/translate-client";
+import {
+  getTranslatedValue,
+  getTranslatedArray,
+  getTermsItems,
+  getPrivacyItems,
+  TERMS_URL,
+  PRIVACY_URL,
+} from "@/lib/translate-client";
+import { shapeForPdf } from "@/lib/arabic-shaper";
 
 interface ItineraryPDFProps {
   tour: Tour | null;
@@ -63,64 +71,6 @@ const BRAND_COLORS = {
   exclusionsBg: "#FFFFFF",
   exclusionsText: "#171717",
 };
-
-const TERMS_URL = "https://www.kemeryatours.com/page/terms-and-conditions";
-const PRIVACY_URL = "https://www.kemeryatours.com/page/privacy-policy";
-const PRIVACY_ITEMS = [
-  "Who We Are: Kemerya Tours is an Egyptian travel company providing tours, accommodation, transfers, guiding services and Nile cruises.",
-  "Information We Collect: Name, nationality, email, phone / WhatsApp, country of residence, travel dates, destinations, accommodation preferences, and passport details only when required for bookings or permits.",
-  "Children's Privacy: We never collect children's data directly — any required details must be provided by a parent or legal guardian.",
-  "How We Use Your Data: Strictly to prepare itineraries and quotations, manage bookings, process secure payments, communicate before / during / after your trip, and comply with Egyptian legal requirements.",
-  "Sharing: We never sell your data. Details are shared only with trusted partners (hotels, cruises, airlines, guides) to fulfil your booking.",
-  "Cookies & Marketing: Essential cookies keep the website running and help us understand visits. Marketing messages are sent only with your consent — you can opt out anytime.",
-  "Data Retention & Your Rights: Data is kept only as long as needed for your trip, accounting or legal duties, then securely deleted. You may request access, correction or deletion via info@kemeryatours.com (subject: Privacy Request — Kemerya Tours).",
-];
-const TERMS_ITEMS = [
-  "Booking Confirmation: A booking is locked in only when Kemerya Tours confirms availability in writing, the required deposit is paid, and the official Booking Confirmation is issued. The lead traveler accepts these terms for every person included in the reservation.",
-  "Deposits & Balance: A non-refundable deposit equal to 35% of the total trip cost is required upon booking confirmation. The remaining 65% balance must be paid upon arrival.",
-  "Pricing & Fees: Quotes are issued in USD or EUR. Bank conversion rates and card processing fees are the traveler's responsibility. If government agencies increase monument ticket fees, taxes, port fees, or fuel surcharges before the trip, the total will be updated to cover those mandatory charges.",
-  "Services & Suppliers: Certain travel components are provided by independent third-party suppliers (hotels, airlines, cruise operators, carriers, and site authorities). Services included are strictly those detailed in the confirmed quotation and itinerary.",
-  "Cancellations & Changes: Most bookings can be changed or canceled depending on the airline, hotel, or service provider's policy. Deposits are non-refundable; cancellation fees follow the confirmed booking terms.",
-  "Liability: Kemerya Tours' maximum financial liability for any dispute, injury, damage, or expense connected to the trip never exceeds the total amount paid for the specific booking. Indirect or consequential damages are excluded.",
-  "In-Trip Complaints: Report any issue to your guide or local representative immediately so it can be fixed on the spot; otherwise send a detailed email complaint within 15 days of finishing the trip.",
-  "Emergency & Governing Law: A 24/7 emergency line is printed on the confirmation voucher. Egyptian law governs these booking terms.",
-];
-
-function safeParseStringList(raw: string | null): string[] {
-  if (!raw) return [];
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed)
-      ? parsed
-          .filter((v): v is string => typeof v === "string")
-          .map((v) => v.trim())
-          .filter(Boolean)
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-function getTermsItems(booking?: BookingConfig): string[] {
-  if (booking?.customTerms && booking.customTerms.length > 0) {
-    return booking.customTerms;
-  }
-  if (typeof window !== "undefined") {
-    const stored = safeParseStringList(localStorage.getItem("kemerya_terms"));
-    if (stored.length > 0) return stored;
-  }
-  return TERMS_ITEMS;
-}
-
-function getPrivacyItems(booking?: BookingConfig): string[] {
-  const custom = booking?.customPrivacy?.filter((t) => t && t.trim().length > 0);
-  if (custom && custom.length > 0) return custom.filter(Boolean);
-  if (typeof window !== "undefined") {
-    const stored = safeParseStringList(localStorage.getItem("kemerya_privacy"));
-    if (stored.length > 0) return stored;
-  }
-  return PRIVACY_ITEMS;
-}
 
 function getOfferMeta(booking: BookingConfig): { title: string; note: string } {
   return {
@@ -1134,7 +1084,7 @@ function LuxuryPage({
       <View style={styles.watermarkText} fixed>
         <Text>KEMERYA TOURS</Text>
       </View>
-      <View style={[styles.pageFrame, { fontFamily: bodyFont }]}>
+      <View style={[styles.pageFrame, { fontFamily: bodyFont, direction: rtl ? "rtl" : "ltr" }]}>
         <View style={styles.headerBox}>
           <KemeryaLogoSvg />
           <Text style={[styles.brandTitle, { fontFamily: brandFont }]}>
@@ -1249,6 +1199,29 @@ export function ItineraryPDF({
   if (booking.travelers.infants > 0) totalTravelersTextParts.push(`${booking.travelers.infants} Infant${booking.travelers.infants > 1 ? "s" : ""}`);
   const travelersText = totalTravelersTextParts.join(", ");
 
+  // ── RTL support ──────────────────────────────────────────────────────────
+  // Dynamically flip the alignment of every text style in the global
+  // stylesheet when the language is RTL (ar/he/…). LTR keeps "left".
+  const rtl = isRTL(languageCode ?? "en");
+  const styleBag = styles as unknown as Record<string, Record<string, unknown>>;
+  for (const key of Object.keys(styleBag)) {
+    const s = styleBag[key];
+    if (
+      s &&
+      typeof s === "object" &&
+      !Array.isArray(s) &&
+      !("textAlign" in s) &&
+      ("fontSize" in s || "color" in s || "fontFamily" in s)
+    ) {
+      s.textAlign = rtl ? "right" : "left";
+    }
+  }
+  // ── Arabic shaping ───────────────────────────────────────────────────────
+  // @react-pdf's textkit does NOT apply OpenType shaping, so Arabic renders
+  // disconnected. shapeForPdf bakes contextual forms + lam-alef ligatures
+  // into Unicode presentation-form code points (a no-op for non-Arabic text).
+  const sh = shapeForPdf;
+
   // ── Translation helpers (strict mapping over the Gemini payload) ──
   const hasTranslation = Boolean(translatedData && languageCode);
 
@@ -1257,12 +1230,12 @@ export function ItineraryPDF({
     if (!translatedData) return fallback;
     const labels = translatedData["_labels"] as Record<string, string> | undefined;
     const value = labels?.[key];
-    return typeof value === "string" && value.trim().length > 0 ? value : fallback;
+    return typeof value === "string" && value.trim().length > 0 ? sh(value) : sh(fallback);
   };
 
   /** Translated flat value (e.g. "tour.title", "booking.customTourTitle") or fallback. */
   const t = (key: string, fallback: string): string =>
-    getTranslatedValue(translatedData, key, fallback) || fallback;
+    sh(getTranslatedValue(translatedData, key, fallback) || fallback);
 
   /** Translated string list; maps index-wise over the fallback so any length works. */
   const tList = (key: string, fallback: string[]): string[] => {
@@ -1274,7 +1247,7 @@ export function ItineraryPDF({
     );
     if (strings.length === 0) return fallback;
     return fallback.map((fb, i) =>
-      i < strings.length && strings[i].trim().length > 0 ? strings[i] : fb
+      i < strings.length && strings[i].trim().length > 0 ? sh(strings[i]) : sh(fb)
     );
   };
 
@@ -1287,8 +1260,22 @@ export function ItineraryPDF({
     const day = translatedDays[idx];
     if (!day) return undefined;
     const value = day[field];
-    return typeof value === "string" && value.trim().length > 0 ? value : undefined;
+    return typeof value === "string" && value.trim().length > 0 ? sh(value) : undefined;
   };
+
+  // Terms & Privacy — read from the translated payload (translated by Gemini
+  // along with everything else); fall back to the resolved English content.
+  const termsItems = getTranslatedArray(translatedData, "terms.items", getTermsItems(booking)).map(sh);
+  const privacyItems = getTranslatedArray(
+    translatedData,
+    "privacy.items",
+    getPrivacyItems(booking)
+  ).map(sh);
+
+  // Tour overview paragraphs (translated when available)
+  const overviewParas = getTranslatedArray(translatedData, "tour.overview", tour?.overview ?? []).map(
+    sh
+  );
 
   const displayTourTitle = hasTranslation
     ? booking.isCustomTour
@@ -1481,15 +1468,15 @@ export function ItineraryPDF({
         })()}
 
         {/* TOUR OVERVIEW — same text as the website #overview section */}
-        {!booking.isCustomTour && tour?.overview?.length ? (
+        {!booking.isCustomTour && tour ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionNumber}><Text>02</Text></View>
               <Text style={[styles.sectionTitle, headingStyle]}>{label("section.overview", "Tour Overview")}</Text>
               <View style={styles.sectionUnderline} />
             </View>
-            {tour.overview.map((para, i) =>
-              i === 0 && para.length > 0 ? (
+            {overviewParas.map((para, i) =>
+              i === 0 && para.length > 0 && !rtl ? (
                 <Text key={i} style={{ ...styles.notesText, marginBottom: 6 }}>
                   {/* Drop cap on the first paragraph */}
                   <Text style={[styles.dropCap, headingStyle]}>{para.charAt(0)}</Text>
@@ -1525,16 +1512,16 @@ export function ItineraryPDF({
           <View style={styles.notesBlock}>
             {booking.notes ? (
               <>
-                <Text style={styles.notesTitle}>Itinerary Notes</Text>
-                <Text style={styles.notesText}>{booking.notes}</Text>
+                <Text style={styles.notesTitle}>{label("notes.title", "Itinerary Notes")}</Text>
+              <Text style={styles.notesText}>{shapeForPdf(booking.notes)}</Text>
               </>
             ) : null}
             {booking.specialRequests ? (
               <>
                 <Text style={{ ...styles.notesTitle, marginTop: booking.notes ? 10 : 0 }}>
-                  Special Requests
+                  {label("notes.specialRequests", "Special Requests")}
                 </Text>
-                <Text style={styles.notesText}>{booking.specialRequests}</Text>
+                <Text style={styles.notesText}>{shapeForPdf(booking.specialRequests)}</Text>
               </>
             ) : null}
           </View>
@@ -1804,7 +1791,7 @@ export function ItineraryPDF({
             <View style={styles.opsGrid}>
               <View style={styles.opsItem}>
                 <Text style={styles.opsLabel}>{label("ops.manager", "Operations Manager")}</Text>
-                <Text style={styles.opsValue}>{companyInfo.operationsManager.name}</Text>
+                <Text style={styles.opsValue}>{shapeForPdf(companyInfo.operationsManager.name)}</Text>
               </View>
               <View style={styles.opsItem}>
                 <Text style={styles.opsLabel}>{label("ops.directMobile", "Direct Mobile")}</Text>
@@ -1832,7 +1819,7 @@ export function ItineraryPDF({
               </View>
               <View style={styles.opsItem}>
                 <Text style={styles.opsLabel}>{label("ops.address", "Office Address")}</Text>
-                <Text style={styles.opsValue}>{companyInfo.address}</Text>
+                <Text style={styles.opsValue}>{shapeForPdf(companyInfo.address)}</Text>
               </View>
             </View>
           </View>
@@ -1864,14 +1851,14 @@ export function ItineraryPDF({
                 {label("section.terms", "Terms & Conditions")}
               </Text>
             </View>
-            {getTermsItems(booking).map((item, i) => (
+            {termsItems.map((item, i) => (
               <View key={i} style={styles.termsItemRow}>
                 <Text style={styles.termsBullet}>▪</Text>
                 <Text style={styles.termsItemText}>{item}</Text>
               </View>
             ))}
             <Text style={styles.termsItemText}>
-              Read the full terms on our website:{" "}
+              {label("terms.readFull", "Read the full terms on our website:")}{" "}
               <Link src={TERMS_URL} style={styles.termsLinkText}>
                 {TERMS_URL}
               </Link>
@@ -1884,14 +1871,14 @@ export function ItineraryPDF({
                 {label("general.privacyPolicy", "Privacy Policy")}
               </Text>
             </View>
-            {getPrivacyItems(booking).map((item, i) => (
+            {privacyItems.map((item, i) => (
               <View key={i} style={styles.termsItemRow}>
                 <Text style={styles.termsBullet}>▪</Text>
                 <Text style={styles.termsItemText}>{item}</Text>
               </View>
             ))}
             <Text style={styles.termsItemText}>
-              Read the full privacy policy:{" "}
+              {label("privacy.readFull", "Read the full privacy policy:")}{" "}
               <Link src={PRIVACY_URL} style={styles.termsLinkText}>
                 {PRIVACY_URL}
               </Link>
@@ -1907,7 +1894,9 @@ export function ItineraryPDF({
           </Text>
           <Link src={companyInfo.socialMedia?.googleBusiness || "https://share.google/RLldzNlk9YFVuIGbD"}>
             <View style={styles.reviewBadge}>
-              <Text style={[styles.reviewBadgeText, headingStyle]}>★ Write a Review</Text>
+              <Text style={[styles.reviewBadgeText, headingStyle]}>
+                {label("review.cta", "★ Write a Review")}
+              </Text>
             </View>
           </Link>
           <Text style={styles.reviewLink}>
@@ -1975,9 +1964,9 @@ function SummaryCard({ label, value }: { label: string; value: React.ReactNode }
         {getIcon()}
       </View>
       <View style={styles.summaryItemTextWrap}>
-        <Text style={styles.summaryItemLabel}>{label}</Text>
+        <Text style={styles.summaryItemLabel}>{shapeForPdf(label)}</Text>
         {typeof value === "string" ? (
-          <Text style={styles.summaryItemValue}>{value}</Text>
+          <Text style={styles.summaryItemValue}>{shapeForPdf(value)}</Text>
         ) : (
           value
         )}
@@ -2009,11 +1998,13 @@ function DayCard({
   headingStyle?: Record<string, string>;
   cinzelStyle?: Record<string, string>;
 }) {
-  const stops = (translatedRoadmap ? translatedRoadmap.split(",").map((s) => s.trim()).filter(Boolean) : roadmap && roadmap.length > 0 ? roadmap : []);
-  const dayTitle = translatedTitle || day.title;
-  const dayDescription = translatedDescription || day.description;
+  const stops = (translatedRoadmap ? translatedRoadmap.split(",").map((s) => s.trim()).filter(Boolean) : roadmap && roadmap.length > 0 ? roadmap : []).map(shapeForPdf);
+  const dayTitle = shapeForPdf(translatedTitle || day.title);
+  const dayDescription = shapeForPdf(translatedDescription || day.description);
   const accommodation = translatedAccommodation || day.accommodation || "";
   const mealsJoined = translatedMeals || (day.meals ? day.meals.join(", ") : "");
+  const accommodationText = shapeForPdf(accommodation);
+  const mealsText = shapeForPdf(mealsJoined);
   return (
     <>
       <View break style={styles.dayCard}>
@@ -2046,13 +2037,13 @@ function DayCard({
               {accommodation ? (
                 <View style={styles.metaItem}>
                   <Text style={styles.metaLabel}>{tLabels?.stay || "Stay"} ·</Text>
-                  <Text style={styles.metaValue}>{accommodation}</Text>
+                  <Text style={styles.metaValue}>{accommodationText}</Text>
                 </View>
               ) : null}
               {mealsJoined ? (
                 <View style={styles.metaItem}>
                   <Text style={styles.metaLabel}>{tLabels?.meals || "Meals"} ·</Text>
-                  <Text style={styles.metaValue}>{mealsJoined}</Text>
+                  <Text style={styles.metaValue}>{mealsText}</Text>
                 </View>
               ) : null}
             </View>

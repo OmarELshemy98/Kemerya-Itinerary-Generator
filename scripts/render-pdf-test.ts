@@ -62,6 +62,32 @@ const tour: Tour = {
       React.createElement(ItineraryPDF, { tour, booking, companyInfo }) as never
     );
     console.log("PDF OK, bytes:", buffer.length);
+
+    // ── Arabic / RTL render: exercises shaping + RTL styles + translated
+    //    Terms & Privacy from the payload ──
+    const arabicTranslatedData = {
+      "_labels": {
+        "section.terms": "الشروط والأحكام",
+        "terms.readFull": "اقرأ الشروط كاملة على موقعنا:",
+        "notes.title": "ملاحظات الرحلة",
+      },
+      "terms.items": [
+        "تأكيد الحجز: لا يتم تأكيد الحجز إلا بعد دفع العربون.",
+        "الودائع والرصيد: عربون غير قابل للاسترداد بنسبة 35٪ من إجمالي تكلفة الرحلة.",
+      ],
+      "privacy.items": ["من نحن: كيميريا تورز شركة سفر مصرية."],
+    };
+    const arabicBuffer = await renderToBuffer(
+      React.createElement(ItineraryPDF, {
+        tour,
+        booking,
+        companyInfo,
+        translatedData: arabicTranslatedData as unknown as Record<string, unknown>,
+        languageCode: "ar",
+      }) as never
+    );
+    console.log("Arabic PDF OK, bytes:", arabicBuffer.length);
+
     process.exit(0);
   } catch (e) {
     console.error("PDF RENDER FAILED:");

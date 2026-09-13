@@ -20,6 +20,73 @@ export interface TranslationResponse {
   error?: string;
 }
 
+/* ────────────────────────────────────────────────────────────────────────────
+ * Terms & Privacy content — single source of truth shared by the PDF and the
+ * translation payload so these sections are translated like everything else.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+export const TERMS_URL = "https://www.kemeryatours.com/page/terms-and-conditions";
+export const PRIVACY_URL = "https://www.kemeryatours.com/page/privacy-policy";
+
+export const DEFAULT_PRIVACY_ITEMS: string[] = [
+  "Who We Are: Kemerya Tours is an Egyptian travel company providing tours, accommodation, transfers, guiding services and Nile cruises.",
+  "Information We Collect: Name, nationality, email, phone / WhatsApp, country of residence, travel dates, destinations, accommodation preferences, and passport details only when required for bookings or permits.",
+  "Children's Privacy: We never collect children's data directly — any required details must be provided by a parent or legal guardian.",
+  "How We Use Your Data: Strictly to prepare itineraries and quotations, manage bookings, process secure payments, communicate before / during / after your trip, and comply with Egyptian legal requirements.",
+  "Sharing: We never sell your data. Details are shared only with trusted partners (hotels, cruises, airlines, guides) to fulfil your booking.",
+  "Cookies & Marketing: Essential cookies keep the website running and help us understand visits. Marketing messages are sent only with your consent — you can opt out anytime.",
+  "Data Retention & Your Rights: Data is kept only as long as needed for your trip, accounting or legal duties, then securely deleted. You may request access, correction or deletion via info@kemeryatours.com (subject: Privacy Request — Kemerya Tours).",
+];
+
+export const DEFAULT_TERMS_ITEMS: string[] = [
+  "Booking Confirmation: A booking is locked in only when Kemerya Tours confirms availability in writing, the required deposit is paid, and the official Booking Confirmation is issued. The lead traveler accepts these terms for every person included in the reservation.",
+  "Deposits & Balance: A non-refundable deposit equal to 35% of the total trip cost is required upon booking confirmation. The remaining 65% balance must be paid upon arrival.",
+  "Pricing & Fees: Quotes are issued in USD or EUR. Bank conversion rates and card processing fees are the traveler's responsibility. If government agencies increase monument ticket fees, taxes, port fees, or fuel surcharges before the trip, the total will be updated to cover those mandatory charges.",
+  "Services & Suppliers: Certain travel components are provided by independent third-party suppliers (hotels, airlines, cruise operators, carriers, and site authorities). Services included are strictly those detailed in the confirmed quotation and itinerary.",
+  "Cancellations & Changes: Most bookings can be changed or canceled depending on the airline, hotel, or service provider's policy. Deposits are non-refundable; cancellation fees follow the confirmed booking terms.",
+  "Liability: Kemerya Tours' maximum financial liability for any dispute, injury, damage, or expense connected to the trip never exceeds the total amount paid for the specific booking. Indirect or consequential damages are excluded.",
+  "In-Trip Complaints: Report any issue to your guide or local representative immediately so it can be fixed on the spot; otherwise send a detailed email complaint within 15 days of finishing the trip.",
+  "Emergency & Governing Law: A 24/7 emergency line is printed on the confirmation voucher. Egyptian law governs these booking terms.",
+];
+
+function safeParseStringList(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed
+          .filter((v): v is string => typeof v === "string")
+          .map((v) => v.trim())
+          .filter(Boolean)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Resolves the effective Terms items: booking overrides → saved settings → defaults. */
+export function getTermsItems(booking?: BookingConfig): string[] {
+  if (booking?.customTerms && booking.customTerms.length > 0) {
+    return booking.customTerms;
+  }
+  if (typeof window !== "undefined") {
+    const stored = safeParseStringList(localStorage.getItem("kemerya_terms"));
+    if (stored.length > 0) return stored;
+  }
+  return DEFAULT_TERMS_ITEMS;
+}
+
+/** Resolves the effective Privacy items: booking overrides → saved settings → defaults. */
+export function getPrivacyItems(booking?: BookingConfig): string[] {
+  const custom = booking?.customPrivacy?.filter((t) => t && t.trim().length > 0);
+  if (custom && custom.length > 0) return custom.filter(Boolean);
+  if (typeof window !== "undefined") {
+    const stored = safeParseStringList(localStorage.getItem("kemerya_privacy"));
+    if (stored.length > 0) return stored;
+  }
+  return DEFAULT_PRIVACY_ITEMS;
+}
+
 /**
  * Get static labels that need translation
  */
@@ -93,10 +160,17 @@ export function getStaticLabels(): Record<string, string> {
 
     // Terms / policy labels
     "terms.policy": "Terms & Policy",
+    "terms.readFull": "Read the full terms on our website:",
+    "privacy.readFull": "Read the full privacy policy:",
+
+    // Notes labels
+    "notes.title": "Itinerary Notes",
+    "notes.specialRequests": "Special Requests",
 
     // Review labels
     "review.title": "Leave a Review",
     "review.subtitle": "Loved your tour? Your feedback on Google Business helps travelers like you find us.",
+    "review.cta": "★ Write a Review",
   };
 }
 
@@ -115,7 +189,16 @@ export function transformItineraryData(
     data["tour.title"] = tour.title;
     data["tour.shortDescription"] = tour.shortDescription || "";
     data["tour.longDescription"] = tour.longDescription || "";
+    if (tour.overview && tour.overview.length > 0) {
+      data["tour.overview"] = tour.overview;
+    }
   }
+
+  // Terms & Privacy — INCLUDED in the payload so Gemini translates these
+  // sections like every other value (previously they were hardcoded English
+  // in the PDF and bypassed translation entirely).
+  data["terms.items"] = getTermsItems(booking);
+  data["privacy.items"] = getPrivacyItems(booking);
 
   // Booking information
   data["booking.clientName"] = booking.clientName || "";
@@ -216,6 +299,24 @@ export async function translateItineraryData(
       error: error instanceof Error ? error.message : "Translation request failed",
     };
   }
+}
+
+/**
+ * Get a translated STRING ARRAY from the payload, falling back to the
+ * original English array when no translation is available.
+ */
+export function getTranslatedArray(
+  translatedData: Record<string, unknown> | undefined,
+  key: string,
+  fallback: string[]
+): string[] {
+  if (!translatedData) return fallback;
+  const raw = translatedData[key];
+  if (!Array.isArray(raw)) return fallback;
+  const strings = raw
+    .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+    .map((v) => v.trim());
+  return strings.length > 0 ? strings : fallback;
 }
 
 /**
