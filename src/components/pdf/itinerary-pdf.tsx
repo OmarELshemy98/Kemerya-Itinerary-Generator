@@ -1191,7 +1191,18 @@ function resolvePdfAsset(filename: string): string {
   if (typeof window !== "undefined") {
     return `/images/${filename}`;
   }
-  return `${process.cwd()}/public/images/${filename}`;
+  // Server (Next.js react-pdf): MUST be an absolute OS path or <Image>
+  // silently renders nothing (blank page). path.join gives the correct
+  // separators on Windows (\Kemerya-...) and Linux (/app/...).
+  try {
+    // Inline require so the "use client" bundle never statically imports "path".
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const nodeRequire = (globalThis as any).require ?? eval("require");
+    const path = nodeRequire("path");
+    return path.join(process.cwd(), "public", "images", filename);
+  } catch {
+    return `${process.cwd()}/public/images/${filename}`;
+  }
 }
 
 const PARCHMENT_SRC = resolvePdfAsset("parchment.svg");
@@ -2079,8 +2090,10 @@ export function ItineraryPDF({
           </View>
           {/* Company showcase — fills the former empty rectangle with a rich
               brand panel: logo, name, tagline, about + contact pills + socials.
-              Pure Flexbox (no absolute) so nothing overlaps; wraps on RTL too. */}
-          <View style={styles.companyShowcase}>
+              Pure Flexbox (no absolute) so nothing overlaps; wraps on RTL too.
+              wrap={false} forces the whole block onto a fresh page if it can't
+              fit above the fixed footer — no more footer bleed-through. */}
+          <View wrap={false} style={styles.companyShowcase}>
             <Image src={LOGO_SRC} style={styles.companyShowcaseLogo} />
             <Text style={[styles.companyShowcaseName, headingStyle]}>
               {shapeForPdf(companyInfo.name)}
