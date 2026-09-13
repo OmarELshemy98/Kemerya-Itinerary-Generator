@@ -147,7 +147,7 @@ const RoadmapArrow = () => (
   </Svg>
 );
 
-const ScarabBullet = ({ size = 14 }: { size?: number }) => (
+const ScarabBullet = ({ size = 12 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <G>
       <Ellipse cx={12} cy={13} rx={8} ry={9.5} fill={PARCHMENT_COLORS.scarabGreen} />
@@ -164,7 +164,7 @@ const ScarabBullet = ({ size = 14 }: { size?: number }) => (
   </Svg>
 );
 
-const EyeOfHorusBullet = ({ size = 14 }: { size?: number }) => (
+const EyeOfHorusBullet = ({ size = 12 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <G>
       <Path d="M2 11 C 6 4 11 2 14 2 C 17 2 22 4 26 11 C 22 18 17 20 14 20 C 11 20 6 18 2 11 Z"
@@ -185,7 +185,7 @@ const EyeOfHorusBullet = ({ size = 14 }: { size?: number }) => (
   </Svg>
 );
 
-const PyramidBullet = ({ size = 14 }: { size?: number }) => (
+const PyramidBullet = ({ size = 12 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <G>
       <Path d="M12 1 L 23 22 L 1 22 Z" fill={PARCHMENT_COLORS.royalGold} />
@@ -197,7 +197,7 @@ const PyramidBullet = ({ size = 14 }: { size?: number }) => (
   </Svg>
 );
 
-const LotusBullet = ({ size = 14 }: { size?: number }) => (
+const LotusBullet = ({ size = 12 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <G>
       <Path d="M12 2 C 9 5 7 10 7 14 C 7 16 9 17 12 17 C 15 17 17 16 17 14 C 17 10 15 5 12 2 Z"
@@ -213,7 +213,7 @@ const LotusBullet = ({ size = 14 }: { size?: number }) => (
   </Svg>
 );
 
-const SunDiscBullet = ({ size = 14 }: { size?: number }) => (
+const SunDiscBullet = ({ size = 12 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <G>
       <Circle cx={12} cy={12} r={8} fill={PARCHMENT_COLORS.royalGold} />
@@ -228,7 +228,7 @@ const SunDiscBullet = ({ size = 14 }: { size?: number }) => (
   </Svg>
 );
 
-const CartoucheSeal = ({ size = 13 }: { size?: number }) => (
+const CartoucheSeal = ({ size = 12 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <G fill="none" stroke={PARCHMENT_COLORS.royalGold} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
       <Path d="M7 3 H 17 V 19 H 9 L 7 21 Z" />
@@ -342,16 +342,18 @@ const styles = StyleSheet.create({
     height: 842,
   },
   contentLayer: {
-    paddingTop: 52,
-    paddingLeft: 52,
-    paddingRight: 52,
-    // Massive clearance so the fixed footer band can NEVER overprint text.
-    paddingBottom: 210,
+    // Balanced: compact top rhythm (fills empty gaps) but bottom clearance
+    // stays ABOVE the fixed footer band (bottom:20 + ~110px footer height)
+    // so text can NEVER overprint Payment Terms / Privacy.
+    paddingTop: 40,
+    paddingLeft: 45,
+    paddingRight: 45,
+    paddingBottom: 150,
     flexDirection: "column",
   },
   footerBand: {
     position: "absolute",
-    bottom: 28,
+    bottom: 20,
     left: 40,
     right: 40,
     width: 515,
@@ -359,8 +361,8 @@ const styles = StyleSheet.create({
   },
   nileImageWrap: {
     width: "100%",
-    height: 108,
-    borderWidth: 1.2,
+    height: 90,
+    borderWidth: 1,
     borderColor: PARCHMENT_COLORS.royalGold,
     overflow: "hidden",
   },
@@ -398,37 +400,37 @@ const styles = StyleSheet.create({
   },
   headerBox: {
     // Premium centered hero header — pure Flexbox stack (no absolute) so
-    // logo / brand / tagline / divider stack with generous breathing room.
+    // logo / brand / tagline / divider stack with tight, even rhythm.
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "flex-start",
-    marginBottom: 14,
-    paddingBottom: 10,
-    paddingTop: 4,
-    gap: 6,
+    marginBottom: 12,
+    paddingBottom: 6,
+    paddingTop: 2,
+    gap: 4,
   },
   officialLogo: {
-    width: 300,
-    height: 120,
+    width: 240,
+    height: 90,
     objectFit: "contain",
     alignSelf: "center",
-    marginBottom: 10,
+    marginBottom: 4,
     marginTop: 2,
   },
   brandTitle: {
-    fontSize: 26,
+    fontSize: 24,
     color: PARCHMENT_COLORS.deepBrown,
-    letterSpacing: 5,
+    letterSpacing: 3,
     fontWeight: 700,
-    marginTop: 8,
+    marginTop: 4,
     marginBottom: 2,
     textAlign: "center",
-    lineHeight: 1.25,
+    lineHeight: 1.3,
   },
   brandTagline: {
-    fontSize: 9.5,
+    fontSize: 9,
     color: PARCHMENT_COLORS.agedBrown,
-    letterSpacing: 3.2,
+    letterSpacing: 2.5,
     textTransform: "uppercase" as const,
     textAlign: "center",
     marginBottom: 4,
@@ -443,8 +445,8 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   officialLogoSmall: {
-    width: 220,
-    height: 80,
+    width: 150,
+    height: 60,
     objectFit: "contain",
     alignSelf: "center",
   },
@@ -486,9 +488,9 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     backgroundColor: "rgba(253, 251, 247, 0.55)",
-    padding: 16,
-    marginBottom: 16,
-    marginTop: 8,
+    padding: 14,
+    marginBottom: 14,
+    marginTop: 6,
     borderWidth: 1.5,
     borderColor: PARCHMENT_COLORS.royalGold,
     overflow: "hidden",
@@ -583,12 +585,12 @@ const styles = StyleSheet.create({
     fontWeight: 700,
   },
   section: {
-    marginBottom: 12,
+    marginBottom: 14,
   },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 8,
     marginTop: 4,
     gap: 8,
   },
@@ -725,7 +727,7 @@ const styles = StyleSheet.create({
   },
   dayCard: {
     backgroundColor: "rgba(253, 251, 247, 0.55)",
-    marginBottom: 10,
+    marginBottom: 8,
     padding: 0,
     borderWidth: 1,
     borderColor: PARCHMENT_COLORS.royalGold,
@@ -862,19 +864,19 @@ const styles = StyleSheet.create({
   },
   listItem: {
     flexDirection: "row",
-    marginBottom: 7,
-    gap: 7,
+    marginBottom: 6,
+    gap: 8,
     alignItems: "flex-start",
   },
   listItemIcon: {
-    width: 13,
-    height: 13,
+    width: 12,
+    height: 12,
     flexShrink: 0,
-    marginTop: 1,
+    marginTop: 2,
   },
   listItemText: {
     fontSize: 9.5,
-    lineHeight: 1.8,
+    lineHeight: 1.6,
     flex: 1,
   },
   inclusionsText: {
@@ -1128,50 +1130,89 @@ const styles = StyleSheet.create({
     lineHeight: 1.4,
   },
   companyShowcase: {
+    // Rich brand panel filling the former empty rectangle: logo + name +
+    // tagline + about + 2x2 contact grid + address. Compact paddings so no
+    // space is wasted, wrap={false} pushes it whole to a fresh page if it
+    // can't fit above the fixed footer — zero footer bleed.
     flexDirection: "column",
     alignItems: "center",
     backgroundColor: PARCHMENT_COLORS.deepLapis,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: PARCHMENT_COLORS.royalGold,
-    padding: 24,
-    marginTop: 20,
-    gap: 10,
+    padding: 16,
+    marginTop: 12,
+    gap: 6,
   },
   companyShowcaseLogo: {
-    width: 240,
-    height: 90,
+    width: 180,
+    height: 68,
     objectFit: "contain",
     alignSelf: "center",
   },
   companyShowcaseName: {
-    fontSize: 18,
+    fontSize: 16,
     color: PARCHMENT_COLORS.royalGold,
-    letterSpacing: 3,
+    letterSpacing: 2.5,
     fontWeight: 700,
     textAlign: "center",
-    lineHeight: 1.6,
+    lineHeight: 1.4,
   },
   companyShowcaseTagline: {
-    fontSize: 10,
+    fontSize: 8.5,
     color: PARCHMENT_COLORS.paleGold,
-    letterSpacing: 2,
+    letterSpacing: 1.8,
     textTransform: "uppercase" as const,
     textAlign: "center",
-    lineHeight: 1.6,
+    lineHeight: 1.5,
   },
   companyShowcaseAbout: {
-    fontSize: 9,
+    fontSize: 8.5,
     color: "#F5EBD3",
     textAlign: "center",
-    lineHeight: 1.8,
-    marginTop: 4,
+    lineHeight: 1.6,
+    marginTop: 2,
   },
   companyShowcaseContact: {
+    width: "100%",
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 8,
+    justifyContent: "space-between",
     marginTop: 8,
+    paddingHorizontal: 10,
+  },
+  // Labeled 2x2 contact grid: icon + (label above value) stacked tight so EN/AR
+  // text sits centered against the 12pt pharaonic glyphs — zero wasted gaps.
+  companyContactCell: {
+    width: "48%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  companyContactIcon: {
+    width: 12,
+    height: 12,
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  companyContactTextWrap: {
+    flex: 1,
+    flexDirection: "column",
+    gap: 1,
+  },
+  companyContactLabel: {
+    fontSize: 6.5,
+    color: PARCHMENT_COLORS.royalGold,
+    letterSpacing: 1,
+    textTransform: "uppercase" as const,
+    fontWeight: 700,
+    lineHeight: 1.4,
+  },
+  companyContactValue: {
+    fontSize: 8,
+    color: "#F5EBD3",
+    letterSpacing: 0.3,
+    lineHeight: 1.5,
   },
   companyShowcasePill: {
     borderWidth: 0.8,
@@ -2087,11 +2128,12 @@ export function ItineraryPDF({
               </View>
             </View>
           </View>
-          {/* Company showcase — fills the former empty rectangle with a rich
-              brand panel: logo, name, tagline, about + contact pills + socials.
-              Pure Flexbox (no absolute) so nothing overlaps; wraps on RTL too.
-              wrap={false} forces the whole block onto a fresh page if it can't
-              fit above the fixed footer — no more footer bleed-through. */}
+          {/* Company showcase — rich brand panel filling the empty rectangle:
+              logo + name + tagline + about + labeled 2×2 contact grid
+              (phone / email / website / address, each with a 12pt pharaonic
+              glyph) + address line. Pure Flexbox (no absolute); wrap={false}
+              pushes it whole to a fresh page if it can't fit above the fixed
+              footer — zero footer bleed. */}
           <View wrap={false} style={styles.companyShowcase}>
             <Image src={LOGO_SRC} style={styles.companyShowcaseLogo} />
             <Text style={[styles.companyShowcaseName, headingStyle]}>
@@ -2108,19 +2150,43 @@ export function ItineraryPDF({
               )}
             </Text>
             <View style={styles.companyShowcaseContact}>
-              <View style={styles.companyShowcasePill}>
-                <Text style={styles.companyShowcasePillText}>{companyInfo.phone}</Text>
+              <View style={styles.companyContactCell}>
+                <View style={styles.companyContactIcon}>
+                  <SunDiscBullet size={12} />
+                </View>
+                <View style={styles.companyContactTextWrap}>
+                  <Text style={styles.companyContactLabel}>{label("ops.directMobile", "Phone")}</Text>
+                  <Text style={styles.companyContactValue}>{companyInfo.phone}</Text>
+                </View>
               </View>
-              <View style={styles.companyShowcasePill}>
-                <Text style={styles.companyShowcasePillText}>{companyInfo.email}</Text>
+              <View style={styles.companyContactCell}>
+                <View style={styles.companyContactIcon}>
+                  <EyeOfHorusBullet size={12} />
+                </View>
+                <View style={styles.companyContactTextWrap}>
+                  <Text style={styles.companyContactLabel}>{label("ops.companyEmail", "Email")}</Text>
+                  <Text style={styles.companyContactValue}>{companyInfo.email}</Text>
+                </View>
               </View>
-              <View style={styles.companyShowcasePill}>
-                <Text style={styles.companyShowcasePillText}>{companyInfo.website}</Text>
+              <View style={styles.companyContactCell}>
+                <View style={styles.companyContactIcon}>
+                  <ScarabBullet size={12} />
+                </View>
+                <View style={styles.companyContactTextWrap}>
+                  <Text style={styles.companyContactLabel}>{label("ops.website", "Website")}</Text>
+                  <Text style={styles.companyContactValue}>{companyInfo.website}</Text>
+                </View>
+              </View>
+              <View style={styles.companyContactCell}>
+                <View style={styles.companyContactIcon}>
+                  <LotusBullet size={12} />
+                </View>
+                <View style={styles.companyContactTextWrap}>
+                  <Text style={styles.companyContactLabel}>{label("ops.address", "Office")}</Text>
+                  <Text style={styles.companyContactValue}>{shapeForPdf(companyInfo.address)}</Text>
+                </View>
               </View>
             </View>
-            <Text style={[styles.companyShowcaseAbout, { fontSize: 7.5 }]}>
-              {shapeForPdf(companyInfo.address)}
-            </Text>
           </View>
         </View>
       </ParchmentPage>
