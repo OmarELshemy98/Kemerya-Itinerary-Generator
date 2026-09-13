@@ -58,7 +58,7 @@ ${JSON.stringify(dataToTranslate, null, 2)}`;
     // Get Gemini model
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash-latest",
+      model: "gemini-2.5-flash",
       systemInstruction: SYSTEM_PROMPT,
       generationConfig: {
         temperature: 0.3, // Lower temperature for consistent translations
