@@ -23,6 +23,14 @@ import {
 } from "@/lib/utils";
 import { resolveLogoSrc } from "@/lib/pdf-assets";
 import { EGYPT_LOCATIONS } from "@/utils/mapGenerator";
+import {
+  KemeryaLogoSvg,
+  CheckIcon,
+  CrossIcon,
+  UserIcon,
+  CalendarIcon,
+  MapPinIcon,
+} from "./pdf-icons";
 
 // Fonts are served locally from /public/fonts (no external CDN) so PDF
 // generation always works, even offline / behind firewalls.
@@ -61,18 +69,17 @@ Font.register({
 });
 
 const BRAND_COLORS = {
-  navy: "#1E3A8A", // Lapis Lazuli - links & small accents only
-  gold: "#C5A059", // Muted Gold - Borders & Accents
-  dark: "#2C1E16", // Dark Espresso - Primary Text
+  charcoal: "#171717", // Charcoal Black - Primary Text & Backgrounds
+  gold: "#C9A962", // Royal Gold - Borders, Accents & Highlights
   lightGold: "#E8D7B1",
   bg: "#FDFBF7", // Premium Ivory
-  text: "#2C1E16", // Dark Espresso - Primary Text
+  text: "#171717", // Charcoal Black - Primary Text
   muted: "#8A8171", // Warm muted stone for secondary text
-  border: "#C5A059", // Muted Gold - Borders & Accents
+  border: "#C9A962", // Royal Gold - Borders & Accents
   inclusionsBg: "#FFFFFF",
-  inclusionsText: "#2C1E16",
+  inclusionsText: "#171717",
   exclusionsBg: "#FFFFFF",
-  exclusionsText: "#2C1E16",
+  exclusionsText: "#171717",
 };
 
 const TERMS_URL = "https://www.kemeryatours.com/page/terms-and-conditions";
@@ -308,25 +315,31 @@ const styles = StyleSheet.create({
     fontFamily: "Lora",
   },
   pageFrame: {
-    borderWidth: 1,
-    borderColor: "#C5A059",
+    border: "1px solid #C9A962",
     paddingTop: 12,
     paddingBottom: 30,
     paddingHorizontal: 12,
     position: "relative",
+  },
+  watermarkText: {
+    fontSize: 80,
+    color: "#C9A962",
+    opacity: 0.06,
+    transform: "rotate(-45deg)",
+    position: "absolute",
   },
   headerBox: {
     alignItems: "center",
     marginBottom: 12,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#C5A059",
+    borderBottomColor: "#C9A962",
   },
   brandTitle: {
     fontFamily: "Cinzel",
     fontSize: 24,
-    color: "#1E3A8A",
-    letterSpacing: 2,
+    color: "#171717",
+    letterSpacing: 4,
     marginTop: 8,
   },
   coverPage: {
@@ -339,7 +352,7 @@ const styles = StyleSheet.create({
     fontFamily: "Lora",
   },
   bookingRefBadge: {
-    backgroundColor: BRAND_COLORS.gold,
+    backgroundColor: "#C9A962",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 4,
@@ -347,7 +360,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   bookingRefText: {
-    color: "white",
+    color: "#FFFFFF",
     fontSize: 11,
     fontFamily: "Cinzel",
     fontWeight: 700,
@@ -361,7 +374,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: BRAND_COLORS.border,
+    borderColor: "#C9A962",
     padding: 14,
   },
   termsItemRow: {
@@ -370,21 +383,21 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   termsBullet: {
-    color: BRAND_COLORS.gold,
+    color: "#C9A962",
     fontSize: 8.5,
     fontWeight: "bold",
   },
   termsItemText: {
     flex: 1,
     fontSize: 8.5,
-    color: BRAND_COLORS.text,
+    color: "#171717",
     fontFamily: "Lora",
     lineHeight: 1.55,
     textAlign: "justify",
   },
   termsLinkText: {
     fontSize: 8.5,
-    color: BRAND_COLORS.navy,
+    color: "#171717",
     fontFamily: "Lora",
     textDecoration: "underline",
   },
@@ -393,19 +406,19 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: BRAND_COLORS.gold,
+    borderColor: "#C9A962",
     padding: 24,
     alignItems: "center",
     marginTop: 10,
   },
   reviewTitle: {
-    color: BRAND_COLORS.dark,
+    color: "#171717",
     fontSize: 13,
     fontFamily: "Cinzel Decorative",
     letterSpacing: 0.5,
   },
   reviewSubtitle: {
-    color: BRAND_COLORS.muted,
+    color: "#8A8171",
     fontSize: 9,
     fontFamily: "Lora",
     textAlign: "center",
@@ -413,19 +426,19 @@ const styles = StyleSheet.create({
     lineHeight: 1.5,
   },
   reviewBadge: {
-    backgroundColor: BRAND_COLORS.gold,
+    backgroundColor: "#C9A962",
     paddingHorizontal: 14,
     paddingVertical: 7,
     marginTop: 10,
   },
   reviewBadgeText: {
-    color: "white",
+    color: "#FFFFFF",
     fontSize: 9.5,
     fontFamily: "Cinzel Decorative",
     letterSpacing: 0.8,
   },
   reviewLink: {
-    color: BRAND_COLORS.muted,
+    color: "#8A8171",
     fontSize: 8,
     fontFamily: "Lora",
     marginTop: 8,
@@ -439,11 +452,11 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopStyle: "solid",
-    borderTopColor: BRAND_COLORS.border,
+    borderTopColor: "#C9A962",
   },
   socialLinkItem: {
     fontSize: 8.5,
-    color: BRAND_COLORS.navy,
+    color: "#171717",
     fontFamily: "Lora",
     fontWeight: "bold",
   },
@@ -454,7 +467,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: BRAND_COLORS.gold,
+    borderColor: "#C9A962",
   },
   logoImgSmall: {
     height: 40,
@@ -463,7 +476,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: BRAND_COLORS.gold,
+    borderColor: "#C9A962",
   },
   header: {
     flexDirection: "row",
@@ -472,7 +485,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     paddingBottom: 18,
     borderBottomWidth: 3,
-    borderBottomColor: BRAND_COLORS.gold,
+    borderBottomColor: "#C9A962",
     borderBottomStyle: "solid",
   },
   brandBlock: {
@@ -482,25 +495,25 @@ const styles = StyleSheet.create({
   brandName: {
     fontSize: 26,
     fontFamily: "Cinzel Decorative",
-    color: BRAND_COLORS.dark,
+    color: "#171717",
     letterSpacing: 1.2,
   },
   brandTagline: {
     fontSize: 9,
-    color: BRAND_COLORS.gold,
+    color: "#C9A962",
     letterSpacing: 3,
     textTransform: "uppercase",
   },
   brandLine: {
     height: 2,
     width: 60,
-    backgroundColor: BRAND_COLORS.gold,
+    backgroundColor: "#C9A962",
     marginTop: 6,
   },
   headerContact: {
     textAlign: "right",
     fontSize: 8.5,
-    color: BRAND_COLORS.muted,
+    color: "#8A8171",
     lineHeight: 1.6,
   },
   heroCard: {
@@ -510,7 +523,7 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     borderWidth: 2,
     borderStyle: "solid",
-    borderColor: BRAND_COLORS.gold,
+    borderColor: "#C9A962",
     position: "relative",
     overflow: "hidden",
   },
@@ -520,7 +533,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: BRAND_COLORS.gold,
+    backgroundColor: "#C9A962",
   },
   heroBottomBar: {
     height: 4,
@@ -528,7 +541,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: BRAND_COLORS.gold,
+    backgroundColor: "#C9A962",
   },
   heroCornerTL: {
     position: "absolute",
@@ -539,7 +552,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 0,
     borderLeftWidth: 3,
     borderStyle: "solid",
-    borderColor: BRAND_COLORS.navy,
+    borderColor: "#171717",
   },
   heroCornerTR: {
     position: "absolute",
@@ -550,7 +563,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 0,
     borderRightWidth: 3,
     borderStyle: "solid",
-    borderColor: BRAND_COLORS.navy,
+    borderColor: "#171717",
   },
   heroCornerBL: {
     position: "absolute",
@@ -561,7 +574,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     borderLeftWidth: 3,
     borderStyle: "solid",
-    borderColor: BRAND_COLORS.navy,
+    borderColor: "#171717",
   },
   heroCornerBR: {
     position: "absolute",
@@ -572,17 +585,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     borderRightWidth: 3,
     borderStyle: "solid",
-    borderColor: BRAND_COLORS.navy,
+    borderColor: "#171717",
   },
   heroTourName: {
-    color: BRAND_COLORS.dark,
+    color: "#171717",
     fontSize: 20,
     fontFamily: "Cinzel Decorative",
     marginBottom: 8,
     lineHeight: 1.3,
   },
   heroSubtitle: {
-    color: BRAND_COLORS.gold,
+    color: "#C9A962",
     fontSize: 9,
     letterSpacing: 3,
     textTransform: "uppercase",
@@ -608,14 +621,14 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   heroStatLabel: {
-    color: BRAND_COLORS.muted,
+    color: "#8A8171",
     fontSize: 7.5,
     letterSpacing: 1.5,
     textTransform: "uppercase",
     marginBottom: 4,
   },
   heroStatValue: {
-    color: BRAND_COLORS.dark,
+    color: "#171717",
     fontSize: 11,
     fontWeight: "bold",
   },
@@ -632,13 +645,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 2,
     borderWidth: 1,
-    borderColor: "#059669",
-    backgroundColor: "#ECFDF5",
+    borderColor: "#C9A962",
+    backgroundColor: "#FFFFFF",
     padding: 10,
   },
   offerBannerTop: { flexDirection: "row", alignItems: "center", marginBottom: 5 },
   offerBannerBadge: {
-    backgroundColor: "#059669",
+    backgroundColor: "#C9A962",
     color: "#FFFFFF",
     fontSize: 7,
     fontWeight: "bold",
@@ -649,7 +662,7 @@ const styles = StyleSheet.create({
   offerBannerTitle: {
     fontFamily: "Cinzel",
     fontSize: 11,
-    color: "#065F46",
+    color: "#171717",
     marginBottom: 4,
   },
   offerBannerPrices: { flexDirection: "row", alignItems: "flex-end", flexWrap: "wrap" },
@@ -660,9 +673,9 @@ const styles = StyleSheet.create({
     textDecorationColor: "#EF4444",
     marginRight: 8,
   },
-  offerBannerNew: { fontSize: 19, color: "#059669", fontWeight: "bold", marginRight: 8 },
-  offerBannerPct: { fontSize: 8, color: "#065F46", fontWeight: "bold", marginBottom: 3 },
-  offerBannerNote: { fontSize: 8.5, color: "#065F46", marginTop: 4, lineHeight: 1.5 },
+  offerBannerNew: { fontSize: 19, color: "#171717", fontWeight: "bold", marginRight: 8 },
+  offerBannerPct: { fontSize: 8, color: "#171717", fontWeight: "bold", marginBottom: 3 },
+  offerBannerNote: { fontSize: 8.5, color: "#171717", marginTop: 4, lineHeight: 1.5 },
   // ── Per-day roadmap strip (vertical, wrap-safe — never overlaps) ──
   dayRoadmap: {
     marginTop: 8,
@@ -733,8 +746,8 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 0,
-    backgroundColor: BRAND_COLORS.gold,
-    color: "white",
+    backgroundColor: "#171717",
+    color: "#C9A962",
     textAlign: "center",
     textAlignVertical: "center",
     fontSize: 12,
@@ -743,53 +756,55 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 14,
-    color: BRAND_COLORS.dark,
+    color: "#171717",
     fontFamily: "Cinzel Decorative",
     letterSpacing: 0.4,
   },
   sectionUnderline: {
     flex: 1,
     height: 1,
-    backgroundColor: BRAND_COLORS.border,
+    backgroundColor: "#C9A962",
   },
   summaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
+    gap: 0,
     justifyContent: "space-between",
-    padding: 8,
-    borderWidth: 1,
-    borderColor: "#E8D7B1",
+    padding: 0,
     backgroundColor: "#FFFFFF",
   },
   summaryItem: {
     width: "48.5%",
     flexDirection: "row",
     alignItems: "flex-start",
-    padding: 7,
-    borderWidth: 1,
-    borderColor: "#C5A059",
-    borderRadius: 0,
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E8D7B1",
     backgroundColor: "transparent",
-    gap: 6,
+    gap: 8,
   },
-  // Journey Route styles removed (routeWrapper through destinationName)
+  summaryItemIcon: {
+    width: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   summaryItemLabel: {
     fontSize: 7.5,
-    color: BRAND_COLORS.muted,
+    color: "#8A8171",
     letterSpacing: 0.6,
     textTransform: "uppercase",
     marginBottom: 2,
   },
   summaryItemValue: {
     fontSize: 9.5,
-    color: BRAND_COLORS.text,
+    color: "#171717",
     fontWeight: "semibold",
   },
   summaryItemBullet: {
     width: 4,
     height: 12,
-    backgroundColor: BRAND_COLORS.gold,
+    backgroundColor: "#C9A962",
     borderRadius: 0,
   },
   summaryItemTextWrap: {
@@ -802,19 +817,21 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     padding: 10,
     borderWidth: 1,
-    borderColor: BRAND_COLORS.border,
+    borderColor: "#C9A962",
     overflow: "hidden",
   },
   dayHeader: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1E3A8A",
-    padding: 8,
-    marginBottom: 10,
-    gap: 8,
+    backgroundColor: "#171717",
+    color: "#C9A962",
+    padding: 10,
+    marginBottom: 0,
+    gap: 10,
+    borderLeft: "4px solid #C9A962",
   },
   dayBadge: {
-    backgroundColor: BRAND_COLORS.gold,
+    backgroundColor: "#C9A962",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 0,
@@ -829,7 +846,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   dayTitle: {
-    color: BRAND_COLORS.gold,
+    color: "#C9A962",
     fontSize: 12,
     fontFamily: "Cinzel Decorative",
     flex: 1,
@@ -839,7 +856,7 @@ const styles = StyleSheet.create({
   },
   dayDescription: {
     fontSize: 10,
-    color: BRAND_COLORS.text,
+    color: "#171717",
     fontFamily: "Lora",
     lineHeight: 1.7,
     marginBottom: 10,
@@ -854,20 +871,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: BRAND_COLORS.bg,
+    backgroundColor: "#FDFBF7",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 0,
   },
   metaLabel: {
     fontSize: 7.5,
-    color: BRAND_COLORS.muted,
+    color: "#8A8171",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   metaValue: {
     fontSize: 8,
-    color: BRAND_COLORS.dark,
+    color: "#171717",
     fontWeight: "bold",
   },
   twoCol: {
@@ -884,7 +901,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: "#C5A059",
+    borderColor: "#C9A962",
   },
   exclusionsCard: {
     backgroundColor: "transparent",
@@ -892,7 +909,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: "#C5A059",
+    borderColor: "#C9A962",
   },
   sectionCardTitle: {
     fontSize: 11,
@@ -902,10 +919,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   inclusionTitleText: {
-    color: BRAND_COLORS.dark,
+    color: "#171717",
   },
   exclusionTitleText: {
-    color: BRAND_COLORS.dark,
+    color: "#171717",
   },
   listItem: {
     flexDirection: "row",
@@ -913,27 +930,9 @@ const styles = StyleSheet.create({
     gap: 8,
     alignItems: "flex-start",
   },
-  listItemBulletIncl: {
+  listItemIcon: {
     width: 14,
     height: 14,
-    borderRadius: 0,
-    backgroundColor: BRAND_COLORS.gold,
-    color: "white",
-    fontSize: 9,
-    textAlign: "center",
-    lineHeight: 14,
-    flexShrink: 0,
-    marginTop: 1,
-  },
-  listItemBulletExcl: {
-    width: 14,
-    height: 14,
-    borderRadius: 0,
-    backgroundColor: "#DC2626",
-    color: "white",
-    fontSize: 9,
-    textAlign: "center",
-    lineHeight: 14,
     flexShrink: 0,
     marginTop: 1,
   },
@@ -943,17 +942,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inclusionsText: {
-    color: BRAND_COLORS.inclusionsText,
+    color: "#171717",
   },
   exclusionsText: {
-    color: BRAND_COLORS.exclusionsText,
+    color: "#171717",
   },
   pricingTable: {
     backgroundColor: "transparent",
     borderRadius: 0,
     padding: 14,
     borderWidth: 1,
-    borderColor: BRAND_COLORS.border,
+    borderColor: "#C9A962",
     overflow: "hidden",
   },
   pricingRow: {
@@ -961,7 +960,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: BRAND_COLORS.border,
+    borderBottomColor: "#E8D7B1",
     backgroundColor: "transparent",
   },
   pricingRowLast: {
@@ -971,31 +970,31 @@ const styles = StyleSheet.create({
   pricingCell: {
     flex: 1,
     fontSize: 10,
-    color: BRAND_COLORS.text,
+    color: "#171717",
   },
   pricingCellRight: {
     flex: 1,
     textAlign: "right",
     fontSize: 10,
-    color: BRAND_COLORS.text,
+    color: "#171717",
     fontWeight: "semibold",
   },
   pricingHeaderCell: {
     fontSize: 8,
     textTransform: "uppercase",
     letterSpacing: 1,
-    color: BRAND_COLORS.muted,
+    color: "#8A8171",
     fontWeight: "bold",
   },
   pricingTotalLabel: {
-    color: BRAND_COLORS.dark,
+    color: "#171717",
     fontSize: 12,
     fontWeight: "bold",
     textTransform: "uppercase",
     letterSpacing: 1,
   },
   pricingTotalValue: {
-    color: BRAND_COLORS.dark,
+    color: "#171717",
     fontSize: 16,
     fontWeight: "bold",
   },
@@ -1004,20 +1003,20 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     padding: 14,
     borderWidth: 1,
-    borderColor: BRAND_COLORS.border,
+    borderColor: "#C9A962",
     marginBottom: 10,
   },
   termsTitle: {
     fontSize: 9,
     fontWeight: "bold",
-    color: BRAND_COLORS.gold,
+    color: "#C9A962",
     textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: 8,
   },
   termsText: {
     fontSize: 8.5,
-    color: BRAND_COLORS.text,
+    color: "#171717",
     lineHeight: 1.7,
     textAlign: "justify",
   },
@@ -1027,20 +1026,20 @@ const styles = StyleSheet.create({
     padding: 18,
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: BRAND_COLORS.gold,
+    borderColor: "#C9A962",
     marginBottom: 16,
   },
   notesTitle: {
     fontSize: 9,
     fontWeight: "bold",
-    color: BRAND_COLORS.gold,
+    color: "#C9A962",
     textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: 6,
   },
   notesText: {
     fontSize: 9.5,
-    color: BRAND_COLORS.text,
+    color: "#171717",
     fontFamily: "Lora",
     lineHeight: 1.6,
   },
@@ -1048,7 +1047,7 @@ const styles = StyleSheet.create({
   dropCap: {
     fontSize: 30,
     fontFamily: "Cinzel Decorative",
-    color: BRAND_COLORS.gold,
+    color: "#C9A962",
     lineHeight: 1,
     marginRight: 3,
   },
@@ -1059,19 +1058,19 @@ const styles = StyleSheet.create({
     right: 40,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: BRAND_COLORS.border,
+    borderTopColor: "#C9A962",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   footerBrand: {
     fontSize: 8,
-    color: BRAND_COLORS.muted,
+    color: "#8A8171",
     fontWeight: "bold",
   },
   footerPage: {
     fontSize: 8,
-    color: BRAND_COLORS.muted,
+    color: "#8A8171",
   },
   operationsCard: {
     backgroundColor: "transparent",
@@ -1080,7 +1079,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: BRAND_COLORS.gold,
+    borderColor: "#C9A962",
   },
   operationsHeader: {
     flexDirection: "row",
@@ -1089,20 +1088,20 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   opsBadge: {
-    backgroundColor: BRAND_COLORS.gold,
+    backgroundColor: "#C9A962",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 0,
   },
   opsBadgeText: {
-    color: "white",
+    color: "#FFFFFF",
     fontSize: 8,
     fontWeight: "bold",
     letterSpacing: 0.5,
     textTransform: "uppercase",
   },
   opsCardTitle: {
-    color: BRAND_COLORS.dark,
+    color: "#171717",
     fontSize: 12,
     fontFamily: "Cinzel Decorative",
   },
@@ -1118,17 +1117,17 @@ const styles = StyleSheet.create({
   },
   opsLabel: {
     fontSize: 7.5,
-    color: BRAND_COLORS.muted,
+    color: "#8A8171",
     textTransform: "uppercase",
     letterSpacing: 1,
   },
   opsValue: {
     fontSize: 10,
-    color: BRAND_COLORS.text,
+    color: "#171717",
     fontWeight: "semibold",
   },
   clientBadge: {
-    backgroundColor: BRAND_COLORS.gold,
+    backgroundColor: "#C9A962",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 0,
@@ -1136,7 +1135,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   clientBadgeText: {
-    color: "white",
+    color: "#FFFFFF",
     fontSize: 8,
     fontWeight: "bold",
     letterSpacing: 1.5,
@@ -1144,11 +1143,11 @@ const styles = StyleSheet.create({
   },
   pageNumber: {
     fontSize: 8,
-    color: BRAND_COLORS.muted,
+    color: "#8A8171",
   },
   pageCount: {
     fontSize: 8,
-    color: BRAND_COLORS.muted,
+    color: "#8A8171",
   },
 });
 
@@ -1159,26 +1158,14 @@ function LuxuryPage({
   children: React.ReactNode;
   companyInfo?: CompanyInfo;
 }) {
-  // Resolve logo path: in browser use /public path, in Node.js use data URL
-  const logoSrc = resolveLogoSrc(companyInfo?.logo);
   return (
     <Page size="A4" style={styles.page}>
+      <View style={styles.watermarkText} fixed>
+        <Text>KEMERYA TOURS</Text>
+      </View>
       <View style={styles.pageFrame}>
         <View style={styles.headerBox}>
-          {logoSrc ? (
-            // eslint-disable-next-line jsx-a11y/alt-text
-            <Image
-              src={logoSrc}
-              style={{
-                width: 150,
-                height: 50,
-                objectFit: "contain",
-                marginBottom: 10,
-              }}
-            />
-          ) : (
-            <AnkhIcon size={28} />
-          )}
+          <KemeryaLogoSvg />
           <Text style={styles.brandTitle}>
             {companyInfo?.name || "KEMERYA TOURS"}
           </Text>
@@ -1599,12 +1586,14 @@ export function ItineraryPDF({
             <View style={styles.col}>
               <View style={styles.inclusionsCard}>
                 <Text style={{ ...styles.sectionCardTitle, ...styles.inclusionTitleText }}>
-                  ✔ What&apos;s Included
+                  What&apos;s Included
                 </Text>
                 {inclusions.length > 0 ? (
                   inclusions.map((inc, i) => (
                     <View key={i} style={styles.listItem}>
-                      <Text style={styles.listItemBulletIncl}>✓</Text>
+                      <View style={styles.listItemIcon}>
+                        <CheckIcon />
+                      </View>
                       <Text style={{ ...styles.listItemText, ...styles.inclusionsText }}>
                         {inc}
                       </Text>
@@ -1620,12 +1609,14 @@ export function ItineraryPDF({
             <View style={styles.col}>
               <View style={styles.exclusionsCard}>
                 <Text style={{ ...styles.sectionCardTitle, ...styles.exclusionTitleText }}>
-                  ✕ What&apos;s Not Included
+                  What&apos;s Not Included
                 </Text>
                 {exclusions.length > 0 ? (
                   exclusions.map((exc, i) => (
                     <View key={i} style={styles.listItem}>
-                      <Text style={styles.listItemBulletExcl}>✕</Text>
+                      <View style={styles.listItemIcon}>
+                        <CrossIcon />
+                      </View>
                       <Text style={{ ...styles.listItemText, ...styles.exclusionsText }}>
                         {exc}
                       </Text>
@@ -1649,7 +1640,7 @@ export function ItineraryPDF({
             <View style={styles.sectionUnderline} />
           </View>
           <View style={styles.pricingTable}>
-            <View style={{ ...styles.pricingRow, backgroundColor: BRAND_COLORS.bg }}>
+            <View style={{ ...styles.pricingRow, backgroundColor: "#FDFBF7" }}>
               <Text style={{ ...styles.pricingCell, ...styles.pricingHeaderCell }}>Description</Text>
               <Text style={{ ...styles.pricingCellRight, ...styles.pricingHeaderCell }}>Amount ({booking.currency})</Text>
             </View>
@@ -1798,7 +1789,7 @@ export function ItineraryPDF({
               <View style={{ marginRight: 6 }}>
                 <CartoucheSeal size={13} />
               </View>
-              <Text style={{ fontFamily: "Cinzel", fontSize: 9, color: "#1E3A8A" }}>
+              <Text style={{ fontFamily: "Cinzel", fontSize: 9, color: "#C9A962" }}>
                 Terms & Conditions
               </Text>
             </View>
@@ -1818,7 +1809,7 @@ export function ItineraryPDF({
               <View style={{ marginRight: 6 }}>
                 <EyeOfHorusIcon size={13} />
               </View>
-              <Text style={{ fontFamily: "Cinzel", fontSize: 9, color: "#1E3A8A" }}>
+              <Text style={{ fontFamily: "Cinzel", fontSize: 9, color: "#C9A962" }}>
                 Privacy Policy
               </Text>
             </View>
@@ -1896,18 +1887,23 @@ export function ItineraryPDF({
 function SummaryCard({ label, value }: { label: string; value: React.ReactNode }) {
   const getIcon = () => {
     const lowerLabel = label.toLowerCase();
-    if (lowerLabel.includes("meeting") || lowerLabel.includes("location") || lowerLabel.includes("destination")) {
-      return <LocationPinIcon size={12} />;
+    if (lowerLabel.includes("total traveler") || lowerLabel.includes("client name")) {
+      return <UserIcon />;
     }
-    if (lowerLabel.includes("duration") || lowerLabel.includes("period")) {
-      return <PyramidIcon size={12} />;
+    if (lowerLabel.includes("duration") || lowerLabel.includes("period") || lowerLabel.includes("date") || lowerLabel.includes("return")) {
+      return <CalendarIcon />;
     }
-    return <View style={styles.summaryItemBullet} />;
+    if (lowerLabel.includes("meeting") || lowerLabel.includes("location") || lowerLabel.includes("destination") || lowerLabel.includes("pickup")) {
+      return <MapPinIcon />;
+    }
+    return <View style={styles.summaryItemIcon} />;
   };
 
   return (
     <View style={styles.summaryItem}>
-      {getIcon()}
+      <View style={styles.summaryItemIcon}>
+        {getIcon()}
+      </View>
       <View style={styles.summaryItemTextWrap}>
         <Text style={styles.summaryItemLabel}>{label}</Text>
         {typeof value === "string" ? (
@@ -1928,7 +1924,6 @@ function DayCard({ day, roadmap }: { day: ItineraryDay; roadmap?: string[] }) {
       <View break style={styles.dayCard}>
         <View style={styles.dayHeader}>
           <View style={styles.dayBadge}>
-            <AnkhIcon size={14} color="#C5A059" />
             <Text style={styles.dayBadgeText}>DAY {day.day}</Text>
           </View>
           <Text style={styles.dayTitle}>{day.title}</Text>
@@ -2032,13 +2027,13 @@ function RouteTimeline({ stops }: { stops: TimelineStop[] }) {
             {/* Outer glow circle */}
             <Path
               d={`M ${x} ${centerY - 16} A 16 16 0 1 1 ${x} ${centerY + 16} A 16 16 0 1 1 ${x} ${centerY - 16} Z`}
-              fill={isFirst || isLast ? "#1E3A8A" : "#C5A059"}
+              fill={isFirst || isLast ? "#171717" : "#C9A962"}
               opacity={0.2}
             />
             {/* Main circle */}
             <Path
               d={`M ${x} ${centerY - 12} A 12 12 0 1 1 ${x} ${centerY + 12} A 12 12 0 1 1 ${x} ${centerY - 12} Z`}
-              fill={isFirst || isLast ? "#1E3A8A" : "#C5A059"}
+              fill={isFirst || isLast ? "#171717" : "#C9A962"}
               stroke="#FDFBF7"
               strokeWidth={2}
             />
@@ -2053,7 +2048,7 @@ function RouteTimeline({ stops }: { stops: TimelineStop[] }) {
             
             {/* Day label above */}
             <Text
-              style={{ fontSize: 7, fontFamily: "Cinzel", fill: "#1E3A8A", textAnchor: "middle" }}
+              style={{ fontSize: 7, fontFamily: "Cinzel", fill: "#171717", textAnchor: "middle" }}
               x={x}
               y={centerY - 22}
             >
@@ -2088,10 +2083,10 @@ function RouteTimeline({ stops }: { stops: TimelineStop[] }) {
               <G>
                 <Path
                   d={`M ${x - 8} ${centerY - 28} L ${x + 8} ${centerY - 28} L ${x} ${centerY - 38} Z`}
-                  fill="#1E3A8A"
+                  fill="#171717"
                 />
                 <Text
-                  style={{ fontSize: 6, fontFamily: "Cinzel", fill: "#1E3A8A", textAnchor: "middle" }}
+                  style={{ fontSize: 6, fontFamily: "Cinzel", fill: "#171717", textAnchor: "middle" }}
                   x={x}
                   y={centerY - 42}
                 >
@@ -2103,10 +2098,10 @@ function RouteTimeline({ stops }: { stops: TimelineStop[] }) {
               <G>
                 <Path
                   d={`M ${x - 8} ${centerY - 28} L ${x + 8} ${centerY - 28} L ${x} ${centerY - 38} Z`}
-                  fill="#1E3A8A"
+                  fill="#171717"
                 />
                 <Text
-                  style={{ fontSize: 6, fontFamily: "Cinzel", fill: "#1E3A8A", textAnchor: "middle" }}
+                  style={{ fontSize: 6, fontFamily: "Cinzel", fill: "#171717", textAnchor: "middle" }}
                   x={x}
                   y={centerY - 42}
                 >
