@@ -1192,17 +1192,16 @@ function resolvePdfAsset(filename: string): string {
     return `/images/${filename}`;
   }
   // Server (Next.js react-pdf): MUST be an absolute OS path or <Image>
-  // silently renders nothing (blank page). path.join gives the correct
-  // separators on Windows (\Kemerya-...) and Linux (/app/...).
+  // silently renders nothing (blank page). Built manually to avoid a static
+  // "path" import inside this client-component bundle.
   try {
-    // Inline require so the "use client" bundle never statically imports "path".
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const nodeRequire = (globalThis as any).require ?? eval("require");
-    const path = nodeRequire("path");
-    return path.join(process.cwd(), "public", "images", filename);
+    const sep = typeof process !== "undefined" && process.platform === "win32" ? "\\" : "/";
+    const cwd = typeof process !== "undefined" && typeof process.cwd === "function" ? process.cwd() : "";
+    if (cwd) return `${cwd}${sep}public${sep}images${sep}${filename}`;
   } catch {
-    return `${process.cwd()}/public/images/${filename}`;
+    /* fall through to fallback below */
   }
+  return `${process.cwd()}/public/images/${filename}`;
 }
 
 const PARCHMENT_SRC = resolvePdfAsset("parchment.svg");
