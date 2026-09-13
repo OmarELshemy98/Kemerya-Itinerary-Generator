@@ -229,12 +229,11 @@ const styles = StyleSheet.create({
     height: 842,
   },
   contentLayer: {
-    position: "absolute",
-    top: 52,
-    left: 52,
-    right: 52,
-    bottom: 170,
-    width: 491,
+    paddingTop: 52,
+    paddingLeft: 52,
+    paddingRight: 52,
+    paddingBottom: 12,
+    marginBottom: 170,
     flexDirection: "column",
   },
   footerBand: {
@@ -949,11 +948,15 @@ function ParchmentPage({
   companyInfo,
   languageCode = "en",
   pageLabel,
+  rtlPageStyle,
+  footerTagline,
 }: {
   children: React.ReactNode;
   companyInfo?: CompanyInfo;
   languageCode?: string;
   pageLabel?: string;
+  rtlPageStyle?: { direction: "rtl" };
+  footerTagline?: string;
 }) {
   const rtl = isRTL(languageCode);
   const bodyFont = getGlobalFont(languageCode);
@@ -963,7 +966,7 @@ function ParchmentPage({
   return (
     <Page
       size="A4"
-      style={[styles.page, { direction: rtl ? "rtl" : "ltr", fontFamily: bodyFont }]}
+      style={[styles.page, { direction: rtl ? "rtl" : "ltr", fontFamily: bodyFont }, rtlPageStyle ?? {}]}
     >
       <Image src={PARCHMENT_SRC} style={styles.parchmentBg} fixed={true} />
       <Image src={BORDER_SRC} style={styles.borderFrame} fixed={true} />
@@ -979,9 +982,9 @@ function ParchmentPage({
         {children}
       </View>
 
-      <View style={styles.footerBand}>
+      <View style={styles.footerBand} fixed={true}>
         <View style={styles.nileImageWrap}>
-          <Image src={NILE_SRC} style={styles.nileImage} fixed={true} />
+          <Image src={NILE_SRC} style={styles.nileImage} />
         </View>
         <View style={styles.footerCaption}>
           <View>
@@ -989,7 +992,7 @@ function ParchmentPage({
               {companyInfo?.name || "KEMERYA TOURS"}
             </Text>
             <Text style={[styles.footerTagline, { fontFamily: brandFont }]}>
-              {label("footer.tagline", "Curated Egyptian Journeys · Est. Luxury")}
+              {footerTagline || "Curated Egyptian Journeys · Est. Luxury"}
             </Text>
           </View>
           <Text style={styles.footerPage}>
@@ -1093,87 +1096,114 @@ export function ItineraryPDF({
   const travelersText = totalTravelersTextParts.join(", ");
 
   const rtl = isRTL(languageCode ?? "en");
+  const languageIsRTL = rtl;
+  // FIX #4 (CRITICAL): idempotent RTL mirror. `styles` is module-shared, so
+  // each render first RESTORES the pristine LTR snapshot, then applies the
+  // L↔R mirror only when rtl. This keeps every existing `styles.*` reference
+  // working while guaranteeing Left↔Right flips never compound.
   const styleBag = styles as unknown as Record<string, Record<string, unknown>>;
-  for (const key of Object.keys(styleBag)) {
-    const s = styleBag[key];
-    if (!s || typeof s !== "object" || Array.isArray(s)) continue;
-    const orig = { ...s } as Record<string, unknown>;
-
-    // Mirror padding L↔R
-    if ("paddingLeft" in orig && !("paddingRight" in orig)) s.paddingRight = orig.paddingLeft;
-    if ("paddingRight" in orig && !("paddingLeft" in orig)) s.paddingLeft = orig.paddingRight;
-    if (rtl && "paddingLeft" in orig && "paddingRight" in orig) {
-      const tmp = s.paddingLeft;
-      s.paddingLeft = s.paddingRight;
-      s.paddingRight = tmp;
-    }
-    if ("paddingHorizontal" in orig && rtl) { /* no-op, symmetrical */ }
-
-    // Mirror margin L↔R
-    if ("marginLeft" in orig && !("marginRight" in orig)) s.marginRight = orig.marginLeft;
-    if ("marginRight" in orig && !("marginLeft" in orig)) s.marginLeft = orig.marginRight;
-    if (rtl && "marginLeft" in orig && "marginRight" in orig) {
-      const tmp = s.marginLeft;
-      s.marginLeft = s.marginRight;
-      s.marginRight = tmp;
-    }
-
-    // Mirror border L↔R (width, color)
-    const borderLR = ["Width", "Color", "Style"] as const;
-    for (const suf of borderLR) {
-      const lk = `borderLeft${suf}` as const;
-      const rk = `borderRight${suf}` as const;
-      if (lk in orig && !(rk in orig)) (s as Record<string, unknown>)[rk] = orig[lk];
-      if (rk in orig && !(lk in orig)) (s as Record<string, unknown>)[lk] = orig[rk];
-      if (rtl && lk in orig && rk in orig) {
-        const tmp = (s as Record<string, unknown>)[lk];
-        (s as Record<string, unknown>)[lk] = (s as Record<string, unknown>)[rk];
-        (s as Record<string, unknown>)[rk] = tmp;
+  const pristine = (globalThis as unknown as { __kemeryaPristine?: Record<string, Record<string, unknown>> }).__kemeryaPristine;
+  if (!pristine) {
+    const snap: Record<string, Record<string, unknown>> = {};
+    for (const k of Object.keys(styleBag)) snap[k] = { ...(styleBag[k] as object) } as Record<string, unknown>;
+    (globalThis as unknown as { __kemeryaPristine?: Record<string, Record<string, unknown>> }).__kemeryaPristine = snap;
+  }
+  const base = (globalThis as unknown as { __kemeryaPristine: Record<string, Record<string, unknown>> }).__kemeryaPristine;
+  for (const key of Object.keys(base)) {
+    const target = styleBag[key];
+    if (!target) continue;
+    for (const k of Object.keys(target)) delete target[k];
+    Object.assign(target, { ...base[key] });
+  }
+  if (rtl) {
+    for (const key of Object.keys(styleBag)) {
+      const s = styleBag[key];
+      const orig = base[key];
+      if (!s || !orig) continue;
+      if ("paddingLeft" in orig && "paddingRight" in orig) {
+        s.paddingLeft = orig.paddingRight;
+        s.paddingRight = orig.paddingLeft;
+      } else if ("paddingLeft" in orig) {
+        (s as Record<string, unknown>).paddingRight = orig.paddingLeft;
+      } else if ("paddingRight" in orig) {
+        (s as Record<string, unknown>).paddingLeft = orig.paddingRight;
       }
-    }
-
-    // Flip row ↔ row-reverse for RTL
-    if (rtl && orig.flexDirection === "row") s.flexDirection = "row-reverse";
-    if (rtl && orig.flexDirection === "row-reverse") s.flexDirection = "row";
-
-    // Flip justify flex-start ↔ flex-end for RTL
-    if (rtl && orig.justifyContent === "flex-start") s.justifyContent = "flex-end";
-    if (rtl && orig.justifyContent === "flex-end") s.justifyContent = "flex-start";
-
-    // Flip border Radius corners for RTL (corner TL↔TR, BL↔BR)
-    if (rtl) {
+      if ("marginLeft" in orig && "marginRight" in orig) {
+        s.marginLeft = orig.marginRight;
+        s.marginRight = orig.marginLeft;
+      } else if ("marginLeft" in orig) {
+        (s as Record<string, unknown>).marginRight = orig.marginLeft;
+      } else if ("marginRight" in orig) {
+        (s as Record<string, unknown>).marginLeft = orig.marginRight;
+      }
+      const borderLR = ["Width", "Color", "Style"] as const;
+      for (const suf of borderLR) {
+        const lk = `borderLeft${suf}`;
+        const rk = `borderRight${suf}`;
+        if (lk in orig && rk in orig) {
+          (s as Record<string, unknown>)[lk] = orig[rk];
+          (s as Record<string, unknown>)[rk] = orig[lk];
+        } else if (lk in orig) {
+          (s as Record<string, unknown>)[rk] = orig[lk];
+        } else if (rk in orig) {
+          (s as Record<string, unknown>)[lk] = orig[rk];
+        }
+      }
+      if (orig.flexDirection === "row") s.flexDirection = "row-reverse";
+      if (orig.justifyContent === "flex-start") s.justifyContent = "flex-end";
+      else if (orig.justifyContent === "flex-end") s.justifyContent = "flex-start";
       const cornerPairs: Array<[string, string]> = [
         ["borderTopLeftRadius", "borderTopRightRadius"],
         ["borderBottomLeftRadius", "borderBottomRightRadius"],
       ];
       for (const [lk, rk] of cornerPairs) {
-        if (lk in orig && !(rk in orig)) (s as Record<string, unknown>)[rk] = orig[lk];
-        if (rk in orig && !(lk in orig)) (s as Record<string, unknown>)[lk] = orig[rk];
         if (lk in orig && rk in orig) {
-          const tmp = (s as Record<string, unknown>)[lk];
-          (s as Record<string, unknown>)[lk] = (s as Record<string, unknown>)[rk];
-          (s as Record<string, unknown>)[rk] = tmp;
+          (s as Record<string, unknown>)[lk] = orig[rk];
+          (s as Record<string, unknown>)[rk] = orig[lk];
+        } else if (lk in orig) {
+          (s as Record<string, unknown>)[rk] = orig[lk];
+        } else if (rk in orig) {
+          (s as Record<string, unknown>)[lk] = orig[rk];
         }
       }
+      if (!("textAlign" in orig) && ("fontSize" in orig || "color" in orig || "fontFamily" in orig || "lineHeight" in orig)) {
+        s.textAlign = "right";
+      }
     }
-
-    // TextAlign default per direction (for text-only styles)
-    if (
-      !("textAlign" in orig) &&
-      ("fontSize" in orig || "color" in orig || "fontFamily" in orig || "lineHeight" in orig)
-    ) {
-      s.textAlign = rtl ? "right" : "left";
+  } else {
+    for (const key of Object.keys(styleBag)) {
+      const s = styleBag[key];
+      const orig = base[key];
+      if (!s || !orig) continue;
+      if (!("textAlign" in orig) && ("fontSize" in orig || "color" in orig || "fontFamily" in orig || "lineHeight" in orig)) {
+        s.textAlign = "left";
+      }
     }
   }
+  // FIX #4: every content Page flows RTL (direction) when Arabic/Hebrew/…
+  const rtlPageStyle = rtl ? { direction: "rtl" as const } : undefined;
   const sh = shapeForPdf;
 
   const hasTranslation = Boolean(translatedData && languageCode);
 
   const label = (key: string, fallback: string): string => {
-    if (!translatedData) return fallback;
+    if (!translatedData) return sh(fallback);
+    // FIX #3: look in BOTH `_labels` (flat keys) and `ui` (protocol
+    // namespace, e.g. translatedData?.ui?.terms || "TERMS & CONDITIONS"),
+    // plus alias pairs shared with the translate route.
+    const aliases: Record<string, string[]> = {
+      "section.summary": ["BOOKING SUMMARY"],
+      "tour.inclusions": ["WHAT'S INCLUDED"],
+      "section.terms": ["TERMS & CONDITIONS"],
+      "hero.subtitle": ["YOUR EXCLUSIVE TRAVEL ITINERARY"],
+    };
     const labels = translatedData["_labels"] as Record<string, string> | undefined;
-    const value = labels?.[key];
-    return typeof value === "string" && value.trim().length > 0 ? sh(value) : sh(fallback);
+    const ui = translatedData["ui"] as Record<string, string> | undefined;
+    for (const candidate of [key, ...(aliases[key] || [])]) {
+      const hit = ui?.[candidate] || labels?.[candidate];
+      if (typeof hit === "string" && hit.trim().length > 0) return sh(hit);
+    }
+    return sh(fallback);
   };
 
   const t = (key: string, fallback: string): string =>
@@ -1230,7 +1260,7 @@ export function ItineraryPDF({
 
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
-      <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel="Page 1">
+      <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel="Page 1" rtlPageStyle={rtlPageStyle} footerTagline={label("footer.tagline", "Curated Egyptian Journeys · Est. Luxury")}>
         <View style={styles.bookingRefBadge}>
           <Text style={[styles.bookingRefText, cinzelStyle]}>Ref: {bookingRef}</Text>
         </View>
@@ -1367,8 +1397,8 @@ export function ItineraryPDF({
           const meta = getOfferMeta(booking);
           const pct = Math.round(((booking.totalPrice - booking.offerPrice) / booking.totalPrice) * 100);
           return (
-            <View style={styles.offerBanner} wrap={false}>
-              <View style={styles.offerBannerTop}>
+            <View style={styles.offerBanner}>
+              <View style={styles.offerBannerTop} wrap={false}>
                 <View style={{ marginRight: 6 }}>
                   <ScarabBullet size={15} />
                 </View>

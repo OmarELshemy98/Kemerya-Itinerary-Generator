@@ -192,6 +192,14 @@ export function getStaticLabels(): Record<string, string> {
     // Fallback empty state strings
     "fallback.inclusions": "Customized inclusions to be confirmed by Operations team.",
     "fallback.exclusions": "Standard exclusion terms apply.",
+
+    // FIX #3 (protocol aliases): the SAME four headline labels keyed by their
+    // exact on-page text, so Gemini output maps dynamically in the JSX via
+    // translatedData?.ui?.terms || "TERMS & CONDITIONS" style lookups.
+    "BOOKING SUMMARY": "Booking Summary",
+    "WHAT'S INCLUDED": "What's Included",
+    "TERMS & CONDITIONS": "Terms & Conditions",
+    "YOUR EXCLUSIVE TRAVEL ITINERARY": "Your Exclusive Travel Itinerary",
   };
 }
 
@@ -258,23 +266,27 @@ export function transformItineraryData(
     "day.transport": day.dayRoute?.join(", ") || "",
   }));
 
-  // Inclusions and exclusions
-  data["inclusions"] = [
-    "All transfers in private vehicles",
-    "Accommodation in hotels",
-    "Full board meals",
-    "Professional tour guide",
-    "All entrance fees",
-    "All taxes and services",
-  ];
-  data["exclusions"] = [
-    "International airfare",
-    "Visa fees",
-    "Travel insurance",
-    "Personal expenses",
-    "Tips and gratuities",
-    "Optional activities",
-  ];
+  // Inclusions and exclusions — send the ACTUAL items rendered in the PDF
+  // (booking overrides, then custom tour lists, then the tour's own lists)
+  // so Gemini translates the real strings instead of generic placeholders.
+  const realInclusions =
+    booking.inclusions && booking.inclusions.length > 0
+      ? booking.inclusions
+      : booking.isCustomTour && booking.customInclusions && booking.customInclusions.length > 0
+        ? booking.customInclusions
+        : tour?.inclusions && tour.inclusions.length > 0
+          ? tour.inclusions
+          : [];
+  const realExclusions =
+    booking.exclusions && booking.exclusions.length > 0
+      ? booking.exclusions
+      : booking.isCustomTour && booking.customExclusions && booking.customExclusions.length > 0
+        ? booking.customExclusions
+        : tour?.exclusions && tour.exclusions.length > 0
+          ? tour.exclusions
+          : [];
+  data["inclusions"] = realInclusions.length > 0 ? realInclusions : ["Customized inclusions to be confirmed by Operations team."];
+  data["exclusions"] = realExclusions.length > 0 ? realExclusions : ["Standard exclusion terms apply."];
 
   return data;
 }
