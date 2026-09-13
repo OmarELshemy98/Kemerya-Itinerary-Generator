@@ -4,12 +4,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // Force dynamic execution to prevent static evaluation at build time
 export const dynamic = "force-dynamic";
 
-// System prompt for luxury travel translation
-const SYSTEM_PROMPT = `You are a luxury travel API. Translate ALL values in the provided JSON object to the target language.
-Return ONLY raw JSON. You must keep the EXACT same object structure and key names. DO NOT nest the response inside a root key. DO NOT translate the JSON keys.
-Return ONLY raw JSON without any markdown formatting, explanations, or additional text.
-If a value is already in the target language, leave it unchanged.
-Preserve all numbers, dates (in their original format), currency symbols, and special characters.`;
+// System prompt for luxury travel translation (used with native JSON mode)
+const SYSTEM_PROMPT = `Translate the values of this JSON object to the target language. Return ONLY a valid JSON object.`;
 
 interface TranslationRequest {
   targetLanguage: string;
@@ -61,6 +57,9 @@ ${JSON.stringify(dataToTranslate, null, 2)}`;
       model: "gemini-3.6-flash",
       systemInstruction: SYSTEM_PROMPT,
       generationConfig: {
+        // Native JSON mode: Gemini is constrained to emit syntactically
+        // valid JSON — no markdown fences, no prose, no truncation artifacts.
+        responseMimeType: "application/json",
         temperature: 0.3, // Lower temperature for consistent translations
         topK: 20,
         topP: 0.95,
@@ -71,8 +70,19 @@ ${JSON.stringify(dataToTranslate, null, 2)}`;
     // Generate translation
     const result = await model.generateContent(prompt);
     let responseText = result.response.text();
-    // Strip markdown formatting if Gemini returns it
+
+    // Strictly safe parsing: even with native JSON mode enabled, strip any
+    // potential markdown code fences / stray whitespace before JSON.parse.
     responseText = responseText.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+
+    // Defensive: extract the outermost JSON object if any leading/trailing
+    // prose slipped through despite JSON mode.
+    const jsonStart = responseText.indexOf("{");
+    const jsonEnd = responseText.lastIndexOf("}");
+    if (jsonStart !== -1 && jsonEnd > jsonStart) {
+      responseText = responseText.slice(jsonStart, jsonEnd + 1);
+    }
+
     const translatedData = JSON.parse(responseText);
 
     return NextResponse.json({

@@ -1353,7 +1353,7 @@ export function ItineraryPDF({
             <View style={styles.heroStat}>
               <Text style={styles.heroStatLabel}>{label("hero.totalPrice", "Total Price")}</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                {booking.offerPrice && booking.offerPrice > 0 ? (
+                {booking.offerPrice != null && booking.offerPrice > 0 ? (
                   <>
                     <Text style={[styles.heroStatValue, styles.strikethroughOldPrice]}>
                       {formatCurrency(booking.totalPrice, booking.currency)}
@@ -1418,35 +1418,35 @@ export function ItineraryPDF({
                 </View>
               ) : formatCurrency(booking.totalPrice, booking.currency)}
             />
-            {booking.clientName && (
+            {booking.clientName ? (
               <SummaryCard label={label("summary.clientName", "Client Name")} value={booking.clientName} />
-            )}
-            {booking.clientEmail && (
+            ) : null}
+            {booking.clientEmail ? (
               <SummaryCard label={label("summary.clientEmail", "Client Email")} value={booking.clientEmail} />
-            )}
-            {booking.clientPhone && (
+            ) : null}
+            {booking.clientPhone ? (
               <SummaryCard label={label("summary.clientPhone", "Client Phone")} value={booking.clientPhone} />
-            )}
-            {booking.clientWhatsapp && (
+            ) : null}
+            {booking.clientWhatsapp ? (
               <SummaryCard label={label("summary.clientWhatsapp", "Client WhatsApp")} value={booking.clientWhatsapp} />
-            )}
-            {booking.meetingPoint && (
+            ) : null}
+            {booking.meetingPoint ? (
               <SummaryCard label={label("summary.meetingPoint", "Meeting Point")} value={booking.meetingPoint} />
-            )}
-            {booking.flightArrival && (
+            ) : null}
+            {booking.flightArrival ? (
               <SummaryCard
                 label={label("summary.airportArrival", "Airport Arrival / Tour Start")}
                 value={booking.flightArrival.replace("T", " · ")}
               />
-            )}
-            {booking.pickupTime && (
+            ) : null}
+            {booking.pickupTime ? (
               <SummaryCard label={label("summary.pickupTime", "Pickup Time")} value={booking.pickupTime} />
-            )}
+            ) : null}
           </View>
         </View>
 
         {/* LUXURY OFFER BANNER — attractive & creative, print-safe */}
-        {booking.offerPrice && booking.offerPrice > 0 && (() => {
+        {booking.offerPrice != null && booking.offerPrice > 0 && (() => {
           const meta = getOfferMeta(booking);
           const pct = Math.round(((booking.totalPrice - booking.offerPrice) / booking.totalPrice) * 100);
           return (
@@ -1501,44 +1501,44 @@ export function ItineraryPDF({
                 </Text>
               )
             )}
-            {(tour.location || tour.group || tour.language || tour.durationLabel) && (
+            {(tour.location || tour.group || tour.language || tour.durationLabel) ? (
               <View style={{ ...styles.summaryGrid, marginTop: 8 }}>
-                {tour.durationLabel && (
+                {tour.durationLabel ? (
                   <SummaryCard label="Duration" value={tour.durationLabel} />
-                )}
-                {tour.location && (
+                ) : null}
+                {tour.location ? (
                   <SummaryCard label="Location" value={tour.location} />
-                )}
-                {tour.group && (
+                ) : null}
+                {tour.group ? (
                   <SummaryCard label="Group" value={tour.group} />
-                )}
-                {tour.language && (
+                ) : null}
+                {tour.language ? (
                   <SummaryCard label="Language" value={tour.language} />
-                )}
+                ) : null}
               </View>
-            )}
+            ) : null}
           </View>
         ) : null}
 
         {/* NOTES IF ANY */}
-        {(booking.notes || booking.specialRequests) && (
+        {(booking.notes || booking.specialRequests) ? (
           <View style={styles.notesBlock}>
-            {booking.notes && (
+            {booking.notes ? (
               <>
                 <Text style={styles.notesTitle}>Itinerary Notes</Text>
                 <Text style={styles.notesText}>{booking.notes}</Text>
               </>
-            )}
-            {booking.specialRequests && (
+            ) : null}
+            {booking.specialRequests ? (
               <>
                 <Text style={{ ...styles.notesTitle, marginTop: booking.notes ? 10 : 0 }}>
                   Special Requests
                 </Text>
                 <Text style={styles.notesText}>{booking.specialRequests}</Text>
               </>
-            )}
+            ) : null}
           </View>
-        )}
+        ) : null}
 
         {/* FOOTER PAGE 1 */}
         <View style={styles.footer}>
@@ -1917,31 +1917,31 @@ export function ItineraryPDF({
 
         {/* SOCIAL MEDIA LINKS */}
         <View style={styles.socialRow}>
-          {companyInfo.socialMedia?.facebook && (
+          {companyInfo.socialMedia?.facebook ? (
             <Link src={companyInfo.socialMedia.facebook} style={styles.socialLinkItem}>
               Facebook
             </Link>
-          )}
-          {companyInfo.socialMedia?.instagram && (
+          ) : null}
+          {companyInfo.socialMedia?.instagram ? (
             <Link src={companyInfo.socialMedia.instagram} style={styles.socialLinkItem}>
               Instagram
             </Link>
-          )}
-          {companyInfo.socialMedia?.youtube && (
+          ) : null}
+          {companyInfo.socialMedia?.youtube ? (
             <Link src={companyInfo.socialMedia.youtube} style={styles.socialLinkItem}>
               YouTube
             </Link>
-          )}
-          {companyInfo.socialMedia?.twitter && (
+          ) : null}
+          {companyInfo.socialMedia?.twitter ? (
             <Link src={companyInfo.socialMedia.twitter} style={styles.socialLinkItem}>
               X (Twitter)
             </Link>
-          )}
-          {companyInfo.socialMedia?.googleBusiness && (
+          ) : null}
+          {companyInfo.socialMedia?.googleBusiness ? (
             <Link src={companyInfo.socialMedia.googleBusiness} style={styles.socialLinkItem}>
               Google Business
             </Link>
-          )}
+          ) : null}
         </View>
 
         <View style={styles.footer}>
@@ -2041,22 +2041,22 @@ function DayCard({
               ))}
             </View>
           )}
-          {(accommodation || mealsJoined) && (
+          {(accommodation || mealsJoined) ? (
             <View style={styles.metaRow}>
-              {accommodation && (
+              {accommodation ? (
                 <View style={styles.metaItem}>
                   <Text style={styles.metaLabel}>{tLabels?.stay || "Stay"} ·</Text>
                   <Text style={styles.metaValue}>{accommodation}</Text>
                 </View>
-              )}
-              {mealsJoined && (
+              ) : null}
+              {mealsJoined ? (
                 <View style={styles.metaItem}>
                   <Text style={styles.metaLabel}>{tLabels?.meals || "Meals"} ·</Text>
                   <Text style={styles.metaValue}>{mealsJoined}</Text>
                 </View>
-              )}
+              ) : null}
             </View>
-          )}
+          ) : null}
         </View>
       </View>
       <LotusDivider />
