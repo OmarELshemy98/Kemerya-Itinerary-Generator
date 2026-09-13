@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { GEMINI_API_KEY } from "@/lib/env";
 
-if (!GEMINI_API_KEY) {
-  throw new Error("GEMINI_API_KEY is not defined");
-}
-
-// Initialize Gemini with API key
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+// Force dynamic execution to prevent static evaluation at build time
+export const dynamic = "force-dynamic";
 
 // System prompt for luxury travel translation
 const SYSTEM_PROMPT = `You are a luxury travel API. Translate ALL values in the provided JSON object to the target language.
@@ -25,6 +20,18 @@ interface TranslationRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    // Runtime environment check - don't crash at build time
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { success: false, error: "GEMINI_API_KEY is not configured on the server." },
+        { status: 500 }
+      );
+    }
+
+    // Initialize Gemini client inside POST to avoid build-time evaluation
+    const genAI = new GoogleGenerativeAI(apiKey);
+
     const body: TranslationRequest = await request.json();
     const { targetLanguage, itineraryData, staticLabels, languageCode } = body;
 
