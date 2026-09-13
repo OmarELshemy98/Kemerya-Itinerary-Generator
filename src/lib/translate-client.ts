@@ -171,6 +171,27 @@ export function getStaticLabels(): Record<string, string> {
     "review.title": "Leave a Review",
     "review.subtitle": "Loved your tour? Your feedback on Google Business helps travelers like you find us.",
     "review.cta": "★ Write a Review",
+
+    // Payment terms (5 bullets)
+    "terms.payment.1": "A 30% non-refundable deposit is required to confirm the booking.",
+    "terms.payment.2": "The remaining balance must be paid no later than 14 days prior to departure.",
+    "terms.payment.3": "Accepted payment methods: Bank transfer, credit/debit card, or cash at our office.",
+    "terms.payment.4": "Cancellations received 30+ days before departure: Deposit retained. 14–29 days: 50% of total due. Less than 14 days: No refund.",
+    "terms.payment.5": "{companyName} reserves the right to modify the itinerary due to local conditions, safety, or force majeure.",
+
+    // Footer labels
+    "footer.tagline": "Curated Egyptian Journeys · Est. Luxury",
+
+    // Social link names
+    "social.facebook": "Facebook",
+    "social.instagram": "Instagram",
+    "social.youtube": "YouTube",
+    "social.twitter": "X (Twitter)",
+    "social.googleBusiness": "Google Business",
+
+    // Fallback empty state strings
+    "fallback.inclusions": "Customized inclusions to be confirmed by Operations team.",
+    "fallback.exclusions": "Standard exclusion terms apply.",
   };
 }
 

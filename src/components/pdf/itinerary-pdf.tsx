@@ -965,8 +965,8 @@ function ParchmentPage({
       size="A4"
       style={[styles.page, { direction: rtl ? "rtl" : "ltr", fontFamily: bodyFont }]}
     >
-      <Image src={PARCHMENT_SRC} style={styles.parchmentBg} />
-      <Image src={BORDER_SRC} style={styles.borderFrame} />
+      <Image src={PARCHMENT_SRC} style={styles.parchmentBg} fixed={true} />
+      <Image src={BORDER_SRC} style={styles.borderFrame} fixed={true} />
 
       <View style={[styles.contentLayer, { fontFamily: bodyFont, direction: rtl ? "rtl" : "ltr" }]}>
         <View style={styles.headerBox}>
@@ -981,7 +981,7 @@ function ParchmentPage({
 
       <View style={styles.footerBand}>
         <View style={styles.nileImageWrap}>
-          <Image src={NILE_SRC} style={styles.nileImage} />
+          <Image src={NILE_SRC} style={styles.nileImage} fixed={true} />
         </View>
         <View style={styles.footerCaption}>
           <View>
@@ -989,7 +989,7 @@ function ParchmentPage({
               {companyInfo?.name || "KEMERYA TOURS"}
             </Text>
             <Text style={[styles.footerTagline, { fontFamily: brandFont }]}>
-              Curated Egyptian Journeys · Est. Luxury
+              {label("footer.tagline", "Curated Egyptian Journeys · Est. Luxury")}
             </Text>
           </View>
           <Text style={styles.footerPage}>
@@ -1096,12 +1096,71 @@ export function ItineraryPDF({
   const styleBag = styles as unknown as Record<string, Record<string, unknown>>;
   for (const key of Object.keys(styleBag)) {
     const s = styleBag[key];
+    if (!s || typeof s !== "object" || Array.isArray(s)) continue;
+    const orig = { ...s } as Record<string, unknown>;
+
+    // Mirror padding L↔R
+    if ("paddingLeft" in orig && !("paddingRight" in orig)) s.paddingRight = orig.paddingLeft;
+    if ("paddingRight" in orig && !("paddingLeft" in orig)) s.paddingLeft = orig.paddingRight;
+    if (rtl && "paddingLeft" in orig && "paddingRight" in orig) {
+      const tmp = s.paddingLeft;
+      s.paddingLeft = s.paddingRight;
+      s.paddingRight = tmp;
+    }
+    if ("paddingHorizontal" in orig && rtl) { /* no-op, symmetrical */ }
+
+    // Mirror margin L↔R
+    if ("marginLeft" in orig && !("marginRight" in orig)) s.marginRight = orig.marginLeft;
+    if ("marginRight" in orig && !("marginLeft" in orig)) s.marginLeft = orig.marginRight;
+    if (rtl && "marginLeft" in orig && "marginRight" in orig) {
+      const tmp = s.marginLeft;
+      s.marginLeft = s.marginRight;
+      s.marginRight = tmp;
+    }
+
+    // Mirror border L↔R (width, color)
+    const borderLR = ["Width", "Color", "Style"] as const;
+    for (const suf of borderLR) {
+      const lk = `borderLeft${suf}` as const;
+      const rk = `borderRight${suf}` as const;
+      if (lk in orig && !(rk in orig)) (s as Record<string, unknown>)[rk] = orig[lk];
+      if (rk in orig && !(lk in orig)) (s as Record<string, unknown>)[lk] = orig[rk];
+      if (rtl && lk in orig && rk in orig) {
+        const tmp = (s as Record<string, unknown>)[lk];
+        (s as Record<string, unknown>)[lk] = (s as Record<string, unknown>)[rk];
+        (s as Record<string, unknown>)[rk] = tmp;
+      }
+    }
+
+    // Flip row ↔ row-reverse for RTL
+    if (rtl && orig.flexDirection === "row") s.flexDirection = "row-reverse";
+    if (rtl && orig.flexDirection === "row-reverse") s.flexDirection = "row";
+
+    // Flip justify flex-start ↔ flex-end for RTL
+    if (rtl && orig.justifyContent === "flex-start") s.justifyContent = "flex-end";
+    if (rtl && orig.justifyContent === "flex-end") s.justifyContent = "flex-start";
+
+    // Flip border Radius corners for RTL (corner TL↔TR, BL↔BR)
+    if (rtl) {
+      const cornerPairs: Array<[string, string]> = [
+        ["borderTopLeftRadius", "borderTopRightRadius"],
+        ["borderBottomLeftRadius", "borderBottomRightRadius"],
+      ];
+      for (const [lk, rk] of cornerPairs) {
+        if (lk in orig && !(rk in orig)) (s as Record<string, unknown>)[rk] = orig[lk];
+        if (rk in orig && !(lk in orig)) (s as Record<string, unknown>)[lk] = orig[rk];
+        if (lk in orig && rk in orig) {
+          const tmp = (s as Record<string, unknown>)[lk];
+          (s as Record<string, unknown>)[lk] = (s as Record<string, unknown>)[rk];
+          (s as Record<string, unknown>)[rk] = tmp;
+        }
+      }
+    }
+
+    // TextAlign default per direction (for text-only styles)
     if (
-      s &&
-      typeof s === "object" &&
-      !Array.isArray(s) &&
-      !("textAlign" in s) &&
-      ("fontSize" in s || "color" in s || "fontFamily" in s)
+      !("textAlign" in orig) &&
+      ("fontSize" in orig || "color" in orig || "fontFamily" in orig || "lineHeight" in orig)
     ) {
       s.textAlign = rtl ? "right" : "left";
     }
@@ -1510,7 +1569,7 @@ export function ItineraryPDF({
                   ))
                 ) : (
                   <Text style={{ ...styles.listItemText, ...styles.inclusionsText }}>
-                    Customized inclusions to be confirmed by Operations team.
+                    {label("fallback.inclusions", "Customized inclusions to be confirmed by Operations team.")}
                   </Text>
                 )}
               </View>
@@ -1534,7 +1593,7 @@ export function ItineraryPDF({
                   ))
                 ) : (
                   <Text style={{ ...styles.listItemText, ...styles.exclusionsText }}>
-                    Standard exclusion terms apply.
+                    {label("fallback.exclusions", "Standard exclusion terms apply.")}
                   </Text>
                 )}
               </View>
@@ -1616,13 +1675,20 @@ export function ItineraryPDF({
               <SunDiscBullet size={12} />
               <Text style={styles.termsTitle}>{label("section.terms", "Payment & Booking Terms")}</Text>
             </View>
-            <Text style={styles.termsText}>
-              • A 30% non-refundable deposit is required to confirm the booking.{"\n"}
-              • The remaining balance must be paid no later than 14 days prior to departure.{"\n"}
-              • Accepted payment methods: Bank transfer, credit/debit card, or cash at our office.{"\n"}
-              • Cancellations received 30+ days before departure: Deposit retained. 14–29 days: 50% of total due. Less than 14 days: No refund.{"\n"}
-              • {companyInfo.name} reserves the right to modify the itinerary due to local conditions, safety, or force majeure.
-            </Text>
+            {[
+              { key: "terms.payment.1", fallback: "A 30% non-refundable deposit is required to confirm the booking." },
+              { key: "terms.payment.2", fallback: "The remaining balance must be paid no later than 14 days prior to departure." },
+              { key: "terms.payment.3", fallback: "Accepted payment methods: Bank transfer, credit/debit card, or cash at our office." },
+              { key: "terms.payment.4", fallback: "Cancellations received 30+ days before departure: Deposit retained. 14–29 days: 50% of total due. Less than 14 days: No refund." },
+              { key: "terms.payment.5", fallback: `${companyInfo.name} reserves the right to modify the itinerary due to local conditions, safety, or force majeure.` },
+            ].map((item, i) => (
+              <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 6, marginBottom: i < 4 ? 4 : 0 }}>
+                <SunDiscBullet size={9} />
+                <Text style={styles.termsText}>
+                  {label(item.key, item.fallback).replace("{companyName}", companyInfo.name)}
+                </Text>
+              </View>
+            ))}
           </View>
         </View>
 
@@ -1753,27 +1819,27 @@ export function ItineraryPDF({
         <View style={styles.socialRow}>
           {companyInfo.socialMedia?.facebook ? (
             <Link src={companyInfo.socialMedia.facebook} style={styles.socialLinkItem}>
-              Facebook
+              {label("social.facebook", "Facebook")}
             </Link>
           ) : null}
           {companyInfo.socialMedia?.instagram ? (
             <Link src={companyInfo.socialMedia.instagram} style={styles.socialLinkItem}>
-              Instagram
+              {label("social.instagram", "Instagram")}
             </Link>
           ) : null}
           {companyInfo.socialMedia?.youtube ? (
             <Link src={companyInfo.socialMedia.youtube} style={styles.socialLinkItem}>
-              YouTube
+              {label("social.youtube", "YouTube")}
             </Link>
           ) : null}
           {companyInfo.socialMedia?.twitter ? (
             <Link src={companyInfo.socialMedia.twitter} style={styles.socialLinkItem}>
-              X (Twitter)
+              {label("social.twitter", "X (Twitter)")}
             </Link>
           ) : null}
           {companyInfo.socialMedia?.googleBusiness ? (
             <Link src={companyInfo.socialMedia.googleBusiness} style={styles.socialLinkItem}>
-              Google Business
+              {label("social.googleBusiness", "Google Business")}
             </Link>
           ) : null}
         </View>
@@ -1848,8 +1914,8 @@ function DayCard({
   const accommodationText = shapeForPdf(accommodation);
   const mealsText = shapeForPdf(mealsJoined);
   return (
-    <>
-      <View break style={styles.dayCard}>
+    <View>
+      <View break={false} style={styles.dayCard}>
         <View style={styles.dayHeader}>
           <View style={styles.dayBadge}>
             <Svg width={11} height={11} viewBox="0 0 24 24" style={{ marginRight: 4 }}>
@@ -1865,7 +1931,7 @@ function DayCard({
         <View style={styles.dayContent}>
           <Text style={styles.dayDescription}>{dayDescription}</Text>
           {stops.length > 0 && (
-            <View style={styles.dayRoadmap} wrap={false}>
+            <View style={styles.dayRoadmap}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 5 }}>
                 <PyramidBullet size={10} />
                 <Text style={[styles.dayRoadmapTitle, cinzelStyle]}>{tLabels?.roadmap || "Today's Roadmap"}</Text>
@@ -1914,6 +1980,6 @@ function DayCard({
         </View>
       </View>
       <SmallAnkhDivider />
-    </>
+    </View>
   );
 }
