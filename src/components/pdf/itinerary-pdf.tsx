@@ -265,14 +265,35 @@ const WingedSunDisc = ({ width = 190 }: { width?: number }) => (
 );
 
 // Hieroglyph strip: ankh · eye · scarab · feather · cobra · djed in a row.
-const HieroglyphStrip = () => (
+const HieroglyphStrip = ({ iconSize = 13 }: { iconSize?: number }) => (
   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginVertical: 4 }}>
-    <ScarabBullet size={13} />
-    <EyeOfHorusBullet size={13} />
-    <PyramidBullet size={13} />
-    <SunDiscBullet size={13} />
-    <LotusBullet size={13} />
-    <CartoucheSeal size={13} />
+    <ScarabBullet size={iconSize} />
+    <EyeOfHorusBullet size={iconSize} />
+    <PyramidBullet size={iconSize} />
+    <SunDiscBullet size={iconSize} />
+    <LotusBullet size={iconSize} />
+    <CartoucheSeal size={iconSize} />
+  </View>
+);
+
+// Native lotus divider — guaranteed decorative break between sections/days.
+const NativePharaonicDivider = ({ iconSize = 15 }: { iconSize?: number }) => (
+  <View style={{ flexDirection: "column", alignItems: "center", marginVertical: 8, gap: 3 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
+      <View style={{ width: 90, height: 1, backgroundColor: PARCHMENT_COLORS.royalGold, opacity: 0.8 }} />
+      <LotusBullet size={iconSize} />
+      <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: PARCHMENT_COLORS.deepLapis, borderWidth: 1, borderColor: PARCHMENT_COLORS.royalGold, justifyContent: "center", alignItems: "center" }}>
+        <Svg width={11} height={11} viewBox="0 0 24 24">
+          <G stroke={PARCHMENT_COLORS.royalGold} strokeWidth={2} fill="none" strokeLinecap="round">
+            <Path d="M12 3 C 8.5 3 6 5.8 6 8.6 C 6 11.4 8.5 13.5 12 13.5 C 15.5 13.5 18 11.4 18 8.6 C 18 5.8 15.5 3 12 3 Z" />
+            <Path d="M12 13.5 L 12 21 M 8.5 21 L 15.5 21" />
+          </G>
+        </Svg>
+      </View>
+      <LotusBullet size={iconSize} />
+      <View style={{ width: 90, height: 1, backgroundColor: PARCHMENT_COLORS.royalGold, opacity: 0.8 }} />
+    </View>
+    <HieroglyphStrip iconSize={11} />
   </View>
 );
 
@@ -324,10 +345,8 @@ const styles = StyleSheet.create({
     paddingTop: 52,
     paddingLeft: 52,
     paddingRight: 52,
-    // PROTOCOL §3 — footer clearance: fixed footer band (~108px Nile image +
-    // captions) would otherwise overprint Payment Terms / Privacy Policy on
-    // pages 4-5. 160pt bottom padding forces content to break before the band.
-    paddingBottom: 160,
+    // Massive clearance so the fixed footer band can NEVER overprint text.
+    paddingBottom: 210,
     flexDirection: "column",
   },
   footerBand: {
@@ -389,11 +408,11 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   officialLogo: {
-    width: 250,
-    height: 90,
+    width: 300,
+    height: 120,
     objectFit: "contain",
     alignSelf: "center",
-    marginBottom: 4,
+    marginBottom: 10,
     marginTop: 2,
   },
   brandTitle: {
@@ -424,8 +443,8 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   officialLogoSmall: {
-    width: 140,
-    height: 50,
+    width: 220,
+    height: 80,
     objectFit: "contain",
     alignSelf: "center",
   },
@@ -854,8 +873,8 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   listItemText: {
-    fontSize: 9,
-    lineHeight: 1.5,
+    fontSize: 9.5,
+    lineHeight: 1.8,
     flex: 1,
   },
   inclusionsText: {
@@ -1112,39 +1131,39 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     alignItems: "center",
     backgroundColor: PARCHMENT_COLORS.deepLapis,
-    borderWidth: 1.2,
+    borderWidth: 2,
     borderColor: PARCHMENT_COLORS.royalGold,
-    padding: 16,
-    marginTop: 12,
-    gap: 6,
+    padding: 24,
+    marginTop: 20,
+    gap: 10,
   },
   companyShowcaseLogo: {
-    width: 190,
-    height: 68,
+    width: 240,
+    height: 90,
     objectFit: "contain",
     alignSelf: "center",
   },
   companyShowcaseName: {
-    fontSize: 15,
+    fontSize: 18,
     color: PARCHMENT_COLORS.royalGold,
-    letterSpacing: 3.5,
+    letterSpacing: 3,
     fontWeight: 700,
     textAlign: "center",
-    lineHeight: 1.4,
+    lineHeight: 1.6,
   },
   companyShowcaseTagline: {
-    fontSize: 8.5,
+    fontSize: 10,
     color: PARCHMENT_COLORS.paleGold,
-    letterSpacing: 1.8,
+    letterSpacing: 2,
     textTransform: "uppercase" as const,
     textAlign: "center",
-    lineHeight: 1.5,
+    lineHeight: 1.6,
   },
   companyShowcaseAbout: {
-    fontSize: 8.5,
+    fontSize: 9,
     color: "#F5EBD3",
     textAlign: "center",
-    lineHeight: 1.7,
+    lineHeight: 1.8,
     marginTop: 4,
   },
   companyShowcaseContact: {
@@ -1233,14 +1252,16 @@ function ParchmentPage({
                 {shapeForPdf(companyInfo.tagline)}
               </Text>
             ) : null}
-            <WingedSunDisc />
+            <WingedSunDisc width={220} />
+            <NativePharaonicDivider />
             <SvgDividerImage />
             <GoldenDivider />
           </View>
         ) : (
           <View style={styles.headerBoxCompact}>
             <Image src={LOGO_SRC} style={styles.officialLogoSmall} />
-            <WingedSunDisc width={130} />
+            <WingedSunDisc width={150} />
+            <NativePharaonicDivider iconSize={13} />
           </View>
         )}
         {children}
@@ -2123,6 +2144,7 @@ export function ItineraryPDF({
               </Link>
             </Text>
             <AnkhDivider color={PARCHMENT_COLORS.antiqueGold} />
+            <NativePharaonicDivider />
             <SvgDividerImage />
             <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, marginBottom: 6 }}>
               <View style={{ marginRight: 6 }}>
@@ -2328,8 +2350,9 @@ function DayCard({
           ) : null}
         </View>
       </View>
-      {/* PROTOCOL §4 — downloaded SVG divider between Day sections
-          (flex-row Image, never a raw CSS border). */}
+      {/* Pharaonic divider between Day sections — native SVG (guaranteed) +
+          downloaded divider art, in-flow flex rows (never a CSS border). */}
+      <NativePharaonicDivider />
       <SvgDividerImage />
     </View>
   );
