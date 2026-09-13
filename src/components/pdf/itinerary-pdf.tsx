@@ -186,6 +186,103 @@ const AnkhGlyph = ({ size = 12, color = COLOR.royalGold }: { size?: number; colo
   </Svg>
 );
 
+/* --------------------------------------------------------------------------
+ * SECTION TITLE ICONOGRAPHY
+ * A small, themed gold glyph that sits next to each numbered section title so
+ * the reader instantly recognises what a page is about without reading a word.
+ * --------------------------------------------------------------------------*/
+
+type SectionGlyphKind =
+  | "summary"
+  | "overview"
+  | "roadmap"
+  | "list"
+  | "price"
+  | "contact"
+  | "terms";
+
+const SectionGlyph = ({ kind, size = 15 }: { kind: SectionGlyphKind; size?: number }) => {
+  const W = 24;
+  const c = COLOR.royalGold;
+  const glyphs: Record<SectionGlyphKind, React.ReactNode> = {
+    summary: (
+      <>
+        <Path d="M6 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
+        <Path d="M9 8h4M9 12h5M9 16h3" />
+      </>
+    ),
+    overview: (
+      <>
+        <Path d="M2 12s3.7-6.5 10-6.5S22 12 22 12s-3.7 6.5-10 6.5S2 12 2 12Z" />
+        <Circle cx={12} cy={12} r={3} />
+      </>
+    ),
+    roadmap: (
+      <>
+        <Path d="M4 5h11a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h11" />
+        <Circle cx={4} cy={5} r={2} />
+        <Circle cx={20} cy={17} r={2} />
+      </>
+    ),
+    list: (
+      <>
+        <Path d="M9 5h11M9 12h11M9 19h11" />
+        <Path d="M3.5 4.5h0M3.5 11.5h0M3.5 18.5h0" />
+        <Path d="M1.5 18l1.3 1.3L5 16.6" />
+      </>
+    ),
+    price: (
+      <>
+        <Path d="M2 7.5h20v9H2Z" />
+        <Circle cx={12} cy={12} r={2.6} />
+        <Path d="M6 10.5h0M18 13.5h0" />
+      </>
+    ),
+    contact: (
+      <>
+        <Path d="M4 3h4l1.6 4.4-2.1 1.8a13.5 13.5 0 0 0 7.3 7.3l1.8-2.1L21 16v4a2 2 0 0 1-2 2A17 17 0 0 1 2 5a2 2 0 0 1 2-2Z" />
+      </>
+    ),
+    terms: (
+      <>
+        <Path d="M12 2l8 3v6.2C20 16 16.5 19.7 12 22 7.5 19.7 4 16 4 11.2V5Z" />
+        <Path d="M9 12l2 2 4-4" />
+      </>
+    ),
+  };
+  return (
+    <Svg width={size} height={size} viewBox={`0 0 ${W} ${W}`}>
+      <G fill="none" stroke={c} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+        {glyphs[kind]}
+      </G>
+    </Svg>
+  );
+};
+
+/** Numbered + iconed section title with the trailing gold rule. */
+function SectionHeader({
+  S,
+  number,
+  icon,
+  title,
+  titleStyle = {},
+}: {
+  S: typeof styles;
+  number: string;
+  icon: SectionGlyphKind;
+  title: string;
+  titleStyle?: Record<string, string>;
+}) {
+  return (
+    <View style={S.sectionHeader}>
+      <View style={S.sectionNumber}><Text>{number}</Text></View>
+      <View style={S.sectionIcon}><SectionGlyph kind={icon} size={15} /></View>
+      <Text style={[S.sectionTitle, titleStyle]}>{title}</Text>
+      <View style={S.sectionUnderline} />
+    </View>
+  );
+}
+
 /**
  * The ONE divider used throughout the document. A single hairline with a
  * small gold medallion — replaces the five competing divider styles from
@@ -245,7 +342,7 @@ const styles = StyleSheet.create({
     // Bottom clearance keeps text safely above the fixed footer band
     // (bottom:18 + ~92pt footer) with a small buffer — no wasted margin
     // beyond what's needed to guarantee zero overlap.
-    paddingTop: 34,
+    paddingTop: 26,
     paddingLeft: 40,
     paddingRight: 40,
     paddingBottom: 116,
@@ -253,8 +350,24 @@ const styles = StyleSheet.create({
   },
 
   footerBand: { position: "absolute", bottom: 18, left: 38, right: 38, width: 519, flexDirection: "column" },
-  nileImageWrap: { width: "100%", height: 78, borderWidth: 1, borderColor: COLOR.royalGold, overflow: "hidden" },
+  nileImageWrap: { width: "100%", height: 78, borderWidth: 1, borderColor: COLOR.royalGold, overflow: "hidden", position: "relative" },
   nileImage: { width: "100%", height: "100%", objectFit: "cover" },
+  companyRect: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(245, 235, 211, 0.86)",
+    justifyContent: "center",
+    paddingHorizontal: SPACE.sm,
+  },
+  companyRectRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: SPACE.md, marginBottom: 2 },
+  companyRectCell: { flexDirection: "row", alignItems: "center", gap: 3 },
+  companyRectIcon: { width: 12, height: 12, justifyContent: "center", alignItems: "center" },
+  companyRectText: { fontSize: 7, color: COLOR.deepBrown, fontWeight: 700, letterSpacing: 0.2 },
+  companyRectAddressRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 3, marginTop: 3 },
+  companyRectAddress: { fontSize: 6.6, color: COLOR.warmBrown, fontWeight: 600, maxWidth: 420 },
   footerCaption: {
     marginTop: SPACE.xs,
     paddingHorizontal: SPACE.sm,
@@ -306,8 +419,8 @@ const styles = StyleSheet.create({
   heroCard: {
     ...CARD,
     borderWidth: 1.4,
-    padding: SPACE.md,
-    marginBottom: SPACE.lg,
+    padding: SPACE.sm,
+    marginBottom: SPACE.sm,
   },
   clientBadge: {
     backgroundColor: COLOR.antiqueGold,
@@ -347,7 +460,7 @@ const styles = StyleSheet.create({
   offerPriceValue: { color: COLOR.scarabGreen, fontSize: 10.5, fontWeight: 700 },
 
   // ---- Sections -------------------------------------------------------------
-  section: { marginBottom: SPACE.lg },
+  section: { marginBottom: SPACE.sm },
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: SPACE.sm, gap: SPACE.sm },
   sectionNumber: {
     width: 24,
@@ -363,6 +476,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   sectionTitle: { fontSize: 12.5, color: COLOR.deepBrown, letterSpacing: 0.4, flexShrink: 1 },
+  sectionIcon: { width: 20, height: 20, justifyContent: "center", alignItems: "center" },
   sectionUnderline: { flex: 1, height: 1, backgroundColor: COLOR.royalGold, opacity: 0.6 },
 
   summaryGrid: {
@@ -424,7 +538,7 @@ const styles = StyleSheet.create({
   offerBadgeText: { color: "#FFFFFF", fontSize: 6.5, fontWeight: 700, letterSpacing: 0.5 },
 
   // ---- Day cards --------------------------------------------------------------
-  dayCard: { ...CARD, marginBottom: SPACE.sm, overflow: "hidden" },
+  dayCard: { ...CARD, marginBottom: 6, overflow: "hidden" },
   dayHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -444,8 +558,8 @@ const styles = StyleSheet.create({
   },
   dayBadgeText: { color: COLOR.deepBrown, fontSize: 8, letterSpacing: 0.5, fontWeight: 700 },
   dayTitle: { color: COLOR.royalGold, fontSize: 11, flex: 1 },
-  dayContent: { padding: SPACE.md },
-  dayDescription: { fontSize: 9.3, color: COLOR.ink, lineHeight: 1.7, marginBottom: SPACE.sm, textAlign: "justify" },
+  dayContent: { padding: SPACE.sm + 2 },
+  dayDescription: { fontSize: 9.3, color: COLOR.ink, lineHeight: 1.7, marginBottom: 6, textAlign: "justify" },
   dayRoadmap: { marginTop: SPACE.xs, borderWidth: 0.8, borderColor: COLOR.royalGold, backgroundColor: "rgba(255, 253, 245, 0.6)", padding: SPACE.sm },
   dayRoadmapTitle: { fontSize: 6.8, color: COLOR.warmBrown, letterSpacing: 1, marginBottom: SPACE.xs, fontWeight: 700 },
   dayRoadmapRow: { flexDirection: "row", alignItems: "flex-start", gap: SPACE.xs + 2, marginBottom: 3 },
@@ -681,6 +795,40 @@ function ParchmentPage({
       <View style={S.footerBand} fixed>
         <View style={S.nileImageWrap}>
           <Image src={NILE_SRC} style={S.nileImage} />
+          <View style={S.companyRect}>
+            <View style={S.companyRectRow}>
+              {companyInfo?.phone ? (
+                <View style={S.companyRectCell}>
+                  <View style={S.companyRectIcon}><SunDiscBullet size={8} /></View>
+                  <Text style={S.companyRectText}>{companyInfo.phone}</Text>
+                </View>
+              ) : null}
+              {companyInfo?.email ? (
+                <View style={S.companyRectCell}>
+                  <View style={S.companyRectIcon}><EyeOfHorusBullet size={8} /></View>
+                  <Text style={S.companyRectText}>{companyInfo.email}</Text>
+                </View>
+              ) : null}
+              {companyInfo?.website ? (
+                <View style={S.companyRectCell}>
+                  <View style={S.companyRectIcon}><ScarabBullet size={8} /></View>
+                  <Text style={S.companyRectText}>{companyInfo.website}</Text>
+                </View>
+              ) : null}
+              {companyInfo?.whatsapp ? (
+                <View style={S.companyRectCell}>
+                  <View style={S.companyRectIcon}><LotusBullet size={8} /></View>
+                  <Text style={S.companyRectText}>WhatsApp {companyInfo.whatsapp}</Text>
+                </View>
+              ) : null}
+            </View>
+            {companyInfo?.address ? (
+              <View style={S.companyRectAddressRow}>
+                <View style={S.companyRectIcon}><AnkhGlyph size={8} /></View>
+                <Text style={S.companyRectAddress}>{shapeForPdf(companyInfo.address)}</Text>
+              </View>
+            ) : null}
+          </View>
         </View>
         <View style={S.footerCaption}>
           <View>
@@ -899,11 +1047,7 @@ export function ItineraryPDF({
         </View>
 
         <View style={S.section}>
-          <View style={S.sectionHeader}>
-            <View style={S.sectionNumber}><Text>01</Text></View>
-            <Text style={[S.sectionTitle, headingStyle]}>{label("section.summary", "Booking Summary")}</Text>
-            <View style={S.sectionUnderline} />
-          </View>
+          <SectionHeader S={S} number="01" icon="summary" title={label("section.summary", "Booking Summary")} titleStyle={headingStyle} />
           <View style={S.summaryGrid}>
             <SummaryCard S={S} label={label("summary.totalTravelers", "Total Travelers")} value={`${totalTravelers} (${travelersText})`} />
             <SummaryCard S={S} label={label("summary.tourDuration", "Tour Duration")} value={`${daysCount} Days / ${nights} Nights`} />
@@ -958,13 +1102,9 @@ export function ItineraryPDF({
           );
         })()}
 
-        {!booking.isCustomTour && tour ? (
+        {!booking.isCustomTour && tour && (overviewParas.length > 0 || tour.location || tour.group || tour.language || tour.durationLabel) ? (
           <View style={S.section}>
-            <View style={S.sectionHeader}>
-              <View style={S.sectionNumber}><Text>02</Text></View>
-              <Text style={[S.sectionTitle, headingStyle]}>{label("section.overview", "Tour Overview")}</Text>
-              <View style={S.sectionUnderline} />
-            </View>
+            <SectionHeader S={S} number="02" icon="overview" title={label("section.overview", "Tour Overview")} titleStyle={headingStyle} />
             {overviewParas.map((para, i) =>
               i === 0 && para.length > 0 && !rtl ? (
                 <Text key={i} style={{ ...S.notesText, marginBottom: SPACE.xs }}>
@@ -1013,11 +1153,7 @@ export function ItineraryPDF({
       {/* ---------------- PAGE 2 — Day-by-day (1-3) ---------------- */}
       <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel={page2Label} rtl={rtl} S={S}>
         <View style={S.section}>
-          <View style={S.sectionHeader}>
-            <View style={S.sectionNumber}><Text>03</Text></View>
-            <Text style={[S.sectionTitle, headingStyle]}>{label("section.roadmap", "Day-by-Day Itinerary")}</Text>
-            <View style={S.sectionUnderline} />
-          </View>
+          <SectionHeader S={S} number="03" icon="roadmap" title={label("section.roadmap", "Day-by-Day Itinerary")} titleStyle={headingStyle} />
 
           {itinerary.slice(0, 3).map((day, idx) => (
             <DayCard
@@ -1055,11 +1191,7 @@ export function ItineraryPDF({
       {hasExtraDays && (
         <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel="Page 3" rtl={rtl} S={S}>
           <View style={S.section}>
-            <View style={S.sectionHeader}>
-              <View style={S.sectionNumber}><Text>03</Text></View>
-              <Text style={[S.sectionTitle, headingStyle]}>{label("section.roadmap", "Itinerary (Continued)")}</Text>
-              <View style={S.sectionUnderline} />
-            </View>
+            <SectionHeader S={S} number="03" icon="roadmap" title={label("section.roadmap", "Itinerary (Continued)")} titleStyle={headingStyle} />
             {itinerary.slice(3, 7).map((day, idx) => (
               <DayCard
                 key={day.day}
@@ -1082,13 +1214,7 @@ export function ItineraryPDF({
       {/* ---------------- Inclusions / Pricing / Ops ---------------- */}
       <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel={hasExtraDays ? "Page 4" : "Page 3"} rtl={rtl} S={S}>
         <View style={S.section}>
-          <View style={S.sectionHeader}>
-            <View style={S.sectionNumber}><Text>04</Text></View>
-            <Text style={[S.sectionTitle, headingStyle]}>
-              {label("section.inclusions", "Inclusions")} & {label("section.exclusions", "Exclusions")}
-            </Text>
-            <View style={S.sectionUnderline} />
-          </View>
+          <SectionHeader S={S} number="04" icon="list" title={`${label("section.inclusions", "Inclusions")} & ${label("section.exclusions", "Exclusions")}`} titleStyle={headingStyle} />
           <View style={S.twoCol}>
             <View style={S.col}>
               <View style={S.panelCard}>
@@ -1130,11 +1256,7 @@ export function ItineraryPDF({
         </View>
 
         <View style={S.section}>
-          <View style={S.sectionHeader}>
-            <View style={S.sectionNumber}><Text>05</Text></View>
-            <Text style={[S.sectionTitle, headingStyle]}>{label("section.pricing", "Pricing & Payment")}</Text>
-            <View style={S.sectionUnderline} />
-          </View>
+          <SectionHeader S={S} number="05" icon="price" title={label("section.pricing", "Pricing & Payment")} titleStyle={headingStyle} />
           <View style={S.pricingTable}>
             <View style={{ ...S.pricingRow, backgroundColor: "rgba(232, 215, 177, 0.3)" }}>
               <Text style={{ ...S.pricingCell, ...S.pricingHeaderCell }}>{label("pricing.description", "Description")}</Text>
@@ -1207,11 +1329,7 @@ export function ItineraryPDF({
         </View>
 
         <View style={S.section}>
-          <View style={S.sectionHeader}>
-            <View style={S.sectionNumber}><Text>06</Text></View>
-            <Text style={[S.sectionTitle, headingStyle]}>{label("section.contact", "Operations & Contact Info")}</Text>
-            <View style={S.sectionUnderline} />
-          </View>
+          <SectionHeader S={S} number="06" icon="contact" title={label("section.contact", "Operations & Contact Info")} titleStyle={headingStyle} />
           <View style={S.operationsCard}>
             <View style={S.operationsHeader}>
               <View style={S.opsBadge}><Text style={S.opsBadgeText}>{label("general.247", "24/7 Support")}</Text></View>
@@ -1301,11 +1419,7 @@ export function ItineraryPDF({
       {/* ---------------- Terms / Review / Social ---------------- */}
       <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel={hasExtraDays ? "Page 5" : "Page 4"} rtl={rtl} S={S}>
         <View style={S.section}>
-          <View style={S.sectionHeader}>
-            <View style={S.sectionNumber}><Text>07</Text></View>
-            <Text style={[S.sectionTitle, headingStyle]}>{label("terms.policy", "Terms & Policy")}</Text>
-            <View style={S.sectionUnderline} />
-          </View>
+          <SectionHeader S={S} number="07" icon="terms" title={label("terms.policy", "Terms & Policy")} titleStyle={headingStyle} />
           <View style={S.termsCard}>
             <View style={{ flexDirection: "row", alignItems: "center", marginBottom: SPACE.xs + 2, gap: SPACE.xs }}>
               <CartoucheSeal size={12} />
