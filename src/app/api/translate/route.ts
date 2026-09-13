@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 // System prompt for luxury travel translation
 const SYSTEM_PROMPT = `You are a luxury travel API. Translate ALL values in the provided JSON object to the target language.
-Keep the exact JSON keys intact. Do not translate the keys. Maintain a premium, high-end hospitality tone.
+Return ONLY raw JSON. You must keep the EXACT same object structure and key names. DO NOT nest the response inside a root key. DO NOT translate the JSON keys.
 Return ONLY raw JSON without any markdown formatting, explanations, or additional text.
 If a value is already in the target language, leave it unchanged.
 Preserve all numbers, dates (in their original format), currency symbols, and special characters.`;

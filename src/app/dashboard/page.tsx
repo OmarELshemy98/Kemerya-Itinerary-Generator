@@ -125,6 +125,7 @@ function DashboardInner() {
       .then((result) => {
         if (result.success && result.translatedData) {
           setTranslatedData(result.translatedData);
+          console.log("Gemini Raw Output:", result.translatedData);
         } else {
           setTranslationError(result.error || "Translation failed");
           setTranslatedData(null);
@@ -183,7 +184,7 @@ function DashboardInner() {
               </div>
               {selectedLanguage && (
                 <Badge variant="gold" className="self-start">
-                  {selectedLanguage} â€” {translatedData ? "Translated" : isTranslating ? "Translating..." : "Ready"}
+                  {selectedLanguage}{" \u2014 "}{translatedData ? "Translated" : isTranslating ? "Translating..." : "Ready"}
                 </Badge>
               )}
             </div>
@@ -226,7 +227,7 @@ function DashboardInner() {
             <Separator className="my-4" />
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <SummaryLine label="Client" value={bookingConfig.clientName || "Not specified"} />
-              <SummaryLine label="Dates" value={formatDateShort(bookingConfig.startDate) + " â†’ " + formatDateShort(bookingConfig.endDate)} />
+              <SummaryLine label="Dates" value={formatDateShort(bookingConfig.startDate) + " \u2192 " + formatDateShort(bookingConfig.endDate)} />
               <SummaryLine label="Currency" value={bookingConfig.currency} />
               <SummaryLine label="Adults" value={String(bookingConfig.travelers.adults)} />
               <SummaryLine label="Children" value={String(bookingConfig.travelers.children)} />

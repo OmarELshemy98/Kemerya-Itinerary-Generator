@@ -36,6 +36,7 @@ import {
   isRTL,
   getFontFamily,
 } from "@/lib/pdf-fonts";
+import { getTranslatedValue } from "@/lib/translate-client";
 
 interface ItineraryPDFProps {
   tour: Tour | null;
@@ -1275,6 +1276,8 @@ export function ItineraryPDF({
   tour,
   booking,
   companyInfo = KEMERYA_COMPANY_INFO,
+  translatedData,
+  languageCode,
 }: ItineraryPDFProps) {
   const tourTitle = getTourTitle(tour, booking);
   const daysCount = getTourDurationDays(tour, booking);
@@ -1293,6 +1296,53 @@ export function ItineraryPDF({
   if (booking.travelers.children > 0) totalTravelersTextParts.push(`${booking.travelers.children} Child${booking.travelers.children > 1 ? "ren" : ""}`);
   if (booking.travelers.infants > 0) totalTravelersTextParts.push(`${booking.travelers.infants} Infant${booking.travelers.infants > 1 ? "s" : ""}`);
   const travelersText = totalTravelersTextParts.join(", ");
+
+  // ── Translation helpers (strict mapping over the Gemini payload) ──
+  const hasTranslation = Boolean(translatedData && languageCode);
+
+  /** Translated static label (from `_labels` nested in the payload) or fallback. */
+  const label = (key: string, fallback: string): string => {
+    if (!translatedData) return fallback;
+    const labels = translatedData["_labels"] as Record<string, string> | undefined;
+    const value = labels?.[key];
+    return typeof value === "string" && value.trim().length > 0 ? value : fallback;
+  };
+
+  /** Translated flat value (e.g. "tour.title", "booking.customTourTitle") or fallback. */
+  const t = (key: string, fallback: string): string =>
+    getTranslatedValue(translatedData, key, fallback) || fallback;
+
+  /** Translated string list; maps index-wise over the fallback so any length works. */
+  const tList = (key: string, fallback: string[]): string[] => {
+    if (!translatedData) return fallback;
+    const raw = translatedData[key];
+    if (!Array.isArray(raw)) return fallback;
+    const strings = raw.filter(
+      (v): v is string => typeof v === "string" && v.trim().length > 0
+    );
+    if (strings.length === 0) return fallback;
+    return fallback.map((fb, i) =>
+      i < strings.length && strings[i].trim().length > 0 ? strings[i] : fb
+    );
+  };
+
+  /** Gemini returns `itinerary.days` as objects with dotted field keys. */
+  const translatedDays = Array.isArray(translatedData?.["itinerary.days"])
+    ? (translatedData!["itinerary.days"] as Array<Record<string, unknown>>)
+    : [];
+
+  const dayField = (idx: number, field: string): string | undefined => {
+    const day = translatedDays[idx];
+    if (!day) return undefined;
+    const value = day[field];
+    return typeof value === "string" && value.trim().length > 0 ? value : undefined;
+  };
+
+  const displayTourTitle = hasTranslation
+    ? booking.isCustomTour
+      ? t("booking.customTourTitle", tourTitle)
+      : t("tour.title", tourTitle)
+    : tourTitle;
 
 
   return (
@@ -1314,33 +1364,33 @@ export function ItineraryPDF({
           <View style={styles.clientBadge}>
             <Text style={styles.clientBadgeText}>Booking Reference · {bookingRef}</Text>
           </View>
-          <Text style={styles.heroSubtitle}>Your Exclusive Travel Itinerary</Text>
-          <Text style={styles.heroTourName}>{tourTitle}</Text>
+          <Text style={styles.heroSubtitle}>{label("hero.subtitle", "Your Exclusive Travel Itinerary")}</Text>
+          <Text style={styles.heroTourName}>{displayTourTitle}</Text>
           <View style={styles.heroGrid}>
             <View style={styles.heroStat}>
-              <Text style={styles.heroStatLabel}>Departure Date</Text>
+              <Text style={styles.heroStatLabel}>{label("hero.departureDate", "Departure Date")}</Text>
               <Text style={styles.heroStatValue}>
                 {formatDateShort(booking.startDate)}
               </Text>
             </View>
             <View style={styles.heroStat}>
-              <Text style={styles.heroStatLabel}>Return Date</Text>
+              <Text style={styles.heroStatLabel}>{label("hero.returnDate", "Return Date")}</Text>
               <Text style={styles.heroStatValue}>
                 {formatDateShort(booking.endDate)}
               </Text>
             </View>
             <View style={styles.heroStatLast}>
-              <Text style={styles.heroStatLabel}>Duration</Text>
+              <Text style={styles.heroStatLabel}>{label("hero.duration", "Duration")}</Text>
               <Text style={styles.heroStatValue}>
                 {daysCount} Days / {nights} Nights
               </Text>
             </View>
             <View style={styles.heroStat}>
-              <Text style={styles.heroStatLabel}>Travelers</Text>
+              <Text style={styles.heroStatLabel}>{label("hero.travelers", "Travelers")}</Text>
               <Text style={styles.heroStatValue}>{totalTravelers} Guest{totalTravelers > 1 ? "s" : ""}</Text>
             </View>
             <View style={styles.heroStat}>
-              <Text style={styles.heroStatLabel}>Total Price</Text>
+              <Text style={styles.heroStatLabel}>{label("hero.totalPrice", "Total Price")}</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 {booking.offerPrice && booking.offerPrice > 0 ? (
                   <>
@@ -1368,7 +1418,7 @@ export function ItineraryPDF({
               </View>
             </View>
             <View style={styles.heroStatLast}>
-              <Text style={styles.heroStatLabel}>Reference</Text>
+              <Text style={styles.heroStatLabel}>{label("hero.reference", "Reference")}</Text>
               <Text style={styles.heroStatValue}>#{bookingRef}</Text>
             </View>
           </View>
@@ -1378,24 +1428,24 @@ export function ItineraryPDF({
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionNumber}><Text>01</Text></View>
-            <Text style={styles.sectionTitle}>Booking Summary</Text>
+            <Text style={styles.sectionTitle}>{label("section.summary", "Booking Summary")}</Text>
             <View style={styles.sectionUnderline} />
           </View>
           <View style={styles.summaryGrid}>
             <SummaryCard
-              label="Total Travelers"
+              label={label("summary.totalTravelers", "Total Travelers")}
               value={`${totalTravelers} (${travelersText})`}
             />
             <SummaryCard
-              label="Tour Duration"
+              label={label("summary.tourDuration", "Tour Duration")}
               value={`${daysCount} Days / ${nights} Nights`}
             />
             <SummaryCard
-              label="Travel Period"
+              label={label("summary.travelPeriod", "Travel Period")}
               value={`${formatDateShort(booking.startDate)} → ${formatDateShort(booking.endDate)}`}
             />
             <SummaryCard
-              label={booking.currency === "EUR" ? "Total Amount (EUR)" : "Total Amount (USD)"}
+              label={`${label("summary.totalAmount", "Total Amount")} (${booking.currency})`}
               value={booking.offerPrice && booking.offerPrice > 0 ? (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <Text style={[styles.summaryItemValue, styles.summaryStrikethrough]}>
@@ -1408,28 +1458,28 @@ export function ItineraryPDF({
               ) : formatCurrency(booking.totalPrice, booking.currency)}
             />
             {booking.clientName && (
-              <SummaryCard label="Client Name" value={booking.clientName} />
+              <SummaryCard label={label("summary.clientName", "Client Name")} value={booking.clientName} />
             )}
             {booking.clientEmail && (
-              <SummaryCard label="Client Email" value={booking.clientEmail} />
+              <SummaryCard label={label("summary.clientEmail", "Client Email")} value={booking.clientEmail} />
             )}
             {booking.clientPhone && (
-              <SummaryCard label="Client Phone" value={booking.clientPhone} />
+              <SummaryCard label={label("summary.clientPhone", "Client Phone")} value={booking.clientPhone} />
             )}
             {booking.clientWhatsapp && (
-              <SummaryCard label="Client WhatsApp" value={booking.clientWhatsapp} />
+              <SummaryCard label={label("summary.clientWhatsapp", "Client WhatsApp")} value={booking.clientWhatsapp} />
             )}
             {booking.meetingPoint && (
-              <SummaryCard label="Meeting Point" value={booking.meetingPoint} />
+              <SummaryCard label={label("summary.meetingPoint", "Meeting Point")} value={booking.meetingPoint} />
             )}
             {booking.flightArrival && (
               <SummaryCard
-                label="Airport Arrival / Tour Start"
+                label={label("summary.airportArrival", "Airport Arrival / Tour Start")}
                 value={booking.flightArrival.replace("T", " · ")}
               />
             )}
             {booking.pickupTime && (
-              <SummaryCard label="Pickup Time" value={booking.pickupTime} />
+              <SummaryCard label={label("summary.pickupTime", "Pickup Time")} value={booking.pickupTime} />
             )}
           </View>
         </View>
@@ -1474,7 +1524,7 @@ export function ItineraryPDF({
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionNumber}><Text>02</Text></View>
-              <Text style={styles.sectionTitle}>Tour Overview</Text>
+              <Text style={styles.sectionTitle}>{label("section.overview", "Tour Overview")}</Text>
               <View style={styles.sectionUnderline} />
             </View>
             {tour.overview.map((para, i) =>
@@ -1543,13 +1593,29 @@ export function ItineraryPDF({
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionNumber}><Text>02</Text></View>
-            <Text style={styles.sectionTitle}>Day-by-Day Itinerary</Text>
+            <Text style={styles.sectionTitle}>{label("section.roadmap", "Day-by-Day Itinerary")}</Text>
             <View style={styles.sectionUnderline} />
           </View>
 
           {itinerary.slice(0, 3).map((day, idx) => {
             const key = day.day || idx + 1;
-            return <DayCard key={day.day} day={day} roadmap={undefined} />;
+            return (
+              <DayCard
+                key={day.day}
+                day={day}
+                roadmap={undefined}
+                translatedTitle={dayField(idx, "day.title")}
+                translatedDescription={dayField(idx, "day.description")}
+                translatedAccommodation={dayField(idx, "day.accommodation")}
+                translatedMeals={dayField(idx, "day.meals")}
+                translatedRoadmap={dayField(idx, "day.transport")}
+                tLabels={{
+                  roadmap: label("day.roadmap", "Today's Roadmap"),
+                  stay: label("day.stay", "Stay"),
+                  meals: label("day.meals", "Meals"),
+                }}
+              />
+            );
           })}
 
           {itinerary.length === 0 && (
@@ -1576,13 +1642,29 @@ export function ItineraryPDF({
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionNumber}><Text>02</Text></View>
-              <Text style={styles.sectionTitle}>Itinerary (Continued)</Text>
+              <Text style={styles.sectionTitle}>{label("section.roadmap", "Itinerary (Continued)")}</Text>
               <View style={styles.sectionUnderline} />
             </View>
 
             {itinerary.slice(3, 7).map((day, idx) => {
               const key = day.day || idx + 4;
-              return <DayCard key={day.day} day={day} roadmap={undefined} />;
+              return (
+                <DayCard
+                  key={day.day}
+                  day={day}
+                  roadmap={undefined}
+                  translatedTitle={dayField(idx + 3, "day.title")}
+                  translatedDescription={dayField(idx + 3, "day.description")}
+                  translatedAccommodation={dayField(idx + 3, "day.accommodation")}
+                  translatedMeals={dayField(idx + 3, "day.meals")}
+                  translatedRoadmap={dayField(idx + 3, "day.transport")}
+                  tLabels={{
+                    roadmap: label("day.roadmap", "Today's Roadmap"),
+                    stay: label("day.stay", "Stay"),
+                    meals: label("day.meals", "Meals"),
+                  }}
+                />
+              );
             })}
           </View>
 
@@ -1599,17 +1681,19 @@ export function ItineraryPDF({
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionNumber}><Text>03</Text></View>
-            <Text style={styles.sectionTitle}>Inclusions & Exclusions</Text>
+            <Text style={styles.sectionTitle}>
+              {label("section.inclusions", "Inclusions")} & {label("section.exclusions", "Exclusions")}
+            </Text>
             <View style={styles.sectionUnderline} />
           </View>
           <View style={styles.twoCol}>
             <View style={styles.col}>
               <View style={styles.inclusionsCard}>
                 <Text style={{ ...styles.sectionCardTitle, ...styles.inclusionTitleText }}>
-                  What&apos;s Included
+                  {label("tour.inclusions", "What's Included")}
                 </Text>
-                {inclusions.length > 0 ? (
-                  inclusions.map((inc, i) => (
+                {tList("inclusions", inclusions).length > 0 ? (
+                  tList("inclusions", inclusions).map((inc, i) => (
                     <View key={i} style={styles.listItem}>
                       <View style={styles.listItemIcon}>
                         <CheckIcon />
@@ -1629,10 +1713,10 @@ export function ItineraryPDF({
             <View style={styles.col}>
               <View style={styles.exclusionsCard}>
                 <Text style={{ ...styles.sectionCardTitle, ...styles.exclusionTitleText }}>
-                  What&apos;s Not Included
+                  {label("tour.exclusions", "What's Not Included")}
                 </Text>
-                {exclusions.length > 0 ? (
-                  exclusions.map((exc, i) => (
+                {tList("exclusions", exclusions).length > 0 ? (
+                  tList("exclusions", exclusions).map((exc, i) => (
                     <View key={i} style={styles.listItem}>
                       <View style={styles.listItemIcon}>
                         <CrossIcon />
@@ -1656,17 +1740,17 @@ export function ItineraryPDF({
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionNumber}><Text>04</Text></View>
-            <Text style={styles.sectionTitle}>Pricing & Payment</Text>
+            <Text style={styles.sectionTitle}>{label("section.pricing", "Pricing & Payment")}</Text>
             <View style={styles.sectionUnderline} />
           </View>
           <View style={styles.pricingTable}>
             <View style={{ ...styles.pricingRow, backgroundColor: "#FDFBF7" }}>
-              <Text style={{ ...styles.pricingCell, ...styles.pricingHeaderCell }}>Description</Text>
-              <Text style={{ ...styles.pricingCellRight, ...styles.pricingHeaderCell }}>Amount ({booking.currency})</Text>
+              <Text style={{ ...styles.pricingCell, ...styles.pricingHeaderCell }}>{label("pricing.description", "Description")}</Text>
+              <Text style={{ ...styles.pricingCellRight, ...styles.pricingHeaderCell }}>{label("pricing.amount", "Amount")} ({booking.currency})</Text>
             </View>
             <View style={styles.pricingRow}>
               <Text style={styles.pricingCell}>
-                Tour Package ({tourTitle})
+                {label("pricing.tourPackage", "Tour Package")} ({displayTourTitle})
               </Text>
               <Text style={styles.pricingCellRight}>
                 {formatCurrency(booking.totalPrice, booking.currency)}
@@ -1675,7 +1759,7 @@ export function ItineraryPDF({
             {booking.travelers.adults > 0 && (
               <View style={styles.pricingRow}>
                 <Text style={styles.pricingCell}>
-                  · Adults ({booking.travelers.adults})
+                  · {label("pricing.adults", "Adults")} ({booking.travelers.adults})
                 </Text>
                 <Text style={styles.pricingCellRight}>
                   —
@@ -1685,7 +1769,7 @@ export function ItineraryPDF({
             {booking.travelers.children > 0 && (
               <View style={styles.pricingRow}>
                 <Text style={styles.pricingCell}>
-                  · Children ({booking.travelers.children})
+                  · {label("pricing.children", "Children")} ({booking.travelers.children})
                 </Text>
                 <Text style={styles.pricingCellRight}>
                   —
@@ -1695,7 +1779,7 @@ export function ItineraryPDF({
             {booking.travelers.infants > 0 && (
               <View style={styles.pricingRow}>
                 <Text style={styles.pricingCell}>
-                  · Infants ({booking.travelers.infants})
+                  · {label("pricing.infants", "Infants")} ({booking.travelers.infants})
                 </Text>
                 <Text style={styles.pricingCellRight}>
                   —
@@ -1714,7 +1798,7 @@ export function ItineraryPDF({
             ))}
             <View style={{ ...styles.pricingRow, ...styles.pricingRowLast }}>
               <Text style={{ ...styles.pricingCell, ...styles.pricingTotalLabel }}>
-                Total Amount Due
+                {label("pricing.totalAmountDue", "Total Amount Due")}
               </Text>
               <Text style={{ ...styles.pricingCellRight, ...styles.pricingTotalValue }}>
                 {formatCurrency(booking.totalPrice, booking.currency)}
@@ -1723,7 +1807,7 @@ export function ItineraryPDF({
           </View>
 
           <View style={styles.termsBlock}>
-            <Text style={styles.termsTitle}>Payment & Booking Terms</Text>
+            <Text style={styles.termsTitle}>{label("section.terms", "Payment & Booking Terms")}</Text>
             <Text style={styles.termsText}>
               • A 30% non-refundable deposit is required to confirm the booking.{"\n"}
               • The remaining balance must be paid no later than 14 days prior to departure.{"\n"}
@@ -1738,49 +1822,49 @@ export function ItineraryPDF({
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionNumber}><Text>05</Text></View>
-            <Text style={styles.sectionTitle}>Operations & Contact Info</Text>
+            <Text style={styles.sectionTitle}>{label("section.contact", "Operations & Contact Info")}</Text>
             <View style={styles.sectionUnderline} />
           </View>
           <View style={styles.operationsCard}>
             <View style={styles.operationsHeader}>
               <View style={styles.opsBadge}>
-                <Text style={styles.opsBadgeText}>24/7 Support</Text>
+                <Text style={styles.opsBadgeText}>{label("general.247", "24/7 Support")}</Text>
               </View>
               <Text style={styles.opsCardTitle}>
-                Your Operations Team — Available Round the Clock
+                {label("ops.roundClock", "Your Operations Team \u2014 Available Round the Clock")}
               </Text>
             </View>
             <View style={styles.opsGrid}>
               <View style={styles.opsItem}>
-                <Text style={styles.opsLabel}>Operations Manager</Text>
+                <Text style={styles.opsLabel}>{label("ops.manager", "Operations Manager")}</Text>
                 <Text style={styles.opsValue}>{companyInfo.operationsManager.name}</Text>
               </View>
               <View style={styles.opsItem}>
-                <Text style={styles.opsLabel}>Direct Mobile</Text>
+                <Text style={styles.opsLabel}>{label("ops.directMobile", "Direct Mobile")}</Text>
                 <Text style={styles.opsValue}>{companyInfo.operationsManager.phone}</Text>
               </View>
               <View style={styles.opsItem}>
-                <Text style={styles.opsLabel}>Operations Email</Text>
+                <Text style={styles.opsLabel}>{label("ops.email", "Operations Email")}</Text>
                 <Text style={styles.opsValue}>{companyInfo.operationsManager.email}</Text>
               </View>
               <View style={styles.opsItem}>
-                <Text style={styles.opsLabel}>WhatsApp Hotline</Text>
+                <Text style={styles.opsLabel}>{label("ops.whatsapp", "WhatsApp Hotline")}</Text>
                 <Text style={styles.opsValue}>{companyInfo.whatsapp}</Text>
               </View>
               <View style={styles.opsItem}>
-                <Text style={styles.opsLabel}>Head Office</Text>
+                <Text style={styles.opsLabel}>{label("ops.headOffice", "Head Office")}</Text>
                 <Text style={styles.opsValue}>{companyInfo.phone}</Text>
               </View>
               <View style={styles.opsItem}>
-                <Text style={styles.opsLabel}>Company Email</Text>
+                <Text style={styles.opsLabel}>{label("ops.companyEmail", "Company Email")}</Text>
                 <Text style={styles.opsValue}>{companyInfo.email}</Text>
               </View>
               <View style={styles.opsItem}>
-                <Text style={styles.opsLabel}>Website</Text>
+                <Text style={styles.opsLabel}>{label("ops.website", "Website")}</Text>
                 <Text style={styles.opsValue}>{companyInfo.website}</Text>
               </View>
               <View style={styles.opsItem}>
-                <Text style={styles.opsLabel}>Office Address</Text>
+                <Text style={styles.opsLabel}>{label("ops.address", "Office Address")}</Text>
                 <Text style={styles.opsValue}>{companyInfo.address}</Text>
               </View>
             </View>
@@ -1801,7 +1885,7 @@ export function ItineraryPDF({
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionNumber}><Text>06</Text></View>
-            <Text style={styles.sectionTitle}>Terms & Policy</Text>
+            <Text style={styles.sectionTitle}>{label("terms.policy", "Terms & Policy")}</Text>
             <View style={styles.sectionUnderline} />
           </View>
           <View style={styles.termsCard}>
@@ -1810,7 +1894,7 @@ export function ItineraryPDF({
                 <CartoucheSeal size={13} />
               </View>
               <Text style={{ fontFamily: "Cinzel", fontSize: 9, color: "#C9A962" }}>
-                Terms & Conditions
+                {label("section.terms", "Terms & Conditions")}
               </Text>
             </View>
             {getTermsItems(booking).map((item, i) => (
@@ -1830,7 +1914,7 @@ export function ItineraryPDF({
                 <EyeOfHorusIcon size={13} />
               </View>
               <Text style={{ fontFamily: "Cinzel", fontSize: 9, color: "#C9A962" }}>
-                Privacy Policy
+                {label("general.privacyPolicy", "Privacy Policy")}
               </Text>
             </View>
             {getPrivacyItems(booking).map((item, i) => (
@@ -1850,10 +1934,9 @@ export function ItineraryPDF({
 
         {/* LEAVE A REVIEW */}
         <View style={styles.reviewCard}>
-          <Text style={styles.reviewTitle}>Leave a Review</Text>
+          <Text style={styles.reviewTitle}>{label("review.title", "Leave a Review")}</Text>
           <Text style={styles.reviewSubtitle}>
-            Loved your tour? Your feedback on Google Business helps travelers
-            like you find us.
+            {label("review.subtitle", "Loved your tour? Your feedback on Google Business helps travelers like you find us.")}
           </Text>
           <Link src={companyInfo.socialMedia?.googleBusiness || "https://share.google/RLldzNlk9YFVuIGbD"}>
             <View style={styles.reviewBadge}>
@@ -1936,9 +2019,30 @@ function SummaryCard({ label, value }: { label: string; value: React.ReactNode }
   );
 }
 
-function DayCard({ day, roadmap }: { day: ItineraryDay; roadmap?: string[] }) {
-  const stops = (roadmap && roadmap.length > 0 ? roadmap : [])
-    .map((s) => String(s).trim()).filter(Boolean);
+function DayCard({
+  day,
+  roadmap,
+  translatedTitle,
+  translatedDescription,
+  translatedAccommodation,
+  translatedMeals,
+  translatedRoadmap,
+  tLabels,
+}: {
+  day: ItineraryDay;
+  roadmap?: string[];
+  translatedTitle?: string;
+  translatedDescription?: string;
+  translatedAccommodation?: string;
+  translatedMeals?: string;
+  translatedRoadmap?: string;
+  tLabels?: { roadmap?: string; stay?: string; meals?: string };
+}) {
+  const stops = (translatedRoadmap ? translatedRoadmap.split(",").map((s) => s.trim()).filter(Boolean) : roadmap && roadmap.length > 0 ? roadmap : []);
+  const dayTitle = translatedTitle || day.title;
+  const dayDescription = translatedDescription || day.description;
+  const accommodation = translatedAccommodation || day.accommodation || "";
+  const mealsJoined = translatedMeals || (day.meals ? day.meals.join(", ") : "");
   return (
     <>
       <View break style={styles.dayCard}>
@@ -1946,13 +2050,13 @@ function DayCard({ day, roadmap }: { day: ItineraryDay; roadmap?: string[] }) {
           <View style={styles.dayBadge}>
             <Text style={styles.dayBadgeText}>DAY {day.day}</Text>
           </View>
-          <Text style={styles.dayTitle}>{day.title}</Text>
+          <Text style={styles.dayTitle}>{dayTitle}</Text>
         </View>
         <View style={styles.dayContent}>
-          <Text style={styles.dayDescription}>{day.description}</Text>
+          <Text style={styles.dayDescription}>{dayDescription}</Text>
           {stops.length > 0 && (
             <View style={styles.dayRoadmap} wrap={false}>
-              <Text style={styles.dayRoadmapTitle}>Today&apos;s Roadmap</Text>
+              <Text style={styles.dayRoadmapTitle}>{tLabels?.roadmap || "Today's Roadmap"}</Text>
               {stops.map((stop, i) => (
                 <View key={i}>
                   <View style={styles.dayRoadmapRow}>
@@ -1966,18 +2070,18 @@ function DayCard({ day, roadmap }: { day: ItineraryDay; roadmap?: string[] }) {
               ))}
             </View>
           )}
-          {(day.meals || day.accommodation) && (
+          {(accommodation || mealsJoined) && (
             <View style={styles.metaRow}>
-              {day.accommodation && (
+              {accommodation && (
                 <View style={styles.metaItem}>
-                  <Text style={styles.metaLabel}>Stay ·</Text>
-                  <Text style={styles.metaValue}>{day.accommodation}</Text>
+                  <Text style={styles.metaLabel}>{tLabels?.stay || "Stay"} ·</Text>
+                  <Text style={styles.metaValue}>{accommodation}</Text>
                 </View>
               )}
-              {day.meals && day.meals.length > 0 && (
+              {mealsJoined && (
                 <View style={styles.metaItem}>
-                  <Text style={styles.metaLabel}>Meals ·</Text>
-                  <Text style={styles.metaValue}>{day.meals.join(", ")}</Text>
+                  <Text style={styles.metaLabel}>{tLabels?.meals || "Meals"} ·</Text>
+                  <Text style={styles.metaValue}>{mealsJoined}</Text>
                 </View>
               )}
             </View>

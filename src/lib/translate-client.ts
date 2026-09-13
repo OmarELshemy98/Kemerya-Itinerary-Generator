@@ -42,6 +42,61 @@ export function getStaticLabels(): Record<string, string> {
     "general.operationsTeam": "Operations Team",
     "general.support": "Support",
     "general.247": "24/7 Support",
+    "general.privacyPolicy": "Privacy Policy",
+
+    // Hero stat labels
+    "hero.subtitle": "Your Exclusive Travel Itinerary",
+    "hero.departureDate": "Departure Date",
+    "hero.returnDate": "Return Date",
+    "hero.duration": "Duration",
+    "hero.travelers": "Travelers",
+    "hero.totalPrice": "Total Price",
+    "hero.reference": "Reference",
+
+    // Booking summary labels
+    "summary.totalTravelers": "Total Travelers",
+    "summary.tourDuration": "Tour Duration",
+    "summary.travelPeriod": "Travel Period",
+    "summary.totalAmount": "Total Amount",
+    "summary.clientName": "Client Name",
+    "summary.clientEmail": "Client Email",
+    "summary.clientPhone": "Client Phone",
+    "summary.clientWhatsapp": "Client WhatsApp",
+    "summary.meetingPoint": "Meeting Point",
+    "summary.airportArrival": "Airport Arrival / Tour Start",
+    "summary.pickupTime": "Pickup Time",
+
+    // Day card labels
+    "day.roadmap": "Today's Roadmap",
+    "day.stay": "Stay",
+    "day.meals": "Meals",
+
+    // Pricing labels
+    "pricing.description": "Description",
+    "pricing.amount": "Amount",
+    "pricing.tourPackage": "Tour Package",
+    "pricing.adults": "Adults",
+    "pricing.children": "Children",
+    "pricing.infants": "Infants",
+    "pricing.totalAmountDue": "Total Amount Due",
+
+    // Operations labels
+    "ops.roundClock": "Your Operations Team \u2014 Available Round the Clock",
+    "ops.manager": "Operations Manager",
+    "ops.directMobile": "Direct Mobile",
+    "ops.email": "Operations Email",
+    "ops.whatsapp": "WhatsApp Hotline",
+    "ops.headOffice": "Head Office",
+    "ops.companyEmail": "Company Email",
+    "ops.website": "Website",
+    "ops.address": "Office Address",
+
+    // Terms / policy labels
+    "terms.policy": "Terms & Policy",
+
+    // Review labels
+    "review.title": "Leave a Review",
+    "review.subtitle": "Loved your tour? Your feedback on Google Business helps travelers like you find us.",
   };
 }
 

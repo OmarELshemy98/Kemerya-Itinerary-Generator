@@ -51,6 +51,7 @@ export async function requireAuthWithRole(): Promise<
 
 /** Database failure → 500 with a safe, non-leaking message. */
 export function dbError(message: string): NextResponse {
+  console.error("DB Error:", message);
   return NextResponse.json(
     { ok: false, error: `Database error: ${message}` },
     { status: 500 }
