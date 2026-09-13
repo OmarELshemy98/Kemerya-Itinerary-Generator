@@ -14,10 +14,6 @@ import {
   Path,
   G,
   Circle,
-  Rect,
-  Defs,
-  LinearGradient,
-  Stop,
   Ellipse,
 } from "@react-pdf/renderer";
 import type { Tour, BookingConfig, CompanyInfo, ItineraryDay } from "@/types";
@@ -27,15 +23,7 @@ import {
   formatCurrency,
   calculateNights,
 } from "@/lib/utils";
-import { resolveLogoSrc } from "@/lib/pdf-assets";
-import { EGYPT_LOCATIONS } from "@/utils/mapGenerator";
-import {
-  CheckIcon,
-  CrossIcon,
-  UserIcon,
-  CalendarIcon,
-  MapPinIcon,
-} from "./pdf-icons";
+import { UserIcon, CalendarIcon, MapPinIcon } from "./pdf-icons";
 import {
   isRTL,
   getGlobalFont,
@@ -61,7 +49,13 @@ interface ItineraryPDFProps {
 
 Font.registerHyphenationCallback((word) => [word]);
 
-const PARCHMENT_COLORS = {
+/* ============================================================================
+ * DESIGN SYSTEM
+ * A single source of truth for color + spacing so every panel, border and
+ * gap in the document reads as ONE coherent product instead of a collage.
+ * ==========================================================================*/
+
+const COLOR = {
   deepBrown: "#3D2B17",
   warmBrown: "#5A4226",
   agedBrown: "#7A6448",
@@ -71,11 +65,23 @@ const PARCHMENT_COLORS = {
   lapis: "#1E3A8A",
   deepLapis: "#172554",
   parchmentLight: "#F5EBD3",
-  parchmentMid: "#EBD9B4",
-  parchmentDark: "#BF9F6E",
   ink: "#2C1E10",
   scarabGreen: "#1F6B45",
+  rust: "#8B3A2E", // strike-through / sale-price accent (was ad-hoc before)
+  white: "#FDFBF7",
 };
+
+// Every "card" panel in the document shares the exact same skin.
+const CARD_BG = "rgba(253, 251, 247, 0.5)";
+const CARD_BORDER = "rgba(184, 150, 58, 0.55)";
+const CARD = {
+  backgroundColor: CARD_BG,
+  borderWidth: 1,
+  borderColor: CARD_BORDER,
+} as const;
+
+// One spacing scale used everywhere — nothing outside this set.
+const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 22, xxl: 30 };
 
 function getOfferMeta(booking: BookingConfig): { title: string; note: string } {
   return {
@@ -84,153 +90,85 @@ function getOfferMeta(booking: BookingConfig): { title: string; note: string } {
   };
 }
 
-const AnkhDivider = ({ color = PARCHMENT_COLORS.royalGold }: { color?: string }) => (
-  <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 10 }}>
-    <View style={{ flex: 1, height: 1, backgroundColor: color, opacity: 0.45 }} />
-    <View style={{ width: 3, height: 3, backgroundColor: color, opacity: 0.8, marginHorizontal: 6 }} />
-    <View style={{ marginHorizontal: 4 }}>
-      <Svg width={26} height={22} viewBox="0 0 26 22">
-        <G stroke={color} strokeWidth={1.8} fill="none" strokeLinecap="round" strokeLinejoin="round">
-          <Path d="M13 7 C 8.5 7 5.5 10 5.5 13 C 5.5 16 8.5 18.5 13 18.5 C 17.5 18.5 20.5 16 20.5 13 C 20.5 10 17.5 7 13 7 Z" />
-          <Path d="M13 14.5 L 13 20 M 8.5 20 L 17.5 20" />
-        </G>
-        <Circle cx={13} cy={13} r={1.5} fill={color} opacity={0.8} />
-      </Svg>
-    </View>
-    <View style={{ width: 3, height: 3, backgroundColor: color, opacity: 0.8, marginHorizontal: 6 }} />
-    <View style={{ flex: 1, height: 1, backgroundColor: color, opacity: 0.45 }} />
-  </View>
-);
+/* ============================================================================
+ * ICONOGRAPHY — small, purposeful pharaonic glyphs used as list bullets.
+ * Kept intentionally restrained: one glyph per icon, no stacked ornaments.
+ * ==========================================================================*/
 
-const SmallAnkhDivider = ({ color = PARCHMENT_COLORS.antiqueGold }: { color?: string }) => (
-  <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 6 }}>
-    <View style={{ flex: 1, height: 0.6, backgroundColor: color, opacity: 0.5 }} />
-    <Svg width={16} height={14} viewBox="0 0 16 14" style={{ marginHorizontal: 5 }}>
-      <G stroke={color} strokeWidth={1.2} fill="none" strokeLinecap="round">
-        <Path d="M8 4 C 5.5 4 3.5 6 3.5 8 C 3.5 10 5.5 11.5 8 11.5 C 10.5 11.5 12.5 10 12.5 8 C 12.5 6 10.5 4 8 4 Z" />
-        <Path d="M8 9 L 8 13 M 5 13 L 11 13" />
-      </G>
-    </Svg>
-    <View style={{ flex: 1, height: 0.6, backgroundColor: color, opacity: 0.5 }} />
-  </View>
-);
-
-// PROTOCOL §4 — premium divider + directional glyph sourced from the
-// downloaded `public/images/dividers_and_icons.svg` sprite sheet (ankh /
-// scarab / sun-disc / cartouche icon family also mirrored by the vector
-// bullets below). Rendered via <Image> in a flex row so it never collides.
-const SvgDividerImage = () => (
-  <Image
-    src={DIVIDER_SRC}
-    style={{
-      width: "100%",
-      height: 30,
-      objectFit: "contain",
-      marginVertical: 6,
-      alignSelf: "center",
-    }}
-  />
-);
-
-// Vector chevron replacing the raw "↓" text glyph (Arabic display fonts may
-// lack the arrow glyph → tofu). In-flow Svg, no absolute positioning.
-const RoadmapArrow = () => (
-  <Svg width={9} height={9} viewBox="0 0 24 24" style={{ marginLeft: 17, marginBottom: 2 }}>
-    <Path
-      d="M12 4 V 20 M 6 14 L 12 20 L 18 14"
-      fill="none"
-      stroke={PARCHMENT_COLORS.antiqueGold}
-      strokeWidth={2.4}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
-
-const ScarabBullet = ({ size = 12 }: { size?: number }) => (
+const ScarabBullet = ({ size = 11 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <G>
-      <Ellipse cx={12} cy={13} rx={8} ry={9.5} fill={PARCHMENT_COLORS.scarabGreen} />
-      <Path d="M4 13 C 4 6.5 7.5 3 12 3 C 16.5 3 20 6.5 20 13 C 20 19.5 16.5 23 12 23 C 7.5 23 4 19.5 4 13 Z"
-        fill="none" stroke={PARCHMENT_COLORS.royalGold} strokeWidth={1.1} />
+      <Ellipse cx={12} cy={13} rx={8} ry={9.5} fill={COLOR.scarabGreen} />
+      <Path
+        d="M4 13 C 4 6.5 7.5 3 12 3 C 16.5 3 20 6.5 20 13 C 20 19.5 16.5 23 12 23 C 7.5 23 4 19.5 4 13 Z"
+        fill="none"
+        stroke={COLOR.royalGold}
+        strokeWidth={1.1}
+      />
       <Path d="M12 4 L 12 22" stroke="#0F4D2E" strokeWidth={1} fill="none" opacity={0.8} />
       <Ellipse cx={12} cy={12} rx={4} ry={5.5} fill="#E8F8EE" opacity={0.3} />
-      <Path d="M12 1.5 C 9.5 1.5 8 3.5 8 5.5 L 16 5.5 C 16 3.5 14.5 1.5 12 1.5 Z"
-        fill={PARCHMENT_COLORS.scarabGreen} />
+    </G>
+  </Svg>
+);
+
+const EyeOfHorusBullet = ({ size = 11 }: { size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <G>
       <Path
-        d="M2 9 L 6 10.2 M 2 14 L 6 13.3 M 22 9 L 18 10.2 M 22 14 L 18 13.3"
-        stroke={PARCHMENT_COLORS.scarabGreen} strokeWidth={1.3} fill="none" />
-    </G>
-  </Svg>
-);
-
-const EyeOfHorusBullet = ({ size = 12 }: { size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24">
-    <G>
-      <Path d="M2 11 C 6 4 11 2 14 2 C 17 2 22 4 26 11 C 22 18 17 20 14 20 C 11 20 6 18 2 11 Z"
-        transform="translate(-1, 1)" fill={PARCHMENT_COLORS.lapis} opacity={0.88} />
-      <Path d="M2 11 C 6 4 11 2 14 2 C 17 2 22 4 26 11 C 22 18 17 20 14 20 C 11 20 6 18 2 11 Z"
-        transform="translate(-1, 1)" fill="none" stroke={PARCHMENT_COLORS.royalGold} strokeWidth={1.1} />
-      <Path d="M13 8 C 10.5 8 8.5 10 8.5 12 C 8.5 14 10.5 16 13 16" fill="none"
-        stroke={PARCHMENT_COLORS.paleGold} strokeWidth={1.4} strokeLinecap="round" />
-      <Circle cx={13} cy={12} r={2.5} fill={PARCHMENT_COLORS.paleGold} />
+        d="M2 11 C 6 4 11 2 14 2 C 17 2 22 4 26 11 C 22 18 17 20 14 20 C 11 20 6 18 2 11 Z"
+        transform="translate(-1, 1)"
+        fill={COLOR.lapis}
+        opacity={0.88}
+      />
+      <Circle cx={13} cy={12} r={2.5} fill={COLOR.paleGold} />
       <Circle cx={13} cy={12} r={1.1} fill="#0F172A" />
-      <G stroke={PARCHMENT_COLORS.royalGold} strokeWidth={1.1} fill="none" strokeLinecap="round">
-        <Path d="M0 14 L 5 13" />
-        <Path d="M1 18 Q 4 21 7 20" />
-        <Path d="M24 14 C 22 17 20 19 17 20" />
-        <Path d="M13 20 C 13 22 12 24.5 10 25" />
-      </G>
+      <Path
+        d="M0 14 L 5 13 M 1 18 Q 4 21 7 20 M 13 20 C 13 22 12 24.5 10 25"
+        stroke={COLOR.royalGold}
+        strokeWidth={1.1}
+        fill="none"
+        strokeLinecap="round"
+      />
     </G>
   </Svg>
 );
 
-const PyramidBullet = ({ size = 12 }: { size?: number }) => (
+const PyramidBullet = ({ size = 11 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <G>
-      <Path d="M12 1 L 23 22 L 1 22 Z" fill={PARCHMENT_COLORS.royalGold} />
-      <Path d="M12 1 L 23 22 L 1 22 Z" fill="none" stroke="#8B6F3A" strokeWidth={0.7} opacity={0.9} />
+      <Path d="M12 1 L 23 22 L 1 22 Z" fill={COLOR.royalGold} />
       <Path d="M12 1 L 12 22" stroke="#FDFBF7" strokeWidth={0.55} fill="none" opacity={0.75} />
-      <Path d="M5 11 L 19 11" stroke="#FDFBF7" strokeWidth={0.55} fill="none" opacity={0.65} />
-      <Path d="M12 1 L 23 22" stroke="#0F172A" strokeWidth={0.45} fill="none" opacity={0.35} />
+      <Path d="M5 11 L 19 11" stroke="#FDFBF7" strokeWidth={0.55} fill="none" opacity={0.6} />
     </G>
   </Svg>
 );
 
-const LotusBullet = ({ size = 12 }: { size?: number }) => (
+const LotusBullet = ({ size = 11 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <G>
-      <Path d="M12 2 C 9 5 7 10 7 14 C 7 16 9 17 12 17 C 15 17 17 16 17 14 C 17 10 15 5 12 2 Z"
-        fill="#C43E6B" opacity={0.85} />
-      <Path d="M4 12 C 6 8 9 6 12 5 C 9 9 8 12 8 14 C 8 15.5 10 16.5 12 17 C 8 16.5 5 15.5 4 14 C 3 13.4 3 12.6 4 12 Z"
-        fill="#F472B6" opacity={0.7} />
-      <Path d="M20 12 C 18 8 15 6 12 5 C 15 9 16 12 16 14 C 16 15.5 14 16.5 12 17 C 16 16.5 19 15.5 20 14 C 21 13.4 21 12.6 20 12 Z"
-        fill="#F472B6" opacity={0.7} />
-      <Ellipse cx={12} cy={18} rx={4.5} ry={1.6} fill={PARCHMENT_COLORS.scarabGreen} opacity={0.88} />
-      <Path d="M12 19 L 12 22 M 6 22 L 9 19 M 18 22 L 15 19"
-        stroke={PARCHMENT_COLORS.scarabGreen} strokeWidth={1.1} fill="none" strokeLinecap="round" />
+      <Path
+        d="M12 2 C 9 5 7 10 7 14 C 7 16 9 17 12 17 C 15 17 17 16 17 14 C 17 10 15 5 12 2 Z"
+        fill="#C43E6B"
+        opacity={0.85}
+      />
+      <Ellipse cx={12} cy={18} rx={4.5} ry={1.6} fill={COLOR.scarabGreen} opacity={0.88} />
     </G>
   </Svg>
 );
 
-const SunDiscBullet = ({ size = 12 }: { size?: number }) => (
+const SunDiscBullet = ({ size = 11 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <G>
-      <Circle cx={12} cy={12} r={8} fill={PARCHMENT_COLORS.royalGold} />
-      <Circle cx={12} cy={12} r={8} fill="none" stroke="#8B6F3A" strokeWidth={0.7} />
+      <Circle cx={12} cy={12} r={8} fill={COLOR.royalGold} />
       <Circle cx={12} cy={12} r={4} fill="#F39516" opacity={0.9} />
-      <Circle cx={12} cy={12} r={2.2} fill="#FDE68A" />
-      <G stroke={PARCHMENT_COLORS.royalGold} strokeWidth={1.2} fill="none" strokeLinecap="round">
-        <Path d="M12 1 V 4 M 12 20 V 23 M 1 12 H 4 M 20 12 H 23" />
-        <Path d="M3 3 L 5.5 5.5 M 18.5 18.5 L 21 21 M 21 3 L 18.5 5.5 M 5.5 18.5 L 3 21" />
-      </G>
+      <Circle cx={12} cy={12} r={2} fill="#FDE68A" />
     </G>
   </Svg>
 );
 
 const CartoucheSeal = ({ size = 12 }: { size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
-    <G fill="none" stroke={PARCHMENT_COLORS.royalGold} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+    <G fill="none" stroke={COLOR.royalGold} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
       <Path d="M7 3 H 17 V 19 H 9 L 7 21 Z" />
       <G strokeWidth={1.1}>
         <Path d="M10 6 H 14 M 10 9 H 14 M 10 12 H 14" />
@@ -239,1008 +177,391 @@ const CartoucheSeal = ({ size = 12 }: { size?: number }) => (
   </Svg>
 );
 
-// ── Native pharaonic ornaments (always render — pure <Svg>, no file I/O) ──
-// Winged sun-disc: the classic Egyptian protective emblem for page headers.
-const WingedSunDisc = ({ width = 190 }: { width?: number }) => (
-  <Svg width={width} height={26} viewBox="0 0 190 26">
-    <G>
-      {/* left wing */}
-      <Path d="M4 16 L 38 8 L 74 12 L 70 17 L 38 15 L 8 20 Z" fill={PARCHMENT_COLORS.lapis} opacity={0.85} />
-      <Path d="M4 16 L 38 8 L 74 12" fill="none" stroke={PARCHMENT_COLORS.royalGold} strokeWidth={1} />
-      <Path d="M12 18 L 40 12 M 24 19 L 48 14" stroke={PARCHMENT_COLORS.royalGold} strokeWidth={0.6} opacity={0.8} />
-      {/* right wing (mirrored) */}
-      <Path d="M186 16 L 152 8 L 116 12 L 120 17 L 152 15 L 182 20 Z" fill={PARCHMENT_COLORS.lapis} opacity={0.85} />
-      <Path d="M186 16 L 152 8 L 116 12" fill="none" stroke={PARCHMENT_COLORS.royalGold} strokeWidth={1} />
-      <Path d="M178 18 L 150 12 M 166 19 L 142 14" stroke={PARCHMENT_COLORS.royalGold} strokeWidth={0.6} opacity={0.8} />
-      {/* sun disc */}
-      <Circle cx={95} cy={12} r={8} fill={PARCHMENT_COLORS.royalGold} />
-      <Circle cx={95} cy={12} r={8} fill="none" stroke="#8B6F3A" strokeWidth={0.8} />
-      <Circle cx={95} cy={12} r={4} fill="#F39516" />
-      <Circle cx={95} cy={12} r={2} fill="#FDE68A" />
-      {/* twin cobras */}
-      <Path d="M86 16 C 84 19 82 21 80 22 M 104 16 C 106 19 108 21 110 22"
-        fill="none" stroke={PARCHMENT_COLORS.scarabGreen} strokeWidth={1.2} strokeLinecap="round" />
+const AnkhGlyph = ({ size = 12, color = COLOR.royalGold }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24">
+    <G stroke={color} strokeWidth={1.8} fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M12 3 C 8.5 3 6 5.8 6 8.6 C 6 11.4 8.5 13.5 12 13.5 C 15.5 13.5 18 11.4 18 8.6 C 18 5.8 15.5 3 12 3 Z" />
+      <Path d="M12 13.5 L 12 21 M 8.5 21 L 15.5 21" />
     </G>
   </Svg>
 );
 
-// Hieroglyph strip: ankh · eye · scarab · feather · cobra · djed in a row.
-const HieroglyphStrip = ({ iconSize = 13 }: { iconSize?: number }) => (
-  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginVertical: 4 }}>
-    <ScarabBullet size={iconSize} />
-    <EyeOfHorusBullet size={iconSize} />
-    <PyramidBullet size={iconSize} />
-    <SunDiscBullet size={iconSize} />
-    <LotusBullet size={iconSize} />
-    <CartoucheSeal size={iconSize} />
-  </View>
-);
-
-// Native lotus divider — guaranteed decorative break between sections/days.
-const NativePharaonicDivider = ({ iconSize = 15 }: { iconSize?: number }) => (
-  <View style={{ flexDirection: "column", alignItems: "center", marginVertical: 8, gap: 3 }}>
-    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
-      <View style={{ width: 90, height: 1, backgroundColor: PARCHMENT_COLORS.royalGold, opacity: 0.8 }} />
-      <LotusBullet size={iconSize} />
-      <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: PARCHMENT_COLORS.deepLapis, borderWidth: 1, borderColor: PARCHMENT_COLORS.royalGold, justifyContent: "center", alignItems: "center" }}>
-        <Svg width={11} height={11} viewBox="0 0 24 24">
-          <G stroke={PARCHMENT_COLORS.royalGold} strokeWidth={2} fill="none" strokeLinecap="round">
-            <Path d="M12 3 C 8.5 3 6 5.8 6 8.6 C 6 11.4 8.5 13.5 12 13.5 C 15.5 13.5 18 11.4 18 8.6 C 18 5.8 15.5 3 12 3 Z" />
-            <Path d="M12 13.5 L 12 21 M 8.5 21 L 15.5 21" />
-          </G>
-        </Svg>
+/**
+ * The ONE divider used throughout the document. A single hairline with a
+ * small gold medallion — replaces the five competing divider styles from
+ * the previous version so pages read as calm and premium, not busy.
+ */
+const Divider = ({
+  compact = false,
+  color = COLOR.royalGold,
+}: {
+  compact?: boolean;
+  color?: string;
+}) => (
+  <View
+    style={{
+      flexDirection: "row",
+      alignItems: "center",
+      marginVertical: compact ? SPACE.xs : SPACE.sm,
+    }}
+  >
+    <View style={{ flex: 1, height: 0.75, backgroundColor: color, opacity: 0.55 }} />
+    {!compact && (
+      <View
+        style={{
+          width: 20,
+          height: 20,
+          borderRadius: 10,
+          backgroundColor: COLOR.deepLapis,
+          borderWidth: 1,
+          borderColor: color,
+          justifyContent: "center",
+          alignItems: "center",
+          marginHorizontal: SPACE.sm,
+        }}
+      >
+        <AnkhGlyph size={11} color={color} />
       </View>
-      <LotusBullet size={iconSize} />
-      <View style={{ width: 90, height: 1, backgroundColor: PARCHMENT_COLORS.royalGold, opacity: 0.8 }} />
-    </View>
-    <HieroglyphStrip iconSize={11} />
+    )}
+    {compact && <View style={{ width: SPACE.sm }} />}
+    <View style={{ flex: 1, height: 0.75, backgroundColor: color, opacity: 0.55 }} />
   </View>
 );
 
-// GoldenDivider: gradient-feel double rule with a central ankh medallion.
-// Native Svg so it renders even when file-based <Image> dividers fail.
-const GoldenDivider = () => (
-  <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 8 }}>
-    <View style={{ flex: 1, height: 1.2, backgroundColor: PARCHMENT_COLORS.royalGold, opacity: 0.85 }} />
-    <View style={{ flex: 1, height: 0.6, backgroundColor: PARCHMENT_COLORS.royalGold, opacity: 0.4, marginTop: 2 }} />
-    <View style={{
-      width: 30, height: 30, borderRadius: 15,
-      backgroundColor: PARCHMENT_COLORS.deepLapis,
-      borderWidth: 1.2, borderColor: PARCHMENT_COLORS.royalGold,
-      justifyContent: "center", alignItems: "center", marginHorizontal: 8,
-    }}>
-      <Svg width={16} height={16} viewBox="0 0 24 24">
-        <G stroke={PARCHMENT_COLORS.royalGold} strokeWidth={1.8} fill="none" strokeLinecap="round">
-          <Path d="M12 3 C 8.5 3 6 5.8 6 8.6 C 6 11.4 8.5 13.5 12 13.5 C 15.5 13.5 18 11.4 18 8.6 C 18 5.8 15.5 3 12 3 Z" />
-          <Path d="M12 13.5 L 12 21 M 8.5 21 L 15.5 21" />
-        </G>
-      </Svg>
-    </View>
-    <View style={{ flex: 1, height: 0.6, backgroundColor: PARCHMENT_COLORS.royalGold, opacity: 0.4, marginTop: 2 }} />
-    <View style={{ flex: 1, height: 1.2, backgroundColor: PARCHMENT_COLORS.royalGold, opacity: 0.85 }} />
-  </View>
-);
+/* ============================================================================
+ * STYLESHEET
+ * ==========================================================================*/
 
 const styles = StyleSheet.create({
   page: {
     width: "100%",
     height: "100%",
-    backgroundColor: PARCHMENT_COLORS.parchmentLight,
+    backgroundColor: COLOR.parchmentLight,
   },
-  parchmentBg: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: 595,
-    height: 842,
-  },
-  borderFrame: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: 595,
-    height: 842,
-  },
+  parchmentBg: { position: "absolute", top: 0, left: 0, width: 595, height: 842 },
+  borderFrame: { position: "absolute", top: 0, left: 0, width: 595, height: 842 },
+
   contentLayer: {
-    // Balanced: compact top rhythm (fills empty gaps) but bottom clearance
-    // stays ABOVE the fixed footer band (bottom:20 + ~110px footer height)
-    // so text can NEVER overprint Payment Terms / Privacy.
-    paddingTop: 40,
-    paddingLeft: 45,
-    paddingRight: 45,
-    paddingBottom: 150,
+    // Bottom clearance keeps text safely above the fixed footer band
+    // (bottom:18 + ~92pt footer) with a small buffer — no wasted margin
+    // beyond what's needed to guarantee zero overlap.
+    paddingTop: 34,
+    paddingLeft: 40,
+    paddingRight: 40,
+    paddingBottom: 116,
     flexDirection: "column",
   },
-  footerBand: {
-    position: "absolute",
-    bottom: 20,
-    left: 40,
-    right: 40,
-    width: 515,
-    flexDirection: "column",
-  },
-  nileImageWrap: {
-    width: "100%",
-    height: 90,
-    borderWidth: 1,
-    borderColor: PARCHMENT_COLORS.royalGold,
-    overflow: "hidden",
-  },
-  nileImage: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-  },
+
+  footerBand: { position: "absolute", bottom: 18, left: 38, right: 38, width: 519, flexDirection: "column" },
+  nileImageWrap: { width: "100%", height: 78, borderWidth: 1, borderColor: COLOR.royalGold, overflow: "hidden" },
+  nileImage: { width: "100%", height: "100%", objectFit: "cover" },
   footerCaption: {
-    marginTop: 6,
-    paddingHorizontal: 12,
+    marginTop: SPACE.xs,
+    paddingHorizontal: SPACE.sm,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  footerBrand: {
-    fontSize: 7.5,
-    color: PARCHMENT_COLORS.warmBrown,
-    fontWeight: 700,
-    letterSpacing: 2,
-    textTransform: "uppercase" as const,
-  },
-  footerPage: {
-    fontSize: 7.5,
-    color: PARCHMENT_COLORS.agedBrown,
-    fontWeight: 700,
-    letterSpacing: 1,
-  },
-  footerTagline: {
-    fontSize: 6.5,
-    color: PARCHMENT_COLORS.antiqueGold,
-    letterSpacing: 3,
-    textTransform: "uppercase" as const,
-    marginTop: 2,
-  },
+  footerBrand: { fontSize: 7.5, color: COLOR.warmBrown, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" as const },
+  footerPage: { fontSize: 7.5, color: COLOR.agedBrown, fontWeight: 700, letterSpacing: 1 },
+  footerTagline: { fontSize: 6.5, color: COLOR.antiqueGold, letterSpacing: 2.5, textTransform: "uppercase" as const, marginTop: 1 },
+
+  // ---- Header -------------------------------------------------------------
   headerBox: {
-    // Premium centered hero header — pure Flexbox stack (no absolute) so
-    // logo / brand / tagline / divider stack with tight, even rhythm.
     flexDirection: "column",
     alignItems: "center",
-    justifyContent: "flex-start",
-    marginBottom: 12,
-    paddingBottom: 6,
-    paddingTop: 2,
-    gap: 4,
+    marginBottom: SPACE.md,
+    gap: SPACE.xs,
   },
-  officialLogo: {
-    width: 240,
-    height: 90,
-    objectFit: "contain",
-    alignSelf: "center",
-    marginBottom: 4,
-    marginTop: 2,
-  },
+  officialLogo: { width: 168, height: 64, objectFit: "contain", alignSelf: "center" },
+  officialLogoSmall: { width: 118, height: 46, objectFit: "contain", alignSelf: "center" },
   brandTitle: {
-    fontSize: 24,
-    color: PARCHMENT_COLORS.deepBrown,
-    letterSpacing: 3,
+    fontSize: 20,
+    color: COLOR.deepBrown,
+    letterSpacing: 2.5,
     fontWeight: 700,
-    marginTop: 4,
-    marginBottom: 2,
     textAlign: "center",
     lineHeight: 1.3,
   },
   brandTagline: {
-    fontSize: 9,
-    color: PARCHMENT_COLORS.agedBrown,
-    letterSpacing: 2.5,
-    textTransform: "uppercase" as const,
-    textAlign: "center",
-    marginBottom: 4,
-    lineHeight: 1.5,
-  },
-  headerBoxCompact: {
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    marginBottom: 8,
-    paddingBottom: 4,
-    gap: 3,
-  },
-  officialLogoSmall: {
-    width: 150,
-    height: 60,
-    objectFit: "contain",
-    alignSelf: "center",
-  },
-  headerCartouche: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 4,
-    marginBottom: 2,
-    paddingHorizontal: 18,
-    paddingVertical: 7,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderTopColor: PARCHMENT_COLORS.royalGold,
-    borderBottomColor: PARCHMENT_COLORS.royalGold,
-  },
-  headerCartoucheText: {
-    fontSize: 8,
-    color: PARCHMENT_COLORS.lapis,
-    letterSpacing: 2.6,
+    fontSize: 8.5,
+    color: COLOR.agedBrown,
+    letterSpacing: 2,
     textTransform: "uppercase" as const,
     textAlign: "center",
   },
+
   bookingRefBadge: {
-    backgroundColor: PARCHMENT_COLORS.deepBrown,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    backgroundColor: COLOR.deepBrown,
+    paddingHorizontal: SPACE.md,
+    paddingVertical: SPACE.xs + 2,
     alignSelf: "flex-start",
-    marginBottom: 14,
+    marginBottom: SPACE.md,
     borderLeftWidth: 3,
-    borderLeftColor: PARCHMENT_COLORS.royalGold,
+    borderLeftColor: COLOR.royalGold,
   },
-  bookingRefText: {
-    color: PARCHMENT_COLORS.royalGold,
-    fontSize: 10,
-    fontWeight: 700,
-    letterSpacing: 1.2,
-  },
+  bookingRefText: { color: COLOR.royalGold, fontSize: 9.5, fontWeight: 700, letterSpacing: 1.2 },
+
+  // ---- Hero card ------------------------------------------------------------
   heroCard: {
-    backgroundColor: "rgba(253, 251, 247, 0.55)",
-    padding: 14,
-    marginBottom: 14,
-    marginTop: 6,
-    borderWidth: 1.5,
-    borderColor: PARCHMENT_COLORS.royalGold,
-    overflow: "hidden",
-  },
-  heroInnerFrame: {
-    // In-flow inner frame (no absolute): all hero rows stack via Flexbox
-    // with gap/marginTop, so Meeting Point can never collide with titles.
-    margin: 4,
-    borderWidth: 0.6,
-    borderColor: PARCHMENT_COLORS.antiqueGold,
-    opacity: 0.9,
-    padding: 14,
-    flexDirection: "column",
-    alignItems: "stretch",
-    gap: 4,
+    ...CARD,
+    borderWidth: 1.4,
+    padding: SPACE.md,
+    marginBottom: SPACE.lg,
   },
   clientBadge: {
-    backgroundColor: PARCHMENT_COLORS.antiqueGold,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    backgroundColor: COLOR.antiqueGold,
+    paddingHorizontal: SPACE.sm,
+    paddingVertical: SPACE.xs - 1,
     alignSelf: "center",
-    marginBottom: 10,
+    marginBottom: SPACE.sm,
   },
-  clientBadgeText: {
-    color: PARCHMENT_COLORS.deepBrown,
-    fontSize: 7.5,
-    fontWeight: 700,
-    letterSpacing: 1.4,
-    textTransform: "uppercase" as const,
-  },
+  clientBadgeText: { color: COLOR.deepBrown, fontSize: 7.5, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase" as const },
   heroSubtitle: {
-    color: PARCHMENT_COLORS.lapis,
+    color: COLOR.lapis,
     fontSize: 8.5,
-    letterSpacing: 3.5,
+    letterSpacing: 3,
     textTransform: "uppercase" as const,
-    marginBottom: 4,
-    marginTop: 4,
     textAlign: "center",
-    lineHeight: 1.5,
+    marginBottom: SPACE.xs,
   },
   heroTourName: {
-    color: PARCHMENT_COLORS.ink,
-    fontSize: 19,
-    marginBottom: 4,
-    marginTop: 6,
-    lineHeight: 1.45,
+    color: COLOR.ink,
+    fontSize: 17,
+    lineHeight: 1.4,
     textAlign: "center",
+    marginBottom: SPACE.sm,
   },
-  heroGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 10,
-  },
-  heroStat: {
-    width: "31.5%",
-    paddingRight: 6,
-    paddingTop: 4,
-    borderRightWidth: 0.8,
-    borderRightColor: PARCHMENT_COLORS.antiqueGold,
-    marginBottom: 8,
-  },
-  heroStatLast: {
-    width: "31.5%",
-    paddingRight: 0,
-    paddingTop: 4,
-    borderRightWidth: 0,
-    marginBottom: 8,
-  },
-  heroStatLabel: {
-    color: PARCHMENT_COLORS.agedBrown,
-    fontSize: 7,
-    letterSpacing: 1.5,
-    textTransform: "uppercase" as const,
-    marginBottom: 3,
-  },
-  heroStatValue: {
-    color: PARCHMENT_COLORS.deepBrown,
-    fontSize: 10.5,
-    fontWeight: 700,
-  },
+  heroGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACE.sm, marginTop: SPACE.sm },
+  heroStat: { width: "31.5%", paddingRight: SPACE.xs, borderRightWidth: 0.8, borderRightColor: COLOR.paleGold, marginBottom: SPACE.sm },
+  heroStatLast: { width: "31.5%", marginBottom: SPACE.sm },
+  heroStatLabel: { color: COLOR.agedBrown, fontSize: 6.8, letterSpacing: 1.3, textTransform: "uppercase" as const, marginBottom: 2 },
+  heroStatValue: { color: COLOR.deepBrown, fontSize: 10, fontWeight: 700 },
+
   strikethroughOldPrice: {
-    color: "#94714A",
+    color: COLOR.agedBrown,
     textDecorationLine: "line-through" as const,
-    textDecorationThickness: 1.2,
-    textDecorationColor: "#A23F2E",
-    fontSize: 9.5,
+    textDecorationColor: COLOR.rust,
+    fontSize: 9,
   },
-  offerPriceValue: {
-    color: PARCHMENT_COLORS.scarabGreen,
-    fontSize: 11,
-    fontWeight: 700,
-  },
-  section: {
-    marginBottom: 14,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-    marginTop: 4,
-    gap: 8,
-  },
+  offerPriceValue: { color: COLOR.scarabGreen, fontSize: 10.5, fontWeight: 700 },
+
+  // ---- Sections -------------------------------------------------------------
+  section: { marginBottom: SPACE.lg },
+  sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: SPACE.sm, gap: SPACE.sm },
   sectionNumber: {
-    width: 28,
-    height: 28,
-    backgroundColor: PARCHMENT_COLORS.deepLapis,
+    width: 24,
+    height: 24,
+    backgroundColor: COLOR.deepLapis,
     borderWidth: 1,
-    borderColor: PARCHMENT_COLORS.royalGold,
-    color: PARCHMENT_COLORS.royalGold,
+    borderColor: COLOR.royalGold,
+    color: COLOR.royalGold,
     textAlign: "center",
     textAlignVertical: "center",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 700,
-    lineHeight: 28,
+    lineHeight: 24,
   },
-  sectionTitle: {
-    fontSize: 13,
-    color: PARCHMENT_COLORS.deepBrown,
-    letterSpacing: 0.5,
-    lineHeight: 1.4,
-    flexShrink: 1,
-  },
-  sectionUnderline: {
-    flex: 1,
-    height: 1,
-    backgroundColor: PARCHMENT_COLORS.royalGold,
-    opacity: 0.75,
-  },
+  sectionTitle: { fontSize: 12.5, color: COLOR.deepBrown, letterSpacing: 0.4, flexShrink: 1 },
+  sectionUnderline: { flex: 1, height: 1, backgroundColor: COLOR.royalGold, opacity: 0.6 },
+
   summaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
-    justifyContent: "space-between",
-    backgroundColor: "rgba(253, 251, 247, 0.5)",
-    borderWidth: 1,
-    borderColor: PARCHMENT_COLORS.royalGold,
-    padding: 8,
+    gap: SPACE.xs + 2,
+    ...CARD,
+    padding: SPACE.sm,
   },
   summaryItem: {
-    width: "48.5%",
+    width: "48.7%",
     flexDirection: "row",
     alignItems: "flex-start",
-    padding: 10,
+    padding: SPACE.sm,
     borderWidth: 0.7,
-    borderColor: PARCHMENT_COLORS.paleGold,
-    backgroundColor: "rgba(255, 253, 247, 0.4)",
-    gap: 7,
+    borderColor: COLOR.paleGold,
+    backgroundColor: "rgba(255, 253, 247, 0.35)",
+    gap: SPACE.xs + 3,
   },
-  summaryItemIcon: {
-    width: 22,
-    height: 22,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  summaryItemLabel: {
-    fontSize: 7,
-    color: PARCHMENT_COLORS.agedBrown,
-    letterSpacing: 0.7,
-    textTransform: "uppercase" as const,
-    marginBottom: 2,
-  },
-  summaryItemValue: {
-    fontSize: 9,
-    color: PARCHMENT_COLORS.ink,
-    fontWeight: 600,
-  },
-  summaryItemTextWrap: {
-    flex: 1,
-    flexDirection: "column",
-  },
-  summaryStrikethrough: {
-    fontSize: 8.5,
-    color: "#94714A",
-    textDecorationLine: "line-through" as const,
-    textDecorationThickness: 1,
-    textDecorationColor: "#A23F2E",
-  },
-  summaryOfferValue: {
-    fontSize: 11,
-    color: PARCHMENT_COLORS.scarabGreen,
-    fontWeight: 700,
-  },
+  summaryItemIcon: { width: 18, height: 18, justifyContent: "center", alignItems: "center" },
+  summaryItemLabel: { fontSize: 6.8, color: COLOR.agedBrown, letterSpacing: 0.6, textTransform: "uppercase" as const, marginBottom: 2 },
+  summaryItemValue: { fontSize: 8.8, color: COLOR.ink, fontWeight: 600 },
+  summaryItemTextWrap: { flex: 1, flexDirection: "column" },
+  summaryStrikethrough: { fontSize: 8, color: COLOR.agedBrown, textDecorationLine: "line-through" as const, textDecorationColor: COLOR.rust },
+  summaryOfferValue: { fontSize: 10.5, color: COLOR.scarabGreen, fontWeight: 700 },
+
   offerBanner: {
-    marginTop: 8,
-    marginBottom: 2,
+    marginTop: SPACE.sm,
     borderWidth: 1,
-    borderColor: PARCHMENT_COLORS.royalGold,
-    backgroundColor: "rgba(255, 248, 224, 0.5)",
-    padding: 10,
-    position: "relative",
+    borderColor: COLOR.royalGold,
+    backgroundColor: "rgba(255, 248, 224, 0.55)",
+    padding: SPACE.sm + 2,
   },
-  offerBannerTop: { flexDirection: "row", alignItems: "center", marginBottom: 5 },
+  offerBannerTop: { flexDirection: "row", alignItems: "center", gap: SPACE.xs, marginBottom: SPACE.xs },
   offerBannerBadge: {
-    backgroundColor: PARCHMENT_COLORS.deepLapis,
-    color: PARCHMENT_COLORS.royalGold,
+    backgroundColor: COLOR.deepLapis,
+    color: COLOR.royalGold,
     fontSize: 6.5,
     fontWeight: 700,
     letterSpacing: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: SPACE.xs + 2,
     paddingVertical: 3,
   },
-  offerBannerTitle: {
-    fontSize: 10.5,
-    color: PARCHMENT_COLORS.deepBrown,
-    marginBottom: 4,
-  },
-  offerBannerPrices: { flexDirection: "row", alignItems: "flex-end", flexWrap: "wrap" },
-  offerBannerOld: {
-    fontSize: 10.5,
-    color: "#94714A",
-    textDecorationLine: "line-through" as const,
-    textDecorationColor: "#A23F2E",
-    marginRight: 8,
-  },
-  offerBannerNew: { fontSize: 18, color: PARCHMENT_COLORS.deepBrown, fontWeight: 700, marginRight: 8 },
-  offerBannerPct: { fontSize: 7.5, color: PARCHMENT_COLORS.deepBrown, fontWeight: 700, marginBottom: 3 },
-  offerBannerNote: { fontSize: 8, color: PARCHMENT_COLORS.warmBrown, marginTop: 4, lineHeight: 1.5 },
+  offerBannerTitle: { fontSize: 10, color: COLOR.deepBrown, marginBottom: SPACE.xs },
+  offerBannerPrices: { flexDirection: "row", alignItems: "flex-end", flexWrap: "wrap", gap: SPACE.sm },
+  offerBannerOld: { fontSize: 10, color: COLOR.agedBrown, textDecorationLine: "line-through" as const, textDecorationColor: COLOR.rust },
+  offerBannerNew: { fontSize: 16, color: COLOR.deepBrown, fontWeight: 700 },
+  offerBannerPct: { fontSize: 7.5, color: COLOR.scarabGreen, fontWeight: 700 },
+  offerBannerNote: { fontSize: 7.8, color: COLOR.warmBrown, marginTop: SPACE.xs, lineHeight: 1.5 },
   offerBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
-    backgroundColor: PARCHMENT_COLORS.scarabGreen,
-    paddingHorizontal: 7,
+    backgroundColor: COLOR.scarabGreen,
+    paddingHorizontal: SPACE.xs + 2,
     paddingVertical: 2,
     alignSelf: "flex-start",
-    marginTop: 2,
   },
-  offerBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 6.5,
-    fontWeight: 700,
-    letterSpacing: 0.5,
-  },
-  dayCard: {
-    backgroundColor: "rgba(253, 251, 247, 0.55)",
-    marginBottom: 8,
-    padding: 0,
-    borderWidth: 1,
-    borderColor: PARCHMENT_COLORS.royalGold,
-    overflow: "hidden",
-  },
+  offerBadgeText: { color: "#FFFFFF", fontSize: 6.5, fontWeight: 700, letterSpacing: 0.5 },
+
+  // ---- Day cards --------------------------------------------------------------
+  dayCard: { ...CARD, marginBottom: SPACE.sm, overflow: "hidden" },
   dayHeader: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: PARCHMENT_COLORS.deepLapis,
-    color: PARCHMENT_COLORS.royalGold,
-    padding: 9,
-    marginBottom: 0,
-    gap: 10,
-    borderBottomWidth: 1.5,
-    borderBottomColor: PARCHMENT_COLORS.royalGold,
+    backgroundColor: COLOR.deepLapis,
+    padding: SPACE.sm,
+    gap: SPACE.sm,
+    borderBottomWidth: 1.4,
+    borderBottomColor: COLOR.royalGold,
   },
   dayBadge: {
-    backgroundColor: PARCHMENT_COLORS.royalGold,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: COLOR.royalGold,
+    paddingHorizontal: SPACE.xs + 3,
+    paddingVertical: SPACE.xs - 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 4,
   },
-  dayBadgeText: {
-    color: PARCHMENT_COLORS.deepBrown,
-    fontSize: 8.5,
-    letterSpacing: 0.6,
-    fontWeight: 700,
-  },
-  dayTitle: {
-    color: PARCHMENT_COLORS.royalGold,
-    fontSize: 11.5,
-    flex: 1,
-  },
-  dayContent: {
-    padding: 12,
-  },
-  dayDescription: {
-    fontSize: 9.5,
-    color: PARCHMENT_COLORS.ink,
-    lineHeight: 1.75,
-    marginBottom: 10,
-    textAlign: "justify",
-  },
-  dayRoadmap: {
-    marginTop: 8,
-    borderWidth: 0.8,
-    borderColor: PARCHMENT_COLORS.royalGold,
-    backgroundColor: "rgba(255, 253, 245, 0.65)",
-    padding: 9,
-  },
-  dayRoadmapTitle: {
-    fontSize: 7,
-    color: PARCHMENT_COLORS.warmBrown,
-    letterSpacing: 1,
-    marginBottom: 5,
-    fontWeight: 700,
-  },
-  dayRoadmapRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 3 },
-  dayRoadmapIcon: {
-    width: 11,
-    height: 11,
-    marginTop: 2,
-    marginRight: 6,
-    flexShrink: 0,
-  },
-  dayRoadmapStop: { flex: 1, fontSize: 8.2, color: PARCHMENT_COLORS.deepBrown, lineHeight: 1.45 },
-  dayRoadmapArrow: { fontSize: 7.5, color: PARCHMENT_COLORS.antiqueGold, marginLeft: 17, marginBottom: 1 },
-  metaRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 6,
-    flexWrap: "wrap",
-  },
+  dayBadgeText: { color: COLOR.deepBrown, fontSize: 8, letterSpacing: 0.5, fontWeight: 700 },
+  dayTitle: { color: COLOR.royalGold, fontSize: 11, flex: 1 },
+  dayContent: { padding: SPACE.md },
+  dayDescription: { fontSize: 9.3, color: COLOR.ink, lineHeight: 1.7, marginBottom: SPACE.sm, textAlign: "justify" },
+  dayRoadmap: { marginTop: SPACE.xs, borderWidth: 0.8, borderColor: COLOR.royalGold, backgroundColor: "rgba(255, 253, 245, 0.6)", padding: SPACE.sm },
+  dayRoadmapTitle: { fontSize: 6.8, color: COLOR.warmBrown, letterSpacing: 1, marginBottom: SPACE.xs, fontWeight: 700 },
+  dayRoadmapRow: { flexDirection: "row", alignItems: "flex-start", gap: SPACE.xs + 2, marginBottom: 3 },
+  dayRoadmapStop: { flex: 1, fontSize: 8, color: COLOR.deepBrown, lineHeight: 1.4 },
+  metaRow: { flexDirection: "row", gap: SPACE.sm, marginTop: SPACE.xs, flexWrap: "wrap" },
   metaItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(255, 250, 232, 0.5)",
-    paddingHorizontal: 7,
-    paddingVertical: 3.5,
+    backgroundColor: "rgba(255, 250, 232, 0.55)",
+    paddingHorizontal: SPACE.xs + 2,
+    paddingVertical: 3,
     borderWidth: 0.6,
-    borderColor: PARCHMENT_COLORS.paleGold,
+    borderColor: COLOR.paleGold,
   },
-  metaLabel: {
-    fontSize: 7,
-    color: PARCHMENT_COLORS.agedBrown,
-    textTransform: "uppercase" as const,
-    letterSpacing: 0.5,
-    fontWeight: 700,
-  },
-  metaValue: {
-    fontSize: 7.8,
-    color: PARCHMENT_COLORS.deepBrown,
-    fontWeight: 700,
-  },
-  twoCol: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  col: {
-    flex: 1,
-    width: "49%",
-  },
-  inclusionsCard: {
-    backgroundColor: "rgba(253, 251, 247, 0.35)",
-    padding: 12,
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: PARCHMENT_COLORS.royalGold,
-  },
-  exclusionsCard: {
-    backgroundColor: "rgba(253, 251, 247, 0.35)",
-    padding: 12,
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: PARCHMENT_COLORS.royalGold,
-  },
-  sectionCardTitle: {
-    fontSize: 10,
-    textTransform: "uppercase" as const,
-    letterSpacing: 1,
-    marginBottom: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  inclusionTitleText: {
-    color: PARCHMENT_COLORS.deepBrown,
-  },
-  exclusionTitleText: {
-    color: PARCHMENT_COLORS.deepBrown,
-  },
-  listItem: {
-    flexDirection: "row",
-    marginBottom: 6,
-    gap: 8,
-    alignItems: "flex-start",
-  },
-  listItemIcon: {
-    width: 12,
-    height: 12,
-    flexShrink: 0,
-    marginTop: 2,
-  },
-  listItemText: {
-    fontSize: 9.5,
-    lineHeight: 1.6,
-    flex: 1,
-  },
-  inclusionsText: {
-    color: PARCHMENT_COLORS.ink,
-  },
-  exclusionsText: {
-    color: PARCHMENT_COLORS.ink,
-  },
-  pricingTable: {
-    backgroundColor: "rgba(253, 251, 247, 0.4)",
-    padding: 12,
-    borderWidth: 1,
-    borderColor: PARCHMENT_COLORS.royalGold,
-    overflow: "hidden",
-  },
+  metaLabel: { fontSize: 6.8, color: COLOR.agedBrown, textTransform: "uppercase" as const, letterSpacing: 0.4, fontWeight: 700 },
+  metaValue: { fontSize: 7.6, color: COLOR.deepBrown, fontWeight: 700 },
+
+  twoCol: { flexDirection: "row", gap: SPACE.sm },
+  col: { flex: 1, width: "49%" },
+  panelCard: { ...CARD, padding: SPACE.md },
+  sectionCardTitle: { fontSize: 9.5, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: SPACE.sm, flexDirection: "row", alignItems: "center", gap: SPACE.xs },
+  listItem: { flexDirection: "row", marginBottom: SPACE.xs + 2, gap: SPACE.xs + 2, alignItems: "flex-start" },
+  listItemIcon: { width: 11, height: 11, flexShrink: 0, marginTop: 2 },
+  listItemText: { fontSize: 9, lineHeight: 1.55, flex: 1, color: COLOR.ink },
+
+  pricingTable: { ...CARD, padding: SPACE.md, overflow: "hidden" },
   pricingRow: {
     flexDirection: "row",
-    paddingVertical: 9,
-    paddingHorizontal: 14,
+    paddingVertical: SPACE.xs + 3,
+    paddingHorizontal: SPACE.sm,
     borderBottomWidth: 0.7,
-    borderBottomColor: PARCHMENT_COLORS.paleGold,
+    borderBottomColor: COLOR.paleGold,
   },
-  pricingRowLast: {
-    borderBottomWidth: 0,
-  },
-  pricingCell: {
-    flex: 1,
-    fontSize: 9.5,
-    color: PARCHMENT_COLORS.deepBrown,
-  },
-  pricingCellRight: {
-    flex: 1,
-    textAlign: "right",
-    fontSize: 9.5,
-    color: PARCHMENT_COLORS.deepBrown,
-    fontWeight: 600,
-  },
-  pricingHeaderCell: {
-    fontSize: 7.5,
-    textTransform: "uppercase" as const,
-    letterSpacing: 1,
-    color: PARCHMENT_COLORS.agedBrown,
-    fontWeight: 700,
-  },
-  pricingTotalLabel: {
-    color: PARCHMENT_COLORS.deepBrown,
-    fontSize: 11,
-    fontWeight: 700,
-    textTransform: "uppercase" as const,
-    letterSpacing: 1,
-  },
-  pricingTotalValue: {
-    color: PARCHMENT_COLORS.deepBrown,
-    fontSize: 15,
-    fontWeight: 700,
-  },
-  termsBlock: {
-    backgroundColor: "rgba(253, 251, 247, 0.35)",
-    padding: 12,
-    borderWidth: 1,
-    borderColor: PARCHMENT_COLORS.royalGold,
-    marginTop: 10,
-  },
-  termsTitle: {
-    fontSize: 8.5,
-    fontWeight: 700,
-    color: PARCHMENT_COLORS.lapis,
-    textTransform: "uppercase" as const,
-    letterSpacing: 1,
-    marginBottom: 7,
-  },
-  termsText: {
-    fontSize: 8,
-    color: PARCHMENT_COLORS.deepBrown,
-    lineHeight: 1.7,
-    textAlign: "justify",
-  },
-  termsSection: {
-    marginTop: 4,
-  },
-  termsCard: {
-    backgroundColor: "rgba(253, 251, 247, 0.35)",
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: PARCHMENT_COLORS.royalGold,
-    padding: 12,
-  },
-  termsItemRow: {
-    flexDirection: "row",
-    gap: 5,
-    marginBottom: 5,
-  },
-  termsBullet: {
-    color: PARCHMENT_COLORS.antiqueGold,
-    fontSize: 8,
-    fontWeight: 700,
-  },
-  termsItemText: {
-    flex: 1,
-    fontSize: 8,
-    color: PARCHMENT_COLORS.deepBrown,
-    lineHeight: 1.55,
-    textAlign: "justify",
-  },
-  termsLinkText: {
-    fontSize: 8,
-    color: PARCHMENT_COLORS.lapis,
-    textDecoration: "underline",
-  },
-  notesBlock: {
-    backgroundColor: "rgba(253, 251, 247, 0.35)",
-    padding: 16,
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: PARCHMENT_COLORS.royalGold,
-    marginBottom: 14,
-  },
-  notesTitle: {
-    fontSize: 8.5,
-    fontWeight: 700,
-    color: PARCHMENT_COLORS.lapis,
-    textTransform: "uppercase" as const,
-    letterSpacing: 1,
-    marginBottom: 5,
-  },
-  notesText: {
-    fontSize: 9,
-    color: PARCHMENT_COLORS.deepBrown,
-    lineHeight: 1.6,
-  },
-  dropCap: {
-    fontSize: 28,
-    color: PARCHMENT_COLORS.lapis,
-    lineHeight: 1,
-    marginRight: 3,
-    fontWeight: 700,
-  },
-  reviewCard: {
-    backgroundColor: "rgba(253, 251, 247, 0.35)",
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: PARCHMENT_COLORS.royalGold,
-    padding: 22,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  reviewTitle: {
-    color: PARCHMENT_COLORS.deepBrown,
-    fontSize: 12,
-    letterSpacing: 0.5,
-  },
-  reviewSubtitle: {
-    color: PARCHMENT_COLORS.agedBrown,
-    fontSize: 8.5,
-    textAlign: "center",
-    marginTop: 5,
-    lineHeight: 1.5,
-  },
-  reviewBadge: {
-    backgroundColor: PARCHMENT_COLORS.royalGold,
-    paddingHorizontal: 13,
-    paddingVertical: 6,
-    marginTop: 10,
-    borderWidth: 0.8,
-    borderColor: PARCHMENT_COLORS.deepBrown,
-  },
-  reviewBadgeText: {
-    color: PARCHMENT_COLORS.deepBrown,
-    fontSize: 9,
-    letterSpacing: 0.8,
-    fontWeight: 700,
-  },
-  reviewLink: {
-    color: PARCHMENT_COLORS.agedBrown,
-    fontSize: 7.5,
-    marginTop: 8,
-  },
+  pricingRowLast: { borderBottomWidth: 0 },
+  pricingCell: { flex: 1, fontSize: 9, color: COLOR.deepBrown },
+  pricingCellRight: { flex: 1, textAlign: "right", fontSize: 9, color: COLOR.deepBrown, fontWeight: 600 },
+  pricingHeaderCell: { fontSize: 7, textTransform: "uppercase" as const, letterSpacing: 0.8, color: COLOR.agedBrown, fontWeight: 700 },
+  pricingTotalLabel: { color: COLOR.deepBrown, fontSize: 10, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: 0.8 },
+  pricingTotalValue: { color: COLOR.deepBrown, fontSize: 14, fontWeight: 700 },
+
+  termsBlock: { ...CARD, padding: SPACE.md, marginTop: SPACE.sm },
+  termsTitle: { fontSize: 8, fontWeight: 700, color: COLOR.lapis, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: SPACE.xs + 2 },
+  termsText: { fontSize: 7.6, color: COLOR.deepBrown, lineHeight: 1.6, textAlign: "justify", flex: 1 },
+  termsCard: { ...CARD, padding: SPACE.md },
+  termsItemRow: { flexDirection: "row", gap: SPACE.xs + 1, marginBottom: SPACE.xs + 1, alignItems: "flex-start" },
+  termsItemText: { flex: 1, fontSize: 7.6, color: COLOR.deepBrown, lineHeight: 1.5, textAlign: "justify" },
+  termsLinkText: { fontSize: 7.6, color: COLOR.lapis, textDecoration: "underline" },
+
+  notesBlock: { ...CARD, padding: SPACE.md, marginBottom: SPACE.lg },
+  notesTitle: { fontSize: 8, fontWeight: 700, color: COLOR.lapis, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: SPACE.xs },
+  notesText: { fontSize: 8.6, color: COLOR.deepBrown, lineHeight: 1.55 },
+  dropCap: { fontSize: 24, color: COLOR.lapis, lineHeight: 1, marginRight: 3, fontWeight: 700 },
+
+  reviewCard: { ...CARD, padding: SPACE.lg, alignItems: "center", marginTop: SPACE.sm },
+  reviewTitle: { color: COLOR.deepBrown, fontSize: 11.5, letterSpacing: 0.4 },
+  reviewSubtitle: { color: COLOR.agedBrown, fontSize: 8, textAlign: "center", marginTop: SPACE.xs, lineHeight: 1.5 },
+  reviewBadge: { backgroundColor: COLOR.royalGold, paddingHorizontal: SPACE.md, paddingVertical: SPACE.xs + 2, marginTop: SPACE.sm, borderWidth: 0.8, borderColor: COLOR.deepBrown },
+  reviewBadgeText: { color: COLOR.deepBrown, fontSize: 8.5, letterSpacing: 0.6, fontWeight: 700 },
+  reviewLink: { color: COLOR.agedBrown, fontSize: 7, marginTop: SPACE.xs },
+
   socialRow: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 14,
-    marginTop: 10,
-    paddingTop: 9,
+    gap: SPACE.md,
+    marginTop: SPACE.sm,
+    paddingTop: SPACE.sm,
     borderTopWidth: 0.8,
-    borderTopStyle: "solid",
-    borderTopColor: PARCHMENT_COLORS.antiqueGold,
+    borderTopColor: COLOR.antiqueGold,
   },
-  socialLinkItem: {
-    fontSize: 8,
-    color: PARCHMENT_COLORS.deepBrown,
-    fontWeight: 700,
-  },
-  operationsCard: {
-    backgroundColor: "rgba(253, 251, 247, 0.55)",
-    padding: 18,
-    marginTop: 12,
-    borderWidth: 1.2,
-    borderStyle: "solid",
-    borderColor: PARCHMENT_COLORS.royalGold,
-  },
-  operationsHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-    gap: 10,
-  },
-  opsBadge: {
-    backgroundColor: PARCHMENT_COLORS.lapis,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  opsBadgeText: {
-    color: PARCHMENT_COLORS.royalGold,
-    fontSize: 7.5,
-    fontWeight: 700,
-    letterSpacing: 0.5,
-    textTransform: "uppercase" as const,
-  },
-  opsCardTitle: {
-    color: PARCHMENT_COLORS.deepBrown,
-    fontSize: 11.5,
-    flex: 1,
-    flexShrink: 1,
-    lineHeight: 1.4,
-  },
-  opsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  opsItem: {
-    width: "48%",
-    flexDirection: "column",
-    gap: 3,
-    paddingVertical: 4,
-    paddingRight: 4,
-    borderBottomWidth: 0.6,
-    borderBottomColor: PARCHMENT_COLORS.paleGold,
-  },
-  opsLabel: {
-    fontSize: 7,
-    color: PARCHMENT_COLORS.agedBrown,
-    textTransform: "uppercase" as const,
-    letterSpacing: 1,
-    marginBottom: 1,
-  },
-  opsValue: {
-    fontSize: 9.5,
-    color: PARCHMENT_COLORS.deepBrown,
-    fontWeight: 600,
-    lineHeight: 1.4,
-  },
+  socialLinkItem: { fontSize: 7.6, color: COLOR.deepBrown, fontWeight: 700 },
+
+  operationsCard: { ...CARD, borderWidth: 1.2, padding: SPACE.md, marginTop: SPACE.sm },
+  operationsHeader: { flexDirection: "row", alignItems: "center", marginBottom: SPACE.xs, gap: SPACE.sm },
+  opsBadge: { backgroundColor: COLOR.lapis, paddingHorizontal: SPACE.xs + 2, paddingVertical: 3 },
+  opsBadgeText: { color: COLOR.royalGold, fontSize: 7, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase" as const },
+  opsCardTitle: { color: COLOR.deepBrown, fontSize: 10.5, flex: 1, flexShrink: 1, lineHeight: 1.35 },
+  opsGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACE.sm },
+  opsItem: { width: "48%", flexDirection: "column", gap: 2, paddingVertical: SPACE.xs, paddingRight: SPACE.xs, borderBottomWidth: 0.6, borderBottomColor: COLOR.paleGold },
+  opsLabel: { fontSize: 6.6, color: COLOR.agedBrown, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 1 },
+  opsValue: { fontSize: 9, color: COLOR.deepBrown, fontWeight: 600, lineHeight: 1.35 },
+
   companyShowcase: {
-    // Rich brand panel filling the former empty rectangle: logo + name +
-    // tagline + about + 2x2 contact grid + address. Compact paddings so no
-    // space is wasted, wrap={false} pushes it whole to a fresh page if it
-    // can't fit above the fixed footer — zero footer bleed.
     flexDirection: "column",
     alignItems: "center",
-    backgroundColor: PARCHMENT_COLORS.deepLapis,
-    borderWidth: 1.5,
-    borderColor: PARCHMENT_COLORS.royalGold,
-    padding: 16,
-    marginTop: 12,
-    gap: 6,
+    backgroundColor: COLOR.deepLapis,
+    borderWidth: 1.4,
+    borderColor: COLOR.royalGold,
+    padding: SPACE.md,
+    marginTop: SPACE.sm,
+    gap: SPACE.xs + 2,
   },
-  companyShowcaseLogo: {
-    width: 180,
-    height: 68,
-    objectFit: "contain",
-    alignSelf: "center",
-  },
-  companyShowcaseName: {
-    fontSize: 16,
-    color: PARCHMENT_COLORS.royalGold,
-    letterSpacing: 2.5,
-    fontWeight: 700,
-    textAlign: "center",
-    lineHeight: 1.4,
-  },
-  companyShowcaseTagline: {
-    fontSize: 8.5,
-    color: PARCHMENT_COLORS.paleGold,
-    letterSpacing: 1.8,
-    textTransform: "uppercase" as const,
-    textAlign: "center",
-    lineHeight: 1.5,
-  },
-  companyShowcaseAbout: {
-    fontSize: 8.5,
-    color: "#F5EBD3",
-    textAlign: "center",
-    lineHeight: 1.6,
-    marginTop: 2,
-  },
-  companyShowcaseContact: {
-    width: "100%",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    marginTop: 8,
-    paddingHorizontal: 10,
-  },
-  // Labeled 2x2 contact grid: icon + (label above value) stacked tight so EN/AR
-  // text sits centered against the 12pt pharaonic glyphs — zero wasted gaps.
-  companyContactCell: {
-    width: "48%",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 8,
-  },
-  companyContactIcon: {
-    width: 12,
-    height: 12,
-    flexShrink: 0,
-    marginTop: 1,
-  },
-  companyContactTextWrap: {
-    flex: 1,
-    flexDirection: "column",
-    gap: 1,
-  },
-  companyContactLabel: {
-    fontSize: 6.5,
-    color: PARCHMENT_COLORS.royalGold,
-    letterSpacing: 1,
-    textTransform: "uppercase" as const,
-    fontWeight: 700,
-    lineHeight: 1.4,
-  },
-  companyContactValue: {
-    fontSize: 8,
-    color: "#F5EBD3",
-    letterSpacing: 0.3,
-    lineHeight: 1.5,
-  },
-  companyShowcasePill: {
-    borderWidth: 0.8,
-    borderColor: PARCHMENT_COLORS.royalGold,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  companyShowcasePillText: {
-    fontSize: 7.5,
-    color: PARCHMENT_COLORS.paleGold,
-    fontWeight: 700,
-    letterSpacing: 0.4,
-  },
+  companyShowcaseLogo: { width: 140, height: 54, objectFit: "contain", alignSelf: "center" },
+  companyShowcaseName: { fontSize: 14, color: COLOR.royalGold, letterSpacing: 2, fontWeight: 700, textAlign: "center", lineHeight: 1.35 },
+  companyShowcaseTagline: { fontSize: 8, color: COLOR.paleGold, letterSpacing: 1.5, textTransform: "uppercase" as const, textAlign: "center", lineHeight: 1.4 },
+  companyShowcaseAbout: { fontSize: 8, color: "#F5EBD3", textAlign: "center", lineHeight: 1.55, marginTop: 2 },
+  companyShowcaseContact: { width: "100%", flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginTop: SPACE.xs, paddingHorizontal: SPACE.xs },
+  companyContactCell: { width: "48%", flexDirection: "row", alignItems: "center", gap: SPACE.xs + 2, marginBottom: SPACE.xs + 2 },
+  companyContactIcon: { width: 11, height: 11, flexShrink: 0, marginTop: 1 },
+  companyContactTextWrap: { flex: 1, flexDirection: "column", gap: 1 },
+  companyContactLabel: { fontSize: 6.2, color: COLOR.royalGold, letterSpacing: 0.8, textTransform: "uppercase" as const, fontWeight: 700, lineHeight: 1.3 },
+  companyContactValue: { fontSize: 7.6, color: "#F5EBD3", letterSpacing: 0.2, lineHeight: 1.4 },
 });
 
+/* ============================================================================
+ * ASSETS
+ * ==========================================================================*/
+
 function resolvePdfAsset(filename: string): string {
-  if (typeof window !== "undefined") {
-    return `/images/${filename}`;
-  }
-  // Server (Next.js react-pdf): MUST be an absolute OS path or <Image>
-  // silently renders nothing (blank page). Built manually to avoid a static
-  // "path" import inside this client-component bundle.
+  if (typeof window !== "undefined") return `/images/${filename}`;
   try {
     const sep = typeof process !== "undefined" && process.platform === "win32" ? "\\" : "/";
     const cwd = typeof process !== "undefined" && typeof process.cwd === "function" ? process.cwd() : "";
     if (cwd) return `${cwd}${sep}public${sep}images${sep}${filename}`;
   } catch {
-    /* fall through to fallback below */
+    /* fall through */
   }
   return `${process.cwd()}/public/images/${filename}`;
 }
@@ -1248,106 +569,140 @@ function resolvePdfAsset(filename: string): string {
 const PARCHMENT_SRC = resolvePdfAsset("parchment.svg");
 const BORDER_SRC = resolvePdfAsset("border_pattern.svg");
 const NILE_SRC = resolvePdfAsset("nile_sunset.svg");
-// PROTOCOL §1+§4 — official brand + harmonious SVG assets discovered in public/images/
 const LOGO_SRC = resolvePdfAsset("pdf-kemerya-logo.png");
-const DIVIDER_SRC = resolvePdfAsset("dividers_and_icons.svg");
+
+/* ============================================================================
+ * RTL SUPPORT (fixed)
+ * The previous version mutated the module-level `styles` object AND wrote to
+ * `globalThis`, which is unsafe: any two PDFs rendered concurrently (e.g. one
+ * Arabic + one English request at the same time on the server) would corrupt
+ * each other's layout. This version computes mirrored styles PURELY, on every
+ * render, into a local object — no shared/global state, no race conditions.
+ * ==========================================================================*/
+
+const LR_PAIRS: Array<[string, string]> = [
+  ["paddingLeft", "paddingRight"],
+  ["marginLeft", "marginRight"],
+  ["borderLeftWidth", "borderRightWidth"],
+  ["borderLeftColor", "borderRightColor"],
+  ["borderTopLeftRadius", "borderTopRightRadius"],
+  ["borderBottomLeftRadius", "borderBottomRightRadius"],
+];
+
+function mirrorOne(style: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...style };
+  for (const [l, r] of LR_PAIRS) {
+    if (l in style || r in style) {
+      out[l] = style[r];
+      out[r] = style[l];
+    }
+  }
+  if (style.flexDirection === "row") out.flexDirection = "row-reverse";
+  if (style.justifyContent === "flex-start") out.justifyContent = "flex-end";
+  else if (style.justifyContent === "flex-end") out.justifyContent = "flex-start";
+  if (
+    !("textAlign" in style) &&
+    ("fontSize" in style || "color" in style || "fontFamily" in style || "lineHeight" in style)
+  ) {
+    out.textAlign = "right";
+  }
+  return out;
+}
+
+/** Builds an RTL-mirrored copy of the whole stylesheet, or returns the
+ * original (LTR) stylesheet untouched. Pure function — safe under
+ * concurrent renders. */
+function useDirectionalStyles(rtl: boolean): typeof styles {
+  return React.useMemo(() => {
+    if (!rtl) return styles;
+    const mirrored: Record<string, Record<string, unknown>> = {};
+    for (const key of Object.keys(styles)) {
+      mirrored[key] = mirrorOne((styles as unknown as Record<string, Record<string, unknown>>)[key]);
+    }
+    return mirrored as unknown as typeof styles;
+  }, [rtl]);
+}
+
+/* ============================================================================
+ * PAGE FRAME
+ * ==========================================================================*/
 
 function ParchmentPage({
   children,
   companyInfo,
   languageCode = "en",
   pageLabel,
-  rtlPageStyle,
+  rtl,
   footerTagline,
   brandHeaderVariant = "compact",
+  S,
 }: {
   children: React.ReactNode;
   companyInfo?: CompanyInfo;
   languageCode?: string;
   pageLabel?: string;
-  rtlPageStyle?: { direction: "rtl" };
+  rtl: boolean;
   footerTagline?: string;
   brandHeaderVariant?: "full" | "compact";
+  S: typeof styles;
 }) {
-  const rtl = isRTL(languageCode);
   const bodyFont = getGlobalFont(languageCode);
   const latinDisplay = isLatinDisplayLanguage(languageCode);
   const brandFont = latinDisplay ? "Cinzel" : bodyFont;
 
   return (
-    <Page
-      size="A4"
-      style={[styles.page, { direction: rtl ? "rtl" : "ltr", fontFamily: bodyFont }, rtlPageStyle ?? {}]}
-    >
-      {/*
-        PROTOCOL §2 (CRITICAL) — layered SVG backgrounds MUST be the first
-        children inside <Page>: fixed + absolute so they repeat on every page
-        as pure background layers without pushing content down.
-      */}
-      <Image src={PARCHMENT_SRC} style={styles.parchmentBg} fixed={true} />
-      <Image src={BORDER_SRC} style={styles.borderFrame} fixed={true} />
+    <Page size="A4" style={[S.page, { direction: rtl ? "rtl" : "ltr", fontFamily: bodyFont }]}>
+      {/* Background layers first so they sit behind everything and repeat
+          on every page without pushing content down. */}
+      <Image src={PARCHMENT_SRC} style={S.parchmentBg} fixed />
+      <Image src={BORDER_SRC} style={S.borderFrame} fixed />
 
-      <View style={[styles.contentLayer, { fontFamily: bodyFont, direction: rtl ? "rtl" : "ltr" }]}>
-        {/* Premium brand header — full hero (big logo + name + tagline +
-            winged sun-disc + dividers) on page 1 only; slim centered logo +
-            winged sun-disc strip on continuation pages. Pure Flexbox column
-            (no absolute) with generous gaps so rows stack, never collide. */}
+      <View style={[S.contentLayer, { fontFamily: bodyFont, direction: rtl ? "rtl" : "ltr" }]}>
         {brandHeaderVariant === "full" ? (
-          <View style={styles.headerBox}>
-            <Image src={LOGO_SRC} style={styles.officialLogo} />
-            <Text style={[styles.brandTitle, { fontFamily: brandFont }]}>
+          <View style={S.headerBox}>
+            <Image src={LOGO_SRC} style={S.officialLogo} />
+            <Text style={[S.brandTitle, { fontFamily: brandFont }]}>
               {companyInfo?.name || "KEMERYA TOURS"}
             </Text>
             {companyInfo?.tagline ? (
-              <Text style={[styles.brandTagline, { fontFamily: bodyFont }]}>
-                {shapeForPdf(companyInfo.tagline)}
-              </Text>
+              <Text style={[S.brandTagline, { fontFamily: bodyFont }]}>{shapeForPdf(companyInfo.tagline)}</Text>
             ) : null}
-            <WingedSunDisc width={220} />
-            <NativePharaonicDivider />
-            <SvgDividerImage />
-            <GoldenDivider />
+            <Divider />
           </View>
         ) : (
-          <View style={styles.headerBoxCompact}>
-            <Image src={LOGO_SRC} style={styles.officialLogoSmall} />
-            <WingedSunDisc width={150} />
-            <NativePharaonicDivider iconSize={13} />
+          <View style={[S.headerBox, { marginBottom: SPACE.sm }]}>
+            <Image src={LOGO_SRC} style={S.officialLogoSmall} />
+            <Divider compact />
           </View>
         )}
         {children}
       </View>
 
-      <View style={styles.footerBand} fixed={true}>
-        <View style={styles.nileImageWrap}>
-          <Image src={NILE_SRC} style={styles.nileImage} />
+      <View style={S.footerBand} fixed>
+        <View style={S.nileImageWrap}>
+          <Image src={NILE_SRC} style={S.nileImage} />
         </View>
-        <View style={styles.footerCaption}>
+        <View style={S.footerCaption}>
           <View>
-            <Text style={[styles.footerBrand, { fontFamily: brandFont }]}>
-              {companyInfo?.name || "KEMERYA TOURS"}
-            </Text>
-            <Text style={[styles.footerTagline, { fontFamily: brandFont }]}>
+            <Text style={[S.footerBrand, { fontFamily: brandFont }]}>{companyInfo?.name || "KEMERYA TOURS"}</Text>
+            <Text style={[S.footerTagline, { fontFamily: brandFont }]}>
               {footerTagline || "Curated Egyptian Journeys · Est. Luxury"}
             </Text>
           </View>
-          <Text style={styles.footerPage}>
-            {pageLabel || "Page 1"}
-          </Text>
+          <Text style={S.footerPage}>{pageLabel || "Page 1"}</Text>
         </View>
       </View>
     </Page>
   );
 }
 
-function buildItineraryList(
-  tour: Tour | null,
-  booking: BookingConfig
-): ItineraryDay[] {
+/* ============================================================================
+ * DATA HELPERS (unchanged behaviour)
+ * ==========================================================================*/
+
+function buildItineraryList(tour: Tour | null, booking: BookingConfig): ItineraryDay[] {
   if (booking.isCustomTour) {
-    if (booking.customItinerary && booking.customItinerary.length > 0) {
-      return booking.customItinerary;
-    }
+    if (booking.customItinerary && booking.customItinerary.length > 0) return booking.customItinerary;
     return [
       {
         day: 1,
@@ -1363,48 +718,30 @@ function buildItineraryList(
 }
 
 function getTourTitle(tour: Tour | null, booking: BookingConfig): string {
-  if (booking.isCustomTour) {
-    return booking.customTourTitle || "Custom Private Tour";
-  }
+  if (booking.isCustomTour) return booking.customTourTitle || "Custom Private Tour";
   return tour?.title || "Kemerya Tours - Arranged Journey";
 }
 
-function getTourDurationDays(
-  tour: Tour | null,
-  booking: BookingConfig
-): number {
-  const nights = calculateNights(
-    new Date(booking.startDate),
-    new Date(booking.endDate)
-  );
+function getTourDurationDays(tour: Tour | null, booking: BookingConfig): number {
+  const nights = calculateNights(new Date(booking.startDate), new Date(booking.endDate));
   return nights + 1;
 }
 
-function getInclusions(
-  tour: Tour | null,
-  booking: BookingConfig
-): string[] {
-  if (booking.inclusions?.length) {
-    return booking.inclusions;
-  }
-  if (booking.isCustomTour && booking.customInclusions?.length) {
-    return booking.customInclusions;
-  }
+function getInclusions(tour: Tour | null, booking: BookingConfig): string[] {
+  if (booking.inclusions?.length) return booking.inclusions;
+  if (booking.isCustomTour && booking.customInclusions?.length) return booking.customInclusions;
   return tour?.inclusions ?? [];
 }
 
-function getExclusions(
-  tour: Tour | null,
-  booking: BookingConfig
-): string[] {
-  if (booking.exclusions?.length) {
-    return booking.exclusions;
-  }
-  if (booking.isCustomTour && booking.customExclusions?.length) {
-    return booking.customExclusions;
-  }
+function getExclusions(tour: Tour | null, booking: BookingConfig): string[] {
+  if (booking.exclusions?.length) return booking.exclusions;
+  if (booking.isCustomTour && booking.customExclusions?.length) return booking.customExclusions;
   return tour?.exclusions ?? [];
 }
+
+/* ============================================================================
+ * MAIN DOCUMENT
+ * ==========================================================================*/
 
 export function ItineraryPDF({
   tour,
@@ -1415,118 +752,28 @@ export function ItineraryPDF({
 }: ItineraryPDFProps) {
   const tourTitle = getTourTitle(tour, booking);
   const daysCount = getTourDurationDays(tour, booking);
-  const nights = Math.max(
-    daysCount - 1,
-    calculateNights(new Date(booking.startDate), new Date(booking.endDate))
-  );
+  const nights = Math.max(daysCount - 1, calculateNights(new Date(booking.startDate), new Date(booking.endDate)));
   const itinerary = buildItineraryList(tour, booking);
   const inclusions = getInclusions(tour, booking);
   const exclusions = getExclusions(tour, booking);
-  const totalTravelers =
-    booking.travelers.adults + booking.travelers.children + booking.travelers.infants;
+  const totalTravelers = booking.travelers.adults + booking.travelers.children + booking.travelers.infants;
   const bookingRef = booking.id.replace(/^bk-/, "").toUpperCase();
+
   const totalTravelersTextParts: string[] = [];
   if (booking.travelers.adults > 0) totalTravelersTextParts.push(`${booking.travelers.adults} Adult${booking.travelers.adults > 1 ? "s" : ""}`);
   if (booking.travelers.children > 0) totalTravelersTextParts.push(`${booking.travelers.children} Child${booking.travelers.children > 1 ? "ren" : ""}`);
   if (booking.travelers.infants > 0) totalTravelersTextParts.push(`${booking.travelers.infants} Infant${booking.travelers.infants > 1 ? "s" : ""}`);
   const travelersText = totalTravelersTextParts.join(", ");
 
-  const rtl = isRTL(languageCode ?? "en");
-  const languageIsRTL = rtl;
-  // FIX #4 (CRITICAL): idempotent RTL mirror. `styles` is module-shared, so
-  // each render first RESTORES the pristine LTR snapshot, then applies the
-  // L↔R mirror only when rtl. This keeps every existing `styles.*` reference
-  // working while guaranteeing Left↔Right flips never compound.
-  const styleBag = styles as unknown as Record<string, Record<string, unknown>>;
-  const pristine = (globalThis as unknown as { __kemeryaPristine?: Record<string, Record<string, unknown>> }).__kemeryaPristine;
-  if (!pristine) {
-    const snap: Record<string, Record<string, unknown>> = {};
-    for (const k of Object.keys(styleBag)) snap[k] = { ...(styleBag[k] as object) } as Record<string, unknown>;
-    (globalThis as unknown as { __kemeryaPristine?: Record<string, Record<string, unknown>> }).__kemeryaPristine = snap;
-  }
-  const base = (globalThis as unknown as { __kemeryaPristine: Record<string, Record<string, unknown>> }).__kemeryaPristine;
-  for (const key of Object.keys(base)) {
-    const target = styleBag[key];
-    if (!target) continue;
-    for (const k of Object.keys(target)) delete target[k];
-    Object.assign(target, { ...base[key] });
-  }
-  if (rtl) {
-    for (const key of Object.keys(styleBag)) {
-      const s = styleBag[key];
-      const orig = base[key];
-      if (!s || !orig) continue;
-      if ("paddingLeft" in orig && "paddingRight" in orig) {
-        s.paddingLeft = orig.paddingRight;
-        s.paddingRight = orig.paddingLeft;
-      } else if ("paddingLeft" in orig) {
-        (s as Record<string, unknown>).paddingRight = orig.paddingLeft;
-      } else if ("paddingRight" in orig) {
-        (s as Record<string, unknown>).paddingLeft = orig.paddingRight;
-      }
-      if ("marginLeft" in orig && "marginRight" in orig) {
-        s.marginLeft = orig.marginRight;
-        s.marginRight = orig.marginLeft;
-      } else if ("marginLeft" in orig) {
-        (s as Record<string, unknown>).marginRight = orig.marginLeft;
-      } else if ("marginRight" in orig) {
-        (s as Record<string, unknown>).marginLeft = orig.marginRight;
-      }
-      const borderLR = ["Width", "Color", "Style"] as const;
-      for (const suf of borderLR) {
-        const lk = `borderLeft${suf}`;
-        const rk = `borderRight${suf}`;
-        if (lk in orig && rk in orig) {
-          (s as Record<string, unknown>)[lk] = orig[rk];
-          (s as Record<string, unknown>)[rk] = orig[lk];
-        } else if (lk in orig) {
-          (s as Record<string, unknown>)[rk] = orig[lk];
-        } else if (rk in orig) {
-          (s as Record<string, unknown>)[lk] = orig[rk];
-        }
-      }
-      if (orig.flexDirection === "row") s.flexDirection = "row-reverse";
-      if (orig.justifyContent === "flex-start") s.justifyContent = "flex-end";
-      else if (orig.justifyContent === "flex-end") s.justifyContent = "flex-start";
-      const cornerPairs: Array<[string, string]> = [
-        ["borderTopLeftRadius", "borderTopRightRadius"],
-        ["borderBottomLeftRadius", "borderBottomRightRadius"],
-      ];
-      for (const [lk, rk] of cornerPairs) {
-        if (lk in orig && rk in orig) {
-          (s as Record<string, unknown>)[lk] = orig[rk];
-          (s as Record<string, unknown>)[rk] = orig[lk];
-        } else if (lk in orig) {
-          (s as Record<string, unknown>)[rk] = orig[lk];
-        } else if (rk in orig) {
-          (s as Record<string, unknown>)[lk] = orig[rk];
-        }
-      }
-      if (!("textAlign" in orig) && ("fontSize" in orig || "color" in orig || "fontFamily" in orig || "lineHeight" in orig)) {
-        s.textAlign = "right";
-      }
-    }
-  } else {
-    for (const key of Object.keys(styleBag)) {
-      const s = styleBag[key];
-      const orig = base[key];
-      if (!s || !orig) continue;
-      if (!("textAlign" in orig) && ("fontSize" in orig || "color" in orig || "fontFamily" in orig || "lineHeight" in orig)) {
-        s.textAlign = "left";
-      }
-    }
-  }
-  // FIX #4: every content Page flows RTL (direction) when Arabic/Hebrew/…
-  const rtlPageStyle = rtl ? { direction: "rtl" as const } : undefined;
+  const langCode = languageCode ?? "en";
+  const rtl = isRTL(langCode);
+  const S = useDirectionalStyles(rtl); // pure, per-render — no shared mutable state
   const sh = shapeForPdf;
 
   const hasTranslation = Boolean(translatedData && languageCode);
 
   const label = (key: string, fallback: string): string => {
     if (!translatedData) return sh(fallback);
-    // FIX #3: look in BOTH `_labels` (flat keys) and `ui` (protocol
-    // namespace, e.g. translatedData?.ui?.terms || "TERMS & CONDITIONS"),
-    // plus alias pairs shared with the translate route.
     const aliases: Record<string, string[]> = {
       "section.summary": ["BOOKING SUMMARY"],
       "tour.inclusions": ["WHAT'S INCLUDED"],
@@ -1542,20 +789,15 @@ export function ItineraryPDF({
     return sh(fallback);
   };
 
-  const t = (key: string, fallback: string): string =>
-    sh(getTranslatedValue(translatedData, key, fallback) || fallback);
+  const t = (key: string, fallback: string): string => sh(getTranslatedValue(translatedData, key, fallback) || fallback);
 
   const tList = (key: string, fallback: string[]): string[] => {
     if (!translatedData) return fallback;
     const raw = translatedData[key];
     if (!Array.isArray(raw)) return fallback;
-    const strings = raw.filter(
-      (v): v is string => typeof v === "string" && v.trim().length > 0
-    );
+    const strings = raw.filter((v): v is string => typeof v === "string" && v.trim().length > 0);
     if (strings.length === 0) return fallback;
-    return fallback.map((fb, i) =>
-      i < strings.length && strings[i].trim().length > 0 ? sh(strings[i]) : sh(fb)
-    );
+    return fallback.map((fb, i) => (i < strings.length && strings[i].trim().length > 0 ? sh(strings[i]) : sh(fb)));
   };
 
   const translatedDays = Array.isArray(translatedData?.["itinerary.days"])
@@ -1570,15 +812,8 @@ export function ItineraryPDF({
   };
 
   const termsItems = getTranslatedArray(translatedData, "terms.items", getTermsItems(booking)).map(sh);
-  const privacyItems = getTranslatedArray(
-    translatedData,
-    "privacy.items",
-    getPrivacyItems(booking)
-  ).map(sh);
-
-  const overviewParas = getTranslatedArray(translatedData, "tour.overview", tour?.overview ?? []).map(
-    sh
-  );
+  const privacyItems = getTranslatedArray(translatedData, "privacy.items", getPrivacyItems(booking)).map(sh);
+  const overviewParas = getTranslatedArray(translatedData, "tour.overview", tour?.overview ?? []).map(sh);
 
   const displayTourTitle = hasTranslation
     ? booking.isCustomTour
@@ -1586,7 +821,6 @@ export function ItineraryPDF({
       : t("tour.title", tourTitle)
     : tourTitle;
 
-  const langCode = languageCode ?? "en";
   const bodyFont = getGlobalFont(langCode);
   const latinDisplay = isLatinDisplayLanguage(langCode);
   const cinzelFont = latinDisplay ? "Cinzel" : bodyFont;
@@ -1594,142 +828,113 @@ export function ItineraryPDF({
   const cinzelStyle = { fontFamily: cinzelFont };
   const headingStyle = { fontFamily: headingFont };
 
+  const page2Label = "Page 2";
+  const hasExtraDays = itinerary.length > 3;
+
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
-      <ParchmentPage brandHeaderVariant="full" companyInfo={companyInfo} languageCode={langCode} pageLabel="Page 1" rtlPageStyle={rtlPageStyle} footerTagline={label("footer.tagline", "Curated Egyptian Journeys · Est. Luxury")}>
-        <View style={styles.bookingRefBadge}>
-          <Text style={[styles.bookingRefText, cinzelStyle]}>Ref: {bookingRef}</Text>
+      {/* ---------------- PAGE 1 — Cover + Summary ---------------- */}
+      <ParchmentPage
+        brandHeaderVariant="full"
+        companyInfo={companyInfo}
+        languageCode={langCode}
+        pageLabel="Page 1"
+        rtl={rtl}
+        footerTagline={label("footer.tagline", "Curated Egyptian Journeys · Est. Luxury")}
+        S={S}
+      >
+        <View style={S.bookingRefBadge}>
+          <Text style={[S.bookingRefText, cinzelStyle]}>Ref: {bookingRef}</Text>
         </View>
 
-        <View style={styles.heroCard}>
-          {/* PROTOCOL §3 — heroInnerFrame is now in-flow (no absolute): all
-              hero rows stack via Flexbox with gap/marginTop, so Meeting Point
-              can never collide with TOUR OVERVIEW. */}
-          <View style={styles.heroInnerFrame}>
-          <View style={styles.clientBadge}>
-            <Text style={styles.clientBadgeText}>Booking Reference · {bookingRef}</Text>
+        <View style={S.heroCard}>
+          <View style={S.clientBadge}>
+            <Text style={S.clientBadgeText}>Booking Reference · {bookingRef}</Text>
           </View>
-          <Text style={[styles.heroSubtitle, cinzelStyle]}>{label("hero.subtitle", "Your Exclusive Travel Itinerary")}</Text>
-          <Text style={[styles.heroTourName, headingStyle]}>{displayTourTitle}</Text>
-          <SvgDividerImage />
-          <View style={styles.heroGrid}>
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatLabel}>{label("hero.departureDate", "Departure Date")}</Text>
-              <Text style={styles.heroStatValue}>
-                {formatDateShort(booking.startDate)}
-              </Text>
+          <Text style={[S.heroSubtitle, cinzelStyle]}>{label("hero.subtitle", "Your Exclusive Travel Itinerary")}</Text>
+          <Text style={[S.heroTourName, headingStyle]}>{displayTourTitle}</Text>
+
+          <View style={S.heroGrid}>
+            <View style={S.heroStat}>
+              <Text style={S.heroStatLabel}>{label("hero.departureDate", "Departure Date")}</Text>
+              <Text style={S.heroStatValue}>{formatDateShort(booking.startDate)}</Text>
             </View>
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatLabel}>{label("hero.returnDate", "Return Date")}</Text>
-              <Text style={styles.heroStatValue}>
-                {formatDateShort(booking.endDate)}
-              </Text>
+            <View style={S.heroStat}>
+              <Text style={S.heroStatLabel}>{label("hero.returnDate", "Return Date")}</Text>
+              <Text style={S.heroStatValue}>{formatDateShort(booking.endDate)}</Text>
             </View>
-            <View style={styles.heroStatLast}>
-              <Text style={styles.heroStatLabel}>{label("hero.duration", "Duration")}</Text>
-              <Text style={styles.heroStatValue}>
-                {daysCount} Days / {nights} Nights
-              </Text>
+            <View style={S.heroStatLast}>
+              <Text style={S.heroStatLabel}>{label("hero.duration", "Duration")}</Text>
+              <Text style={S.heroStatValue}>{daysCount} Days / {nights} Nights</Text>
             </View>
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatLabel}>{label("hero.travelers", "Travelers")}</Text>
-              <Text style={styles.heroStatValue}>{totalTravelers} Guest{totalTravelers > 1 ? "s" : ""}</Text>
+            <View style={S.heroStat}>
+              <Text style={S.heroStatLabel}>{label("hero.travelers", "Travelers")}</Text>
+              <Text style={S.heroStatValue}>{totalTravelers} Guest{totalTravelers > 1 ? "s" : ""}</Text>
             </View>
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatLabel}>{label("hero.totalPrice", "Total Price")}</Text>
+            <View style={S.heroStat}>
+              <Text style={S.heroStatLabel}>{label("hero.totalPrice", "Total Price")}</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                 {booking.offerPrice != null && booking.offerPrice > 0 ? (
                   <>
-                    <Text style={[styles.heroStatValue, styles.strikethroughOldPrice]}>
-                      {formatCurrency(booking.totalPrice, booking.currency)}
-                    </Text>
-                    <Text style={styles.offerPriceValue}>
-                      {formatCurrency(booking.offerPrice, booking.currency)}
-                    </Text>
+                    <Text style={[S.heroStatValue, S.strikethroughOldPrice]}>{formatCurrency(booking.totalPrice, booking.currency)}</Text>
+                    <Text style={S.offerPriceValue}>{formatCurrency(booking.offerPrice, booking.currency)}</Text>
                     {booking.totalPrice > 0 && (
-                      <View style={styles.offerBadge}>
-                        <Svg width={7} height={7} viewBox="0 0 24 24">
-                          <G fill="#FFFFFF">
-                            <Path d="M12 2 L15 8 H21 L16 12 L18 18 L12 15 L6 18 L8 12 L3 8 H9 Z" />
-                          </G>
-                        </Svg>
-                        <Text style={styles.offerBadgeText}>
+                      <View style={S.offerBadge}>
+                        <Text style={S.offerBadgeText}>
                           {Math.round(((booking.totalPrice - booking.offerPrice) / booking.totalPrice) * 100)}% OFF
                         </Text>
                       </View>
                     )}
                   </>
                 ) : (
-                  <Text style={styles.heroStatValue}>
-                    {formatCurrency(booking.totalPrice, booking.currency)}
-                  </Text>
+                  <Text style={S.heroStatValue}>{formatCurrency(booking.totalPrice, booking.currency)}</Text>
                 )}
               </View>
             </View>
-            <View style={styles.heroStatLast}>
-              <Text style={styles.heroStatLabel}>{label("hero.reference", "Reference")}</Text>
-              <Text style={styles.heroStatValue}>#{bookingRef}</Text>
+            <View style={S.heroStatLast}>
+              <Text style={S.heroStatLabel}>{label("hero.reference", "Reference")}</Text>
+              <Text style={S.heroStatValue}>#{bookingRef}</Text>
             </View>
-          </View>
           </View>
         </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionNumber}><Text>01</Text></View>
-            <Text style={[styles.sectionTitle, headingStyle]}>{label("section.summary", "Booking Summary")}</Text>
-            <View style={styles.sectionUnderline} />
+        <View style={S.section}>
+          <View style={S.sectionHeader}>
+            <View style={S.sectionNumber}><Text>01</Text></View>
+            <Text style={[S.sectionTitle, headingStyle]}>{label("section.summary", "Booking Summary")}</Text>
+            <View style={S.sectionUnderline} />
           </View>
-          <View style={styles.summaryGrid}>
+          <View style={S.summaryGrid}>
+            <SummaryCard S={S} label={label("summary.totalTravelers", "Total Travelers")} value={`${totalTravelers} (${travelersText})`} />
+            <SummaryCard S={S} label={label("summary.tourDuration", "Tour Duration")} value={`${daysCount} Days / ${nights} Nights`} />
             <SummaryCard
-              label={label("summary.totalTravelers", "Total Travelers")}
-              value={`${totalTravelers} (${travelersText})`}
-            />
-            <SummaryCard
-              label={label("summary.tourDuration", "Tour Duration")}
-              value={`${daysCount} Days / ${nights} Nights`}
-            />
-            <SummaryCard
+              S={S}
               label={label("summary.travelPeriod", "Travel Period")}
               value={`${formatDateShort(booking.startDate)} → ${formatDateShort(booking.endDate)}`}
             />
             <SummaryCard
+              S={S}
               label={`${label("summary.totalAmount", "Total Amount")} (${booking.currency})`}
-              value={booking.offerPrice && booking.offerPrice > 0 ? (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Text style={[styles.summaryItemValue, styles.summaryStrikethrough]}>
-                    {formatCurrency(booking.totalPrice, booking.currency)}
-                  </Text>
-                  <Text style={styles.summaryOfferValue}>
-                    {formatCurrency(booking.offerPrice, booking.currency)}
-                  </Text>
-                </View>
-              ) : formatCurrency(booking.totalPrice, booking.currency)}
+              value={
+                booking.offerPrice && booking.offerPrice > 0 ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Text style={[S.summaryItemValue, S.summaryStrikethrough]}>{formatCurrency(booking.totalPrice, booking.currency)}</Text>
+                    <Text style={S.summaryOfferValue}>{formatCurrency(booking.offerPrice, booking.currency)}</Text>
+                  </View>
+                ) : (
+                  formatCurrency(booking.totalPrice, booking.currency)
+                )
+              }
             />
-            {booking.clientName ? (
-              <SummaryCard label={label("summary.clientName", "Client Name")} value={booking.clientName} />
-            ) : null}
-            {booking.clientEmail ? (
-              <SummaryCard label={label("summary.clientEmail", "Client Email")} value={booking.clientEmail} />
-            ) : null}
-            {booking.clientPhone ? (
-              <SummaryCard label={label("summary.clientPhone", "Client Phone")} value={booking.clientPhone} />
-            ) : null}
-            {booking.clientWhatsapp ? (
-              <SummaryCard label={label("summary.clientWhatsapp", "Client WhatsApp")} value={booking.clientWhatsapp} />
-            ) : null}
-            {booking.meetingPoint ? (
-              <SummaryCard label={label("summary.meetingPoint", "Meeting Point")} value={booking.meetingPoint} />
-            ) : null}
+            {booking.clientName ? <SummaryCard S={S} label={label("summary.clientName", "Client Name")} value={booking.clientName} /> : null}
+            {booking.clientEmail ? <SummaryCard S={S} label={label("summary.clientEmail", "Client Email")} value={booking.clientEmail} /> : null}
+            {booking.clientPhone ? <SummaryCard S={S} label={label("summary.clientPhone", "Client Phone")} value={booking.clientPhone} /> : null}
+            {booking.clientWhatsapp ? <SummaryCard S={S} label={label("summary.clientWhatsapp", "Client WhatsApp")} value={booking.clientWhatsapp} /> : null}
+            {booking.meetingPoint ? <SummaryCard S={S} label={label("summary.meetingPoint", "Meeting Point")} value={booking.meetingPoint} /> : null}
             {booking.flightArrival ? (
-              <SummaryCard
-                label={label("summary.airportArrival", "Airport Arrival / Tour Start")}
-                value={booking.flightArrival.replace("T", " · ")}
-              />
+              <SummaryCard S={S} label={label("summary.airportArrival", "Airport Arrival / Tour Start")} value={booking.flightArrival.replace("T", " · ")} />
             ) : null}
-            {booking.pickupTime ? (
-              <SummaryCard label={label("summary.pickupTime", "Pickup Time")} value={booking.pickupTime} />
-            ) : null}
+            {booking.pickupTime ? <SummaryCard S={S} label={label("summary.pickupTime", "Pickup Time")} value={booking.pickupTime} /> : null}
           </View>
         </View>
 
@@ -1737,132 +942,102 @@ export function ItineraryPDF({
           const meta = getOfferMeta(booking);
           const pct = Math.round(((booking.totalPrice - booking.offerPrice) / booking.totalPrice) * 100);
           return (
-            <View style={styles.offerBanner}>
-              <View style={styles.offerBannerTop} wrap={false}>
-                <View style={{ marginRight: 6 }}>
-                  <ScarabBullet size={15} />
-                </View>
-                <Text style={[styles.offerBannerBadge, cinzelStyle]}>
-                  {pct > 0 ? `SPECIAL OFFER · SAVE ${pct}%` : "SPECIAL OFFER"}
-                </Text>
+            <View style={S.offerBanner}>
+              <View style={S.offerBannerTop} wrap={false}>
+                <ScarabBullet size={14} />
+                <Text style={[S.offerBannerBadge, cinzelStyle]}>{pct > 0 ? `SPECIAL OFFER · SAVE ${pct}%` : "SPECIAL OFFER"}</Text>
               </View>
-              <Text style={[styles.offerBannerTitle, cinzelStyle]}>{meta.title}</Text>
-              <View style={styles.offerBannerPrices}>
-                <Text style={styles.offerBannerOld}>
-                  {formatCurrency(booking.totalPrice, booking.currency)}
-                </Text>
-                <Text style={styles.offerBannerNew}>
-                  {formatCurrency(booking.offerPrice, booking.currency)}
-                </Text>
-                {pct > 0 && (
-                  <Text style={styles.offerBannerPct}>
-                    You save {formatCurrency(booking.totalPrice - booking.offerPrice, booking.currency)}
-                  </Text>
-                )}
+              <Text style={[S.offerBannerTitle, cinzelStyle]}>{meta.title}</Text>
+              <View style={S.offerBannerPrices}>
+                <Text style={S.offerBannerOld}>{formatCurrency(booking.totalPrice, booking.currency)}</Text>
+                <Text style={S.offerBannerNew}>{formatCurrency(booking.offerPrice, booking.currency)}</Text>
+                {pct > 0 && <Text style={S.offerBannerPct}>You save {formatCurrency(booking.totalPrice - booking.offerPrice, booking.currency)}</Text>}
               </View>
-              {meta.note ? (
-                <Text style={styles.offerBannerNote}>{meta.note}</Text>
-              ) : null}
+              {meta.note ? <Text style={S.offerBannerNote}>{meta.note}</Text> : null}
             </View>
           );
         })()}
 
         {!booking.isCustomTour && tour ? (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionNumber}><Text>02</Text></View>
-              <Text style={[styles.sectionTitle, headingStyle]}>{label("section.overview", "Tour Overview")}</Text>
-              <View style={styles.sectionUnderline} />
+          <View style={S.section}>
+            <View style={S.sectionHeader}>
+              <View style={S.sectionNumber}><Text>02</Text></View>
+              <Text style={[S.sectionTitle, headingStyle]}>{label("section.overview", "Tour Overview")}</Text>
+              <View style={S.sectionUnderline} />
             </View>
             {overviewParas.map((para, i) =>
               i === 0 && para.length > 0 && !rtl ? (
-                <Text key={i} style={{ ...styles.notesText, marginBottom: 6 }}>
-                  <Text style={[styles.dropCap, headingStyle]}>{para.charAt(0)}</Text>
+                <Text key={i} style={{ ...S.notesText, marginBottom: SPACE.xs }}>
+                  <Text style={[S.dropCap, headingStyle]}>{para.charAt(0)}</Text>
                   {para.slice(1)}
                 </Text>
               ) : (
-                <Text key={i} style={{ ...styles.notesText, marginBottom: 6 }}>
-                  {para}
-                </Text>
+                <Text key={i} style={{ ...S.notesText, marginBottom: SPACE.xs }}>{para}</Text>
               )
             )}
             {(tour.location || tour.group || tour.language || tour.durationLabel) ? (
-              <View style={{ ...styles.summaryGrid, marginTop: 8 }}>
-                {tour.durationLabel ? (
-                  <SummaryCard label="Duration" value={tour.durationLabel} />
-                ) : null}
-                {tour.location ? (
-                  <SummaryCard label="Location" value={tour.location} />
-                ) : null}
-                {tour.group ? (
-                  <SummaryCard label="Group" value={tour.group} />
-                ) : null}
-                {tour.language ? (
-                  <SummaryCard label="Language" value={tour.language} />
-                ) : null}
+              <View style={{ ...S.summaryGrid, marginTop: SPACE.sm }}>
+                {tour.durationLabel ? <SummaryCard S={S} label="Duration" value={tour.durationLabel} /> : null}
+                {tour.location ? <SummaryCard S={S} label="Location" value={tour.location} /> : null}
+                {tour.group ? <SummaryCard S={S} label="Group" value={tour.group} /> : null}
+                {tour.language ? <SummaryCard S={S} label="Language" value={tour.language} /> : null}
               </View>
             ) : null}
           </View>
         ) : null}
 
         {(booking.notes || booking.specialRequests) ? (
-          <View style={styles.notesBlock}>
+          <View style={S.notesBlock}>
             {booking.notes ? (
               <>
-                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 5, gap: 6 }}>
-                  <PyramidBullet size={12} />
-                  <Text style={styles.notesTitle}>{label("notes.title", "Itinerary Notes")}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: SPACE.xs, gap: SPACE.xs }}>
+                  <PyramidBullet size={11} />
+                  <Text style={S.notesTitle}>{label("notes.title", "Itinerary Notes")}</Text>
                 </View>
-                <Text style={styles.notesText}>{shapeForPdf(booking.notes)}</Text>
+                <Text style={S.notesText}>{shapeForPdf(booking.notes)}</Text>
               </>
             ) : null}
             {booking.specialRequests ? (
               <>
-                <View style={{ flexDirection: "row", alignItems: "center", marginTop: booking.notes ? 10 : 0, marginBottom: 5, gap: 6 }}>
-                  <LotusBullet size={12} />
-                  <Text style={styles.notesTitle}>
-                    {label("notes.specialRequests", "Special Requests")}
-                  </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", marginTop: booking.notes ? SPACE.sm : 0, marginBottom: SPACE.xs, gap: SPACE.xs }}>
+                  <LotusBullet size={11} />
+                  <Text style={S.notesTitle}>{label("notes.specialRequests", "Special Requests")}</Text>
                 </View>
-                <Text style={styles.notesText}>{shapeForPdf(booking.specialRequests)}</Text>
+                <Text style={S.notesText}>{shapeForPdf(booking.specialRequests)}</Text>
               </>
             ) : null}
           </View>
         ) : null}
       </ParchmentPage>
 
-      <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel="Page 2">
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionNumber}><Text>03</Text></View>
-            <Text style={[styles.sectionTitle, headingStyle]}>{label("section.roadmap", "Day-by-Day Itinerary")}</Text>
-            <View style={styles.sectionUnderline} />
+      {/* ---------------- PAGE 2 — Day-by-day (1-3) ---------------- */}
+      <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel={page2Label} rtl={rtl} S={S}>
+        <View style={S.section}>
+          <View style={S.sectionHeader}>
+            <View style={S.sectionNumber}><Text>03</Text></View>
+            <Text style={[S.sectionTitle, headingStyle]}>{label("section.roadmap", "Day-by-Day Itinerary")}</Text>
+            <View style={S.sectionUnderline} />
           </View>
 
-          {itinerary.slice(0, 3).map((day, idx) => {
-            return (
-              <DayCard
-                key={day.day}
-                day={day}
-                roadmap={undefined}
-                translatedTitle={dayField(idx, "day.title")}
-                translatedDescription={dayField(idx, "day.description")}
-                translatedAccommodation={dayField(idx, "day.accommodation")}
-                translatedMeals={dayField(idx, "day.meals")}
-                translatedRoadmap={dayField(idx, "day.transport")}
-                tLabels={{
-                  roadmap: label("day.roadmap", "Today's Roadmap"),
-                  stay: label("day.stay", "Stay"),
-                  meals: label("day.meals", "Meals"),
-                }}
-                headingStyle={headingStyle}
-                cinzelStyle={cinzelStyle}
-              />
-            );
-          })}
+          {itinerary.slice(0, 3).map((day, idx) => (
+            <DayCard
+              key={day.day}
+              S={S}
+              day={day}
+              translatedTitle={dayField(idx, "day.title")}
+              translatedDescription={dayField(idx, "day.description")}
+              translatedAccommodation={dayField(idx, "day.accommodation")}
+              translatedMeals={dayField(idx, "day.meals")}
+              translatedRoadmap={dayField(idx, "day.transport")}
+              tLabels={{ roadmap: label("day.roadmap", "Today's Roadmap"), stay: label("day.stay", "Stay"), meals: label("day.meals", "Meals") }}
+              headingStyle={headingStyle}
+              cinzelStyle={cinzelStyle}
+            />
+          ))}
 
           {itinerary.length === 0 && (
             <DayCard
+              S={S}
               day={{
                 day: 1,
                 title: "Custom Arranged Itinerary",
@@ -1876,187 +1051,145 @@ export function ItineraryPDF({
         </View>
       </ParchmentPage>
 
-      {itinerary.length > 3 && (
-        <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel="Page 3">
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionNumber}><Text>03</Text></View>
-              <Text style={[styles.sectionTitle, headingStyle]}>{label("section.roadmap", "Itinerary (Continued)")}</Text>
-              <View style={styles.sectionUnderline} />
+      {/* ---------------- PAGE 3 (optional) — Day-by-day (4-7) ---------------- */}
+      {hasExtraDays && (
+        <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel="Page 3" rtl={rtl} S={S}>
+          <View style={S.section}>
+            <View style={S.sectionHeader}>
+              <View style={S.sectionNumber}><Text>03</Text></View>
+              <Text style={[S.sectionTitle, headingStyle]}>{label("section.roadmap", "Itinerary (Continued)")}</Text>
+              <View style={S.sectionUnderline} />
             </View>
-
-            {itinerary.slice(3, 7).map((day, idx) => {
-              return (
-                <DayCard
-                  key={day.day}
-                  day={day}
-                  roadmap={undefined}
-                  translatedTitle={dayField(idx + 3, "day.title")}
-                  translatedDescription={dayField(idx + 3, "day.description")}
-                  translatedAccommodation={dayField(idx + 3, "day.accommodation")}
-                  translatedMeals={dayField(idx + 3, "day.meals")}
-                  translatedRoadmap={dayField(idx + 3, "day.transport")}
-                  tLabels={{
-                    roadmap: label("day.roadmap", "Today's Roadmap"),
-                    stay: label("day.stay", "Stay"),
-                    meals: label("day.meals", "Meals"),
-                  }}
-                  headingStyle={headingStyle}
-                  cinzelStyle={cinzelStyle}
-                />
-              );
-            })}
+            {itinerary.slice(3, 7).map((day, idx) => (
+              <DayCard
+                key={day.day}
+                S={S}
+                day={day}
+                translatedTitle={dayField(idx + 3, "day.title")}
+                translatedDescription={dayField(idx + 3, "day.description")}
+                translatedAccommodation={dayField(idx + 3, "day.accommodation")}
+                translatedMeals={dayField(idx + 3, "day.meals")}
+                translatedRoadmap={dayField(idx + 3, "day.transport")}
+                tLabels={{ roadmap: label("day.roadmap", "Today's Roadmap"), stay: label("day.stay", "Stay"), meals: label("day.meals", "Meals") }}
+                headingStyle={headingStyle}
+                cinzelStyle={cinzelStyle}
+              />
+            ))}
           </View>
         </ParchmentPage>
       )}
 
-      <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel={itinerary.length > 3 ? "Page 4" : "Page 3"}>
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionNumber}><Text>04</Text></View>
-            <Text style={[styles.sectionTitle, headingStyle]}>
+      {/* ---------------- Inclusions / Pricing / Ops ---------------- */}
+      <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel={hasExtraDays ? "Page 4" : "Page 3"} rtl={rtl} S={S}>
+        <View style={S.section}>
+          <View style={S.sectionHeader}>
+            <View style={S.sectionNumber}><Text>04</Text></View>
+            <Text style={[S.sectionTitle, headingStyle]}>
               {label("section.inclusions", "Inclusions")} & {label("section.exclusions", "Exclusions")}
             </Text>
-            <View style={styles.sectionUnderline} />
+            <View style={S.sectionUnderline} />
           </View>
-          <View style={styles.twoCol}>
-            <View style={styles.col}>
-              <View style={styles.inclusionsCard}>
-                <View style={[styles.sectionCardTitle, styles.inclusionTitleText, headingStyle]}>
-                  <ScarabBullet size={13} />
+          <View style={S.twoCol}>
+            <View style={S.col}>
+              <View style={S.panelCard}>
+                <View style={[S.sectionCardTitle, { color: COLOR.deepBrown }, headingStyle]}>
+                  <ScarabBullet size={12} />
                   <Text>{label("tour.inclusions", "What's Included")}</Text>
                 </View>
                 {tList("inclusions", inclusions).length > 0 ? (
                   tList("inclusions", inclusions).map((inc, i) => (
-                    <View key={i} style={styles.listItem}>
-                      <View style={styles.listItemIcon}>
-                        <ScarabBullet size={13} />
-                      </View>
-                      <Text style={{ ...styles.listItemText, ...styles.inclusionsText }}>
-                        {inc}
-                      </Text>
+                    <View key={i} style={S.listItem}>
+                      <View style={S.listItemIcon}><ScarabBullet size={12} /></View>
+                      <Text style={S.listItemText}>{inc}</Text>
                     </View>
                   ))
                 ) : (
-                  <Text style={{ ...styles.listItemText, ...styles.inclusionsText }}>
-                    {label("fallback.inclusions", "Customized inclusions to be confirmed by Operations team.")}
-                  </Text>
+                  <Text style={S.listItemText}>{label("fallback.inclusions", "Customized inclusions to be confirmed by Operations team.")}</Text>
                 )}
               </View>
             </View>
-            <View style={styles.col}>
-              <View style={styles.exclusionsCard}>
-                <View style={[styles.sectionCardTitle, styles.exclusionTitleText, headingStyle]}>
-                  <EyeOfHorusBullet size={13} />
+            <View style={S.col}>
+              <View style={S.panelCard}>
+                <View style={[S.sectionCardTitle, { color: COLOR.deepBrown }, headingStyle]}>
+                  <EyeOfHorusBullet size={12} />
                   <Text>{label("tour.exclusions", "What's Not Included")}</Text>
                 </View>
                 {tList("exclusions", exclusions).length > 0 ? (
                   tList("exclusions", exclusions).map((exc, i) => (
-                    <View key={i} style={styles.listItem}>
-                      <View style={styles.listItemIcon}>
-                        <EyeOfHorusBullet size={13} />
-                      </View>
-                      <Text style={{ ...styles.listItemText, ...styles.exclusionsText }}>
-                        {exc}
-                      </Text>
+                    <View key={i} style={S.listItem}>
+                      <View style={S.listItemIcon}><EyeOfHorusBullet size={12} /></View>
+                      <Text style={S.listItemText}>{exc}</Text>
                     </View>
                   ))
                 ) : (
-                  <Text style={{ ...styles.listItemText, ...styles.exclusionsText }}>
-                    {label("fallback.exclusions", "Standard exclusion terms apply.")}
-                  </Text>
+                  <Text style={S.listItemText}>{label("fallback.exclusions", "Standard exclusion terms apply.")}</Text>
                 )}
               </View>
             </View>
           </View>
         </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionNumber}><Text>05</Text></View>
-            <Text style={[styles.sectionTitle, headingStyle]}>{label("section.pricing", "Pricing & Payment")}</Text>
-            <View style={styles.sectionUnderline} />
+        <View style={S.section}>
+          <View style={S.sectionHeader}>
+            <View style={S.sectionNumber}><Text>05</Text></View>
+            <Text style={[S.sectionTitle, headingStyle]}>{label("section.pricing", "Pricing & Payment")}</Text>
+            <View style={S.sectionUnderline} />
           </View>
-          <View style={styles.pricingTable}>
-            <View style={{ ...styles.pricingRow, backgroundColor: "rgba(232, 215, 177, 0.25)" }}>
-              <Text style={{ ...styles.pricingCell, ...styles.pricingHeaderCell }}>{label("pricing.description", "Description")}</Text>
-              <Text style={{ ...styles.pricingCellRight, ...styles.pricingHeaderCell }}>{label("pricing.amount", "Amount")} ({booking.currency})</Text>
+          <View style={S.pricingTable}>
+            <View style={{ ...S.pricingRow, backgroundColor: "rgba(232, 215, 177, 0.3)" }}>
+              <Text style={{ ...S.pricingCell, ...S.pricingHeaderCell }}>{label("pricing.description", "Description")}</Text>
+              <Text style={{ ...S.pricingCellRight, ...S.pricingHeaderCell }}>{label("pricing.amount", "Amount")} ({booking.currency})</Text>
             </View>
-            <View style={styles.pricingRow}>
-              <Text style={styles.pricingCell}>
-                {label("pricing.tourPackage", "Tour Package")} ({displayTourTitle})
-              </Text>
-              <Text style={styles.pricingCellRight}>
-                {formatCurrency(booking.totalPrice, booking.currency)}
-              </Text>
+            <View style={S.pricingRow}>
+              <Text style={S.pricingCell}>{label("pricing.tourPackage", "Tour Package")} ({displayTourTitle})</Text>
+              <Text style={S.pricingCellRight}>{formatCurrency(booking.totalPrice, booking.currency)}</Text>
             </View>
             {booking.travelers.adults > 0 && (
-              <View style={styles.pricingRow}>
-                {/* PROTOCOL §4 — SVG icon bullet in a flex row (no raw "·" text bullet). */}
-                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6, flex: 1 }}>
-                  <View style={{ marginTop: 2 }}><SunDiscBullet size={9} /></View>
-                  <Text style={styles.pricingCell}>
-                    {label("pricing.adults", "Adults")} ({booking.travelers.adults})
-                  </Text>
+              <View style={S.pricingRow}>
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: SPACE.xs, flex: 1 }}>
+                  <SunDiscBullet size={9} />
+                  <Text style={S.pricingCell}>{label("pricing.adults", "Adults")} ({booking.travelers.adults})</Text>
                 </View>
-                <Text style={styles.pricingCellRight}>
-                  —
-                </Text>
+                <Text style={S.pricingCellRight}>—</Text>
               </View>
             )}
             {booking.travelers.children > 0 && (
-              <View style={styles.pricingRow}>
-                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6, flex: 1 }}>
-                  <View style={{ marginTop: 2 }}><SunDiscBullet size={9} /></View>
-                  <Text style={styles.pricingCell}>
-                    {label("pricing.children", "Children")} ({booking.travelers.children})
-                  </Text>
+              <View style={S.pricingRow}>
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: SPACE.xs, flex: 1 }}>
+                  <SunDiscBullet size={9} />
+                  <Text style={S.pricingCell}>{label("pricing.children", "Children")} ({booking.travelers.children})</Text>
                 </View>
-                <Text style={styles.pricingCellRight}>
-                  —
-                </Text>
+                <Text style={S.pricingCellRight}>—</Text>
               </View>
             )}
             {booking.travelers.infants > 0 && (
-              <View style={styles.pricingRow}>
-                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6, flex: 1 }}>
-                  <View style={{ marginTop: 2 }}><SunDiscBullet size={9} /></View>
-                  <Text style={styles.pricingCell}>
-                    {label("pricing.infants", "Infants")} ({booking.travelers.infants})
-                  </Text>
+              <View style={S.pricingRow}>
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: SPACE.xs, flex: 1 }}>
+                  <SunDiscBullet size={9} />
+                  <Text style={S.pricingCell}>{label("pricing.infants", "Infants")} ({booking.travelers.infants})</Text>
                 </View>
-                <Text style={styles.pricingCellRight}>
-                  —
-                </Text>
+                <Text style={S.pricingCellRight}>—</Text>
               </View>
             )}
             {(booking.specialRequestItems ?? []).map((item, i) => (
-              <View key={i} style={styles.pricingRow}>
-                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6, flex: 1 }}>
-                  <View style={{ marginTop: 2 }}><SunDiscBullet size={9} /></View>
-                  <Text style={styles.pricingCell}>
-                    Extra Request · {item.description}
-                  </Text>
+              <View key={i} style={S.pricingRow}>
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: SPACE.xs, flex: 1 }}>
+                  <SunDiscBullet size={9} />
+                  <Text style={S.pricingCell}>Extra Request · {item.description}</Text>
                 </View>
-                <Text style={styles.pricingCellRight}>
-                  {formatCurrency(item.price, booking.currency)}
-                </Text>
+                <Text style={S.pricingCellRight}>{formatCurrency(item.price, booking.currency)}</Text>
               </View>
             ))}
-            <View style={{ ...styles.pricingRow, ...styles.pricingRowLast }}>
-              <Text style={{ ...styles.pricingCell, ...styles.pricingTotalLabel }}>
-                {label("pricing.totalAmountDue", "Total Amount Due")}
-              </Text>
-              <Text style={{ ...styles.pricingCellRight, ...styles.pricingTotalValue }}>
-                {formatCurrency(booking.totalPrice, booking.currency)}
-              </Text>
+            <View style={{ ...S.pricingRow, ...S.pricingRowLast }}>
+              <Text style={{ ...S.pricingCell, ...S.pricingTotalLabel }}>{label("pricing.totalAmountDue", "Total Amount Due")}</Text>
+              <Text style={{ ...S.pricingCellRight, ...S.pricingTotalValue }}>{formatCurrency(booking.totalPrice, booking.currency)}</Text>
             </View>
           </View>
 
-          <View style={styles.termsBlock}>
-            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 7, gap: 6 }}>
-              <SunDiscBullet size={12} />
-              <Text style={styles.termsTitle}>{label("section.terms", "Payment & Booking Terms")}</Text>
+          <View style={S.termsBlock}>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: SPACE.xs + 2, gap: SPACE.xs }}>
+              <SunDiscBullet size={11} />
+              <Text style={S.termsTitle}>{label("section.terms", "Payment & Booking Terms")}</Text>
             </View>
             {[
               { key: "terms.payment.1", fallback: "A 30% non-refundable deposit is required to confirm the booking." },
@@ -2065,125 +1198,99 @@ export function ItineraryPDF({
               { key: "terms.payment.4", fallback: "Cancellations received 30+ days before departure: Deposit retained. 14–29 days: 50% of total due. Less than 14 days: No refund." },
               { key: "terms.payment.5", fallback: `${companyInfo.name} reserves the right to modify the itinerary due to local conditions, safety, or force majeure.` },
             ].map((item, i) => (
-              <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 6, marginBottom: i < 4 ? 4 : 0 }}>
-                <SunDiscBullet size={9} />
-                <Text style={styles.termsText}>
-                  {label(item.key, item.fallback).replace("{companyName}", companyInfo.name)}
-                </Text>
+              <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: SPACE.xs, marginBottom: i < 4 ? SPACE.xs : 0 }}>
+                <SunDiscBullet size={8} />
+                <Text style={S.termsText}>{label(item.key, item.fallback).replace("{companyName}", companyInfo.name)}</Text>
               </View>
             ))}
           </View>
         </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionNumber}><Text>06</Text></View>
-            <Text style={[styles.sectionTitle, headingStyle]}>{label("section.contact", "Operations & Contact Info")}</Text>
-            <View style={styles.sectionUnderline} />
+        <View style={S.section}>
+          <View style={S.sectionHeader}>
+            <View style={S.sectionNumber}><Text>06</Text></View>
+            <Text style={[S.sectionTitle, headingStyle]}>{label("section.contact", "Operations & Contact Info")}</Text>
+            <View style={S.sectionUnderline} />
           </View>
-          <View style={styles.operationsCard}>
-            <View style={styles.operationsHeader}>
-              <View style={styles.opsBadge}>
-                <Text style={styles.opsBadgeText}>{label("general.247", "24/7 Support")}</Text>
-              </View>
-              <Text style={[styles.opsCardTitle, headingStyle]}>
-                {label("ops.roundClock", "Your Operations Team \u2014 Available Round the Clock")}
-              </Text>
+          <View style={S.operationsCard}>
+            <View style={S.operationsHeader}>
+              <View style={S.opsBadge}><Text style={S.opsBadgeText}>{label("general.247", "24/7 Support")}</Text></View>
+              <Text style={[S.opsCardTitle, headingStyle]}>{label("ops.roundClock", "Your Operations Team \u2014 Available Round the Clock")}</Text>
             </View>
-            <SmallAnkhDivider />
-            <HieroglyphStrip />
-            <SvgDividerImage />
-            <View style={styles.opsGrid}>
-              <View style={styles.opsItem}>
-                <Text style={styles.opsLabel}>{label("ops.manager", "Operations Manager")}</Text>
-                <Text style={styles.opsValue}>{shapeForPdf(companyInfo.operationsManager.name)}</Text>
+            <Divider compact />
+            <View style={S.opsGrid}>
+              <View style={S.opsItem}>
+                <Text style={S.opsLabel}>{label("ops.manager", "Operations Manager")}</Text>
+                <Text style={S.opsValue}>{shapeForPdf(companyInfo.operationsManager.name)}</Text>
               </View>
-              <View style={styles.opsItem}>
-                <Text style={styles.opsLabel}>{label("ops.directMobile", "Direct Mobile")}</Text>
-                <Text style={styles.opsValue}>{companyInfo.operationsManager.phone}</Text>
+              <View style={S.opsItem}>
+                <Text style={S.opsLabel}>{label("ops.directMobile", "Direct Mobile")}</Text>
+                <Text style={S.opsValue}>{companyInfo.operationsManager.phone}</Text>
               </View>
-              <View style={styles.opsItem}>
-                <Text style={styles.opsLabel}>{label("ops.email", "Operations Email")}</Text>
-                <Text style={styles.opsValue}>{companyInfo.operationsManager.email}</Text>
+              <View style={S.opsItem}>
+                <Text style={S.opsLabel}>{label("ops.email", "Operations Email")}</Text>
+                <Text style={S.opsValue}>{companyInfo.operationsManager.email}</Text>
               </View>
-              <View style={styles.opsItem}>
-                <Text style={styles.opsLabel}>{label("ops.whatsapp", "WhatsApp Hotline")}</Text>
-                <Text style={styles.opsValue}>{companyInfo.whatsapp}</Text>
+              <View style={S.opsItem}>
+                <Text style={S.opsLabel}>{label("ops.whatsapp", "WhatsApp Hotline")}</Text>
+                <Text style={S.opsValue}>{companyInfo.whatsapp}</Text>
               </View>
-              <View style={styles.opsItem}>
-                <Text style={styles.opsLabel}>{label("ops.headOffice", "Head Office")}</Text>
-                <Text style={styles.opsValue}>{companyInfo.phone}</Text>
+              <View style={S.opsItem}>
+                <Text style={S.opsLabel}>{label("ops.headOffice", "Head Office")}</Text>
+                <Text style={S.opsValue}>{companyInfo.phone}</Text>
               </View>
-              <View style={styles.opsItem}>
-                <Text style={styles.opsLabel}>{label("ops.companyEmail", "Company Email")}</Text>
-                <Text style={styles.opsValue}>{companyInfo.email}</Text>
+              <View style={S.opsItem}>
+                <Text style={S.opsLabel}>{label("ops.companyEmail", "Company Email")}</Text>
+                <Text style={S.opsValue}>{companyInfo.email}</Text>
               </View>
-              <View style={styles.opsItem}>
-                <Text style={styles.opsLabel}>{label("ops.website", "Website")}</Text>
-                <Text style={styles.opsValue}>{companyInfo.website}</Text>
+              <View style={S.opsItem}>
+                <Text style={S.opsLabel}>{label("ops.website", "Website")}</Text>
+                <Text style={S.opsValue}>{companyInfo.website}</Text>
               </View>
-              <View style={styles.opsItem}>
-                <Text style={styles.opsLabel}>{label("ops.address", "Office Address")}</Text>
-                <Text style={styles.opsValue}>{shapeForPdf(companyInfo.address)}</Text>
+              <View style={S.opsItem}>
+                <Text style={S.opsLabel}>{label("ops.address", "Office Address")}</Text>
+                <Text style={S.opsValue}>{shapeForPdf(companyInfo.address)}</Text>
               </View>
             </View>
           </View>
-          {/* Company showcase — rich brand panel filling the empty rectangle:
-              logo + name + tagline + about + labeled 2×2 contact grid
-              (phone / email / website / address, each with a 12pt pharaonic
-              glyph) + address line. Pure Flexbox (no absolute); wrap={false}
-              pushes it whole to a fresh page if it can't fit above the fixed
-              footer — zero footer bleed. */}
-          <View wrap={false} style={styles.companyShowcase}>
-            <Image src={LOGO_SRC} style={styles.companyShowcaseLogo} />
-            <Text style={[styles.companyShowcaseName, headingStyle]}>
-              {shapeForPdf(companyInfo.name)}
-            </Text>
-            <Text style={styles.companyShowcaseTagline}>
-              {shapeForPdf(companyInfo.tagline || "Discover Egypt with Excellence")}
-            </Text>
-            <HieroglyphStrip />
-            <Text style={styles.companyShowcaseAbout}>
+
+          <View wrap={false} style={S.companyShowcase}>
+            <Image src={LOGO_SRC} style={S.companyShowcaseLogo} />
+            <Text style={[S.companyShowcaseName, headingStyle]}>{shapeForPdf(companyInfo.name)}</Text>
+            <Text style={S.companyShowcaseTagline}>{shapeForPdf(companyInfo.tagline || "Discover Egypt with Excellence")}</Text>
+            <Text style={S.companyShowcaseAbout}>
               {label(
                 "company.about",
                 "Kemerya Tours crafts tailor-made Egyptian journeys — from the Pyramids of Giza to the temples of Luxor and the Nile — with expert guides, handpicked stays and 24/7 on-trip support."
               )}
             </Text>
-            <View style={styles.companyShowcaseContact}>
-              <View style={styles.companyContactCell}>
-                <View style={styles.companyContactIcon}>
-                  <SunDiscBullet size={12} />
-                </View>
-                <View style={styles.companyContactTextWrap}>
-                  <Text style={styles.companyContactLabel}>{label("ops.directMobile", "Phone")}</Text>
-                  <Text style={styles.companyContactValue}>{companyInfo.phone}</Text>
+            <View style={S.companyShowcaseContact}>
+              <View style={S.companyContactCell}>
+                <View style={S.companyContactIcon}><SunDiscBullet size={11} /></View>
+                <View style={S.companyContactTextWrap}>
+                  <Text style={S.companyContactLabel}>{label("ops.directMobile", "Phone")}</Text>
+                  <Text style={S.companyContactValue}>{companyInfo.phone}</Text>
                 </View>
               </View>
-              <View style={styles.companyContactCell}>
-                <View style={styles.companyContactIcon}>
-                  <EyeOfHorusBullet size={12} />
-                </View>
-                <View style={styles.companyContactTextWrap}>
-                  <Text style={styles.companyContactLabel}>{label("ops.companyEmail", "Email")}</Text>
-                  <Text style={styles.companyContactValue}>{companyInfo.email}</Text>
+              <View style={S.companyContactCell}>
+                <View style={S.companyContactIcon}><EyeOfHorusBullet size={11} /></View>
+                <View style={S.companyContactTextWrap}>
+                  <Text style={S.companyContactLabel}>{label("ops.companyEmail", "Email")}</Text>
+                  <Text style={S.companyContactValue}>{companyInfo.email}</Text>
                 </View>
               </View>
-              <View style={styles.companyContactCell}>
-                <View style={styles.companyContactIcon}>
-                  <ScarabBullet size={12} />
-                </View>
-                <View style={styles.companyContactTextWrap}>
-                  <Text style={styles.companyContactLabel}>{label("ops.website", "Website")}</Text>
-                  <Text style={styles.companyContactValue}>{companyInfo.website}</Text>
+              <View style={S.companyContactCell}>
+                <View style={S.companyContactIcon}><ScarabBullet size={11} /></View>
+                <View style={S.companyContactTextWrap}>
+                  <Text style={S.companyContactLabel}>{label("ops.website", "Website")}</Text>
+                  <Text style={S.companyContactValue}>{companyInfo.website}</Text>
                 </View>
               </View>
-              <View style={styles.companyContactCell}>
-                <View style={styles.companyContactIcon}>
-                  <LotusBullet size={12} />
-                </View>
-                <View style={styles.companyContactTextWrap}>
-                  <Text style={styles.companyContactLabel}>{label("ops.address", "Office")}</Text>
-                  <Text style={styles.companyContactValue}>{shapeForPdf(companyInfo.address)}</Text>
+              <View style={S.companyContactCell}>
+                <View style={S.companyContactIcon}><LotusBullet size={11} /></View>
+                <View style={S.companyContactTextWrap}>
+                  <Text style={S.companyContactLabel}>{label("ops.address", "Office")}</Text>
+                  <Text style={S.companyContactValue}>{shapeForPdf(companyInfo.address)}</Text>
                 </View>
               </View>
             </View>
@@ -2191,150 +1298,102 @@ export function ItineraryPDF({
         </View>
       </ParchmentPage>
 
-      <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel={itinerary.length > 3 ? "Page 5" : "Page 4"}>
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionNumber}><Text>07</Text></View>
-            <Text style={[styles.sectionTitle, headingStyle]}>{label("terms.policy", "Terms & Policy")}</Text>
-            <View style={styles.sectionUnderline} />
+      {/* ---------------- Terms / Review / Social ---------------- */}
+      <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel={hasExtraDays ? "Page 5" : "Page 4"} rtl={rtl} S={S}>
+        <View style={S.section}>
+          <View style={S.sectionHeader}>
+            <View style={S.sectionNumber}><Text>07</Text></View>
+            <Text style={[S.sectionTitle, headingStyle]}>{label("terms.policy", "Terms & Policy")}</Text>
+            <View style={S.sectionUnderline} />
           </View>
-          <View style={styles.termsCard}>
-            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}>
-              <View style={{ marginRight: 6 }}>
-                <CartoucheSeal size={13} />
-              </View>
-              <Text style={{ ...cinzelStyle, fontSize: 9, color: PARCHMENT_COLORS.deepLapis, fontWeight: 700 }}>
-                {label("section.terms", "Terms & Conditions")}
-              </Text>
+          <View style={S.termsCard}>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: SPACE.xs + 2, gap: SPACE.xs }}>
+              <CartoucheSeal size={12} />
+              <Text style={{ ...cinzelStyle, fontSize: 8.5, color: COLOR.deepLapis, fontWeight: 700 }}>{label("section.terms", "Terms & Conditions")}</Text>
             </View>
             {termsItems.map((item, i) => (
-              // PROTOCOL §4 — downloaded SVG icon bullets in a flex row
-              // (no raw "·" text bullets).
-              <View key={i} style={styles.termsItemRow}>
-                <SunDiscBullet size={10} />
-                <Text style={styles.termsItemText}>{item}</Text>
+              <View key={i} style={S.termsItemRow}>
+                <SunDiscBullet size={9} />
+                <Text style={S.termsItemText}>{item}</Text>
               </View>
             ))}
-            <Text style={styles.termsItemText}>
+            <Text style={S.termsItemText}>
               {label("terms.readFull", "Read the full terms on our website:")}{" "}
-              <Link src={TERMS_URL} style={styles.termsLinkText}>
-                {TERMS_URL}
-              </Link>
+              <Link src={TERMS_URL} style={S.termsLinkText}>{TERMS_URL}</Link>
             </Text>
-            <AnkhDivider color={PARCHMENT_COLORS.antiqueGold} />
-            <NativePharaonicDivider />
-            <SvgDividerImage />
-            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, marginBottom: 6 }}>
-              <View style={{ marginRight: 6 }}>
-                <EyeOfHorusBullet size={13} />
-              </View>
-              <Text style={{ ...cinzelStyle, fontSize: 9, color: PARCHMENT_COLORS.deepLapis, fontWeight: 700 }}>
-                {label("general.privacyPolicy", "Privacy Policy")}
-              </Text>
+
+            <Divider compact />
+
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: SPACE.xs + 2, gap: SPACE.xs }}>
+              <EyeOfHorusBullet size={12} />
+              <Text style={{ ...cinzelStyle, fontSize: 8.5, color: COLOR.deepLapis, fontWeight: 700 }}>{label("general.privacyPolicy", "Privacy Policy")}</Text>
             </View>
             {privacyItems.map((item, i) => (
-              <View key={i} style={styles.termsItemRow}>
-                <PyramidBullet size={10} />
-                <Text style={styles.termsItemText}>{item}</Text>
+              <View key={i} style={S.termsItemRow}>
+                <PyramidBullet size={9} />
+                <Text style={S.termsItemText}>{item}</Text>
               </View>
             ))}
-            <Text style={styles.termsItemText}>
+            <Text style={S.termsItemText}>
               {label("privacy.readFull", "Read the full privacy policy:")}{" "}
-              <Link src={PRIVACY_URL} style={styles.termsLinkText}>
-                {PRIVACY_URL}
-              </Link>
+              <Link src={PRIVACY_URL} style={S.termsLinkText}>{PRIVACY_URL}</Link>
             </Text>
           </View>
         </View>
 
-        <View style={styles.reviewCard}>
-          <Text style={[styles.reviewTitle, headingStyle]}>{label("review.title", "Leave a Review")}</Text>
-          <SmallAnkhDivider />
-          <Text style={styles.reviewSubtitle}>
+        <View style={S.reviewCard}>
+          <Text style={[S.reviewTitle, headingStyle]}>{label("review.title", "Leave a Review")}</Text>
+          <Text style={S.reviewSubtitle}>
             {label("review.subtitle", "Loved your tour? Your feedback on Google Business helps travelers like you find us.")}
           </Text>
           <Link src={companyInfo.socialMedia?.googleBusiness || "https://share.google/RLldzNlk9YFVuIGbD"}>
-            <View style={styles.reviewBadge}>
-              <Text style={[styles.reviewBadgeText, headingStyle]}>
-                {label("review.cta", "★ Write a Review")}
-              </Text>
+            <View style={S.reviewBadge}>
+              <Text style={[S.reviewBadgeText, headingStyle]}>{label("review.cta", "★ Write a Review")}</Text>
             </View>
           </Link>
-          <Text style={styles.reviewLink}>
-            {companyInfo.socialMedia?.googleBusiness || "https://share.google/RLldzNlk9YFVuIGbD"}
-          </Text>
+          <Text style={S.reviewLink}>{companyInfo.socialMedia?.googleBusiness || "https://share.google/RLldzNlk9YFVuIGbD"}</Text>
         </View>
 
-        <View style={styles.socialRow}>
-          {companyInfo.socialMedia?.facebook ? (
-            <Link src={companyInfo.socialMedia.facebook} style={styles.socialLinkItem}>
-              {label("social.facebook", "Facebook")}
-            </Link>
-          ) : null}
-          {companyInfo.socialMedia?.instagram ? (
-            <Link src={companyInfo.socialMedia.instagram} style={styles.socialLinkItem}>
-              {label("social.instagram", "Instagram")}
-            </Link>
-          ) : null}
-          {companyInfo.socialMedia?.youtube ? (
-            <Link src={companyInfo.socialMedia.youtube} style={styles.socialLinkItem}>
-              {label("social.youtube", "YouTube")}
-            </Link>
-          ) : null}
-          {companyInfo.socialMedia?.twitter ? (
-            <Link src={companyInfo.socialMedia.twitter} style={styles.socialLinkItem}>
-              {label("social.twitter", "X (Twitter)")}
-            </Link>
-          ) : null}
-          {companyInfo.socialMedia?.googleBusiness ? (
-            <Link src={companyInfo.socialMedia.googleBusiness} style={styles.socialLinkItem}>
-              {label("social.googleBusiness", "Google Business")}
-            </Link>
-          ) : null}
+        <View style={S.socialRow}>
+          {companyInfo.socialMedia?.facebook ? <Link src={companyInfo.socialMedia.facebook} style={S.socialLinkItem}>{label("social.facebook", "Facebook")}</Link> : null}
+          {companyInfo.socialMedia?.instagram ? <Link src={companyInfo.socialMedia.instagram} style={S.socialLinkItem}>{label("social.instagram", "Instagram")}</Link> : null}
+          {companyInfo.socialMedia?.youtube ? <Link src={companyInfo.socialMedia.youtube} style={S.socialLinkItem}>{label("social.youtube", "YouTube")}</Link> : null}
+          {companyInfo.socialMedia?.twitter ? <Link src={companyInfo.socialMedia.twitter} style={S.socialLinkItem}>{label("social.twitter", "X (Twitter)")}</Link> : null}
+          {companyInfo.socialMedia?.googleBusiness ? <Link src={companyInfo.socialMedia.googleBusiness} style={S.socialLinkItem}>{label("social.googleBusiness", "Google Business")}</Link> : null}
         </View>
       </ParchmentPage>
     </Document>
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: React.ReactNode }) {
+/* ============================================================================
+ * SMALL SUBCOMPONENTS
+ * ==========================================================================*/
+
+function SummaryCard({ S, label, value }: { S: typeof styles; label: string; value: React.ReactNode }) {
   const getIcon = () => {
-    const lowerLabel = label.toLowerCase();
-    if (lowerLabel.includes("total traveler") || lowerLabel.includes("client name")) {
-      return <UserIcon />;
-    }
-    if (lowerLabel.includes("duration") || lowerLabel.includes("period") || lowerLabel.includes("date") || lowerLabel.includes("return")) {
-      return <CalendarIcon />;
-    }
-    if (lowerLabel.includes("meeting") || lowerLabel.includes("location") || lowerLabel.includes("destination") || lowerLabel.includes("pickup")) {
-      return <MapPinIcon />;
-    }
-    if (lowerLabel.includes("amount") || lowerLabel.includes("price") || lowerLabel.includes("email") || lowerLabel.includes("phone") || lowerLabel.includes("whatsapp")) {
-      return <SunDiscBullet size={18} />;
-    }
-    return <View style={styles.summaryItemIcon} />;
+    const l = label.toLowerCase();
+    if (l.includes("total traveler") || l.includes("client name")) return <UserIcon />;
+    if (l.includes("duration") || l.includes("period") || l.includes("date") || l.includes("return")) return <CalendarIcon />;
+    if (l.includes("meeting") || l.includes("location") || l.includes("destination") || l.includes("pickup")) return <MapPinIcon />;
+    if (l.includes("amount") || l.includes("price") || l.includes("email") || l.includes("phone") || l.includes("whatsapp")) return <SunDiscBullet size={16} />;
+    return <View style={S.summaryItemIcon} />;
   };
 
   return (
-    <View style={styles.summaryItem}>
-      <View style={styles.summaryItemIcon}>
-        {getIcon()}
-      </View>
-      <View style={styles.summaryItemTextWrap}>
-        <Text style={styles.summaryItemLabel}>{shapeForPdf(label)}</Text>
-        {typeof value === "string" ? (
-          <Text style={styles.summaryItemValue}>{shapeForPdf(value)}</Text>
-        ) : (
-          value
-        )}
+    <View style={S.summaryItem}>
+      <View style={S.summaryItemIcon}>{getIcon()}</View>
+      <View style={S.summaryItemTextWrap}>
+        <Text style={S.summaryItemLabel}>{shapeForPdf(label)}</Text>
+        {typeof value === "string" ? <Text style={S.summaryItemValue}>{shapeForPdf(value)}</Text> : value}
       </View>
     </View>
   );
 }
 
 function DayCard({
+  S,
   day,
-  roadmap,
   translatedTitle,
   translatedDescription,
   translatedAccommodation,
@@ -2344,8 +1403,8 @@ function DayCard({
   headingStyle = {},
   cinzelStyle = {},
 }: {
+  S: typeof styles;
   day: ItineraryDay;
-  roadmap?: string[];
   translatedTitle?: string;
   translatedDescription?: string;
   translatedAccommodation?: string;
@@ -2355,83 +1414,60 @@ function DayCard({
   headingStyle?: Record<string, string>;
   cinzelStyle?: Record<string, string>;
 }) {
-  const stops = (translatedRoadmap ? translatedRoadmap.split(",").map((s) => s.trim()).filter(Boolean) : roadmap && roadmap.length > 0 ? roadmap : []).map(shapeForPdf);
+  const stops = (
+    translatedRoadmap
+      ? translatedRoadmap.split(",").map((s) => s.trim()).filter(Boolean)
+      : day.highlights && day.highlights.length > 0
+      ? day.highlights
+      : []
+  ).map(shapeForPdf);
   const dayTitle = shapeForPdf(translatedTitle || day.title);
   const dayDescription = shapeForPdf(translatedDescription || day.description);
   const accommodation = translatedAccommodation || day.accommodation || "";
   const mealsJoined = translatedMeals || (day.meals ? day.meals.join(", ") : "");
   const accommodationText = shapeForPdf(accommodation);
   const mealsText = shapeForPdf(mealsJoined);
+
   return (
-    <View>
-      <View break={false} style={styles.dayCard}>
-        <View style={styles.dayHeader}>
-          <View style={styles.dayBadge}>
-            <Svg width={11} height={11} viewBox="0 0 24 24" style={{ marginRight: 4 }}>
-              <G stroke={PARCHMENT_COLORS.deepBrown} strokeWidth={1.8} fill="none" strokeLinecap="round">
-                <Path d="M12 5 C 9 5 6.5 7.5 6.5 10.5 C 6.5 13 8.5 15 12 15 C 15.5 15 17.5 13 17.5 10.5 C 17.5 7.5 15 5 12 5 Z" />
-                <Path d="M12 13 L 12 18.5 M 9 18.5 L 15 18.5" />
-              </G>
-            </Svg>
-            <Text style={[styles.dayBadgeText, headingStyle]}>DAY {day.day}</Text>
-          </View>
-          <Text style={[styles.dayTitle, headingStyle]}>{dayTitle}</Text>
+    <View style={S.dayCard} break={false}>
+      <View style={S.dayHeader}>
+        <View style={S.dayBadge}>
+          <Text style={[S.dayBadgeText, headingStyle]}>DAY {day.day}</Text>
         </View>
-        <View style={styles.dayContent}>
-          <Text style={styles.dayDescription}>{dayDescription}</Text>
-          {stops.length > 0 && (
-            <View style={styles.dayRoadmap}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 5 }}>
-                <PyramidBullet size={10} />
-                <Text style={[styles.dayRoadmapTitle, cinzelStyle]}>{tLabels?.roadmap || "Today's Roadmap"}</Text>
-              </View>
-              {stops.map((stop, i) => (
-                <View key={i}>
-                  <View style={styles.dayRoadmapRow}>
-                    <View style={styles.dayRoadmapIcon}>
-                      <LotusBullet size={11} />
-                    </View>
-                    <Text style={styles.dayRoadmapStop}>{stop}</Text>
-                  </View>
-                  {i < stops.length - 1 && (
-                    <RoadmapArrow />
-                  )}
-                </View>
-              ))}
-            </View>
-          )}
-          {(accommodation || mealsJoined) ? (
-            <View style={styles.metaRow}>
-              {accommodation ? (
-                <View style={styles.metaItem}>
-                  <Svg width={10} height={10} viewBox="0 0 24 24">
-                    <G fill={PARCHMENT_COLORS.lapis} opacity={0.85}>
-                      <Path d="M2 20 V 10 L 12 4 L 22 10 V 20 H 16 V 13 H 8 V 20 Z" />
-                    </G>
-                  </Svg>
-                  <Text style={styles.metaLabel}>{tLabels?.stay || "Stay"} ·</Text>
-                  <Text style={styles.metaValue}>{accommodationText}</Text>
-                </View>
-              ) : null}
-              {mealsJoined ? (
-                <View style={styles.metaItem}>
-                  <Svg width={10} height={10} viewBox="0 0 24 24">
-                    <G fill="none" stroke={PARCHMENT_COLORS.lapis} strokeWidth={2} strokeLinecap="round">
-                      <Path d="M4 3 V 19 C 4 20 5 21 6 21 M 8 3 V 19 C 8 20 9 21 10 21 M 14 3 C 12 4 12 7 14 9 C 16 7 16 4 14 3 Z M 14 9 V 21" />
-                    </G>
-                  </Svg>
-                  <Text style={styles.metaLabel}>{tLabels?.meals || "Meals"} ·</Text>
-                  <Text style={styles.metaValue}>{mealsText}</Text>
-                </View>
-              ) : null}
-            </View>
-          ) : null}
-        </View>
+        <Text style={[S.dayTitle, headingStyle]}>{dayTitle}</Text>
       </View>
-      {/* Pharaonic divider between Day sections — native SVG (guaranteed) +
-          downloaded divider art, in-flow flex rows (never a CSS border). */}
-      <NativePharaonicDivider />
-      <SvgDividerImage />
+      <View style={S.dayContent}>
+        <Text style={S.dayDescription}>{dayDescription}</Text>
+        {stops.length > 0 && (
+          <View style={S.dayRoadmap}>
+            <Text style={[S.dayRoadmapTitle, cinzelStyle]}>{tLabels?.roadmap || "Today's Roadmap"}</Text>
+            {stops.map((stop, i) => (
+              <View key={i} style={S.dayRoadmapRow}>
+                <LotusBullet size={9} />
+                <Text style={S.dayRoadmapStop}>{stop}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+        {(accommodation || mealsJoined) ? (
+          <View style={S.metaRow}>
+            {accommodation ? (
+              <View style={S.metaItem}>
+                <PyramidBullet size={9} />
+                <Text style={S.metaLabel}>{tLabels?.stay || "Stay"} ·</Text>
+                <Text style={S.metaValue}>{accommodationText}</Text>
+              </View>
+            ) : null}
+            {mealsJoined ? (
+              <View style={S.metaItem}>
+                <SunDiscBullet size={9} />
+                <Text style={S.metaLabel}>{tLabels?.meals || "Meals"} ·</Text>
+                <Text style={S.metaValue}>{mealsText}</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }
