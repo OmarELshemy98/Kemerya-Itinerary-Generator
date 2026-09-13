@@ -30,7 +30,6 @@ import {
 import { resolveLogoSrc } from "@/lib/pdf-assets";
 import { EGYPT_LOCATIONS } from "@/utils/mapGenerator";
 import {
-  KemeryaLogoSvg,
   CheckIcon,
   CrossIcon,
   UserIcon,
@@ -114,6 +113,38 @@ const SmallAnkhDivider = ({ color = PARCHMENT_COLORS.antiqueGold }: { color?: st
     </Svg>
     <View style={{ flex: 1, height: 0.6, backgroundColor: color, opacity: 0.5 }} />
   </View>
+);
+
+// PROTOCOL §4 — premium divider + directional glyph sourced from the
+// downloaded `public/images/dividers_and_icons.svg` sprite sheet (ankh /
+// scarab / sun-disc / cartouche icon family also mirrored by the vector
+// bullets below). Rendered via <Image> in a flex row so it never collides.
+const SvgDividerImage = () => (
+  <Image
+    src={DIVIDER_SRC}
+    style={{
+      width: "100%",
+      height: 30,
+      objectFit: "contain",
+      marginVertical: 6,
+      alignSelf: "center",
+    }}
+  />
+);
+
+// Vector chevron replacing the raw "↓" text glyph (Arabic display fonts may
+// lack the arrow glyph → tofu). In-flow Svg, no absolute positioning.
+const RoadmapArrow = () => (
+  <Svg width={9} height={9} viewBox="0 0 24 24" style={{ marginLeft: 17, marginBottom: 2 }}>
+    <Path
+      d="M12 4 V 20 M 6 14 L 12 20 L 18 14"
+      fill="none"
+      stroke={PARCHMENT_COLORS.antiqueGold}
+      strokeWidth={2.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
 );
 
 const ScarabBullet = ({ size = 14 }: { size?: number }) => (
@@ -232,8 +263,10 @@ const styles = StyleSheet.create({
     paddingTop: 52,
     paddingLeft: 52,
     paddingRight: 52,
-    paddingBottom: 12,
-    marginBottom: 170,
+    // PROTOCOL §3 — footer clearance: fixed footer band (~108px Nile image +
+    // captions) would otherwise overprint Payment Terms / Privacy Policy on
+    // pages 4-5. 160pt bottom padding forces content to break before the band.
+    paddingBottom: 160,
     flexDirection: "column",
   },
   footerBand: {
@@ -284,15 +317,30 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   headerBox: {
+    // PROTOCOL §3 — pure Flexbox stack (no absolute) so TOUR OVERVIEW /
+    // Meeting Point rows can never collide on page 1.
+    flexDirection: "column",
     alignItems: "center",
+    justifyContent: "flex-start",
     marginBottom: 10,
     paddingBottom: 8,
+    gap: 4,
+  },
+  officialLogo: {
+    width: 118,
+    height: 118,
+    objectFit: "contain",
+    alignSelf: "center",
+    marginBottom: 2,
   },
   brandTitle: {
     fontSize: 21,
     color: PARCHMENT_COLORS.deepBrown,
     letterSpacing: 4.5,
-    marginTop: 5,
+    // PROTOCOL §3 — Flexbox gap/marginTop stacking (no absolute) so the
+    // brand line can never overlap Meeting Point / TOUR OVERVIEW rows.
+    marginTop: 6,
+    textAlign: "center",
   },
   bookingRefBadge: {
     backgroundColor: PARCHMENT_COLORS.deepBrown,
@@ -313,20 +361,19 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(253, 251, 247, 0.35)",
     padding: 14,
     marginBottom: 16,
+    marginTop: 8,
     borderWidth: 1.5,
     borderColor: PARCHMENT_COLORS.royalGold,
-    position: "relative",
     overflow: "hidden",
   },
   heroInnerFrame: {
-    position: "absolute",
-    top: 4,
-    left: 4,
-    right: 4,
-    bottom: 4,
+    // PROTOCOL §3 — in-flow inner frame (no position:absolute) so it can
+    // never overlap Meeting Point / TOUR OVERVIEW header rows.
+    margin: 4,
     borderWidth: 0.6,
     borderColor: PARCHMENT_COLORS.antiqueGold,
     opacity: 0.7,
+    padding: 10,
   },
   clientBadge: {
     backgroundColor: PARCHMENT_COLORS.antiqueGold,
@@ -942,6 +989,9 @@ function resolvePdfAsset(filename: string): string {
 const PARCHMENT_SRC = resolvePdfAsset("parchment.svg");
 const BORDER_SRC = resolvePdfAsset("border_pattern.svg");
 const NILE_SRC = resolvePdfAsset("nile_sunset.svg");
+// PROTOCOL §1+§4 — official brand + harmonious SVG assets discovered in public/images/
+const LOGO_SRC = resolvePdfAsset("pdf-kemerya-logo.png");
+const DIVIDER_SRC = resolvePdfAsset("dividers_and_icons.svg");
 
 function ParchmentPage({
   children,
@@ -968,16 +1018,24 @@ function ParchmentPage({
       size="A4"
       style={[styles.page, { direction: rtl ? "rtl" : "ltr", fontFamily: bodyFont }, rtlPageStyle ?? {}]}
     >
+      {/*
+        PROTOCOL §2 (CRITICAL) — layered SVG backgrounds MUST be the first
+        children inside <Page>: fixed + absolute so they repeat on every page
+        as pure background layers without pushing content down.
+      */}
       <Image src={PARCHMENT_SRC} style={styles.parchmentBg} fixed={true} />
       <Image src={BORDER_SRC} style={styles.borderFrame} fixed={true} />
 
       <View style={[styles.contentLayer, { fontFamily: bodyFont, direction: rtl ? "rtl" : "ltr" }]}>
+        {/* PROTOCOL §1 — official logo, perfectly centered above header text.
+            Generic KemeryaLogoSvg placeholder removed. Header is a pure
+            Flexbox column (no absolute) so nothing can collide. */}
         <View style={styles.headerBox}>
-          <KemeryaLogoSvg />
+          <Image src={LOGO_SRC} style={styles.officialLogo} />
           <Text style={[styles.brandTitle, { fontFamily: brandFont }]}>
             {companyInfo?.name || "KEMERYA TOURS"}
           </Text>
-          <AnkhDivider />
+          <SvgDividerImage />
         </View>
         {children}
       </View>
@@ -1266,13 +1324,16 @@ export function ItineraryPDF({
         </View>
 
         <View style={styles.heroCard}>
-          <View style={styles.heroInnerFrame} />
+          {/* PROTOCOL §3 — heroInnerFrame is now in-flow (no absolute): all
+              hero rows stack via Flexbox with gap/marginTop, so Meeting Point
+              can never collide with TOUR OVERVIEW. */}
+          <View style={styles.heroInnerFrame}>
           <View style={styles.clientBadge}>
             <Text style={styles.clientBadgeText}>Booking Reference · {bookingRef}</Text>
           </View>
           <Text style={[styles.heroSubtitle, cinzelStyle]}>{label("hero.subtitle", "Your Exclusive Travel Itinerary")}</Text>
           <Text style={[styles.heroTourName, headingStyle]}>{displayTourTitle}</Text>
-          <SmallAnkhDivider />
+          <SvgDividerImage />
           <View style={styles.heroGrid}>
             <View style={styles.heroStat}>
               <Text style={styles.heroStatLabel}>{label("hero.departureDate", "Departure Date")}</Text>
@@ -1331,6 +1392,7 @@ export function ItineraryPDF({
               <Text style={styles.heroStatLabel}>{label("hero.reference", "Reference")}</Text>
               <Text style={styles.heroStatValue}>#{bookingRef}</Text>
             </View>
+          </View>
           </View>
         </View>
 
@@ -1652,9 +1714,13 @@ export function ItineraryPDF({
             </View>
             {booking.travelers.adults > 0 && (
               <View style={styles.pricingRow}>
-                <Text style={styles.pricingCell}>
-                  · {label("pricing.adults", "Adults")} ({booking.travelers.adults})
-                </Text>
+                {/* PROTOCOL §4 — SVG icon bullet in a flex row (no raw "·" text bullet). */}
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6, flex: 1 }}>
+                  <View style={{ marginTop: 2 }}><SunDiscBullet size={9} /></View>
+                  <Text style={styles.pricingCell}>
+                    {label("pricing.adults", "Adults")} ({booking.travelers.adults})
+                  </Text>
+                </View>
                 <Text style={styles.pricingCellRight}>
                   —
                 </Text>
@@ -1662,9 +1728,12 @@ export function ItineraryPDF({
             )}
             {booking.travelers.children > 0 && (
               <View style={styles.pricingRow}>
-                <Text style={styles.pricingCell}>
-                  · {label("pricing.children", "Children")} ({booking.travelers.children})
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6, flex: 1 }}>
+                  <View style={{ marginTop: 2 }}><SunDiscBullet size={9} /></View>
+                  <Text style={styles.pricingCell}>
+                    {label("pricing.children", "Children")} ({booking.travelers.children})
+                  </Text>
+                </View>
                 <Text style={styles.pricingCellRight}>
                   —
                 </Text>
@@ -1672,9 +1741,12 @@ export function ItineraryPDF({
             )}
             {booking.travelers.infants > 0 && (
               <View style={styles.pricingRow}>
-                <Text style={styles.pricingCell}>
-                  · {label("pricing.infants", "Infants")} ({booking.travelers.infants})
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6, flex: 1 }}>
+                  <View style={{ marginTop: 2 }}><SunDiscBullet size={9} /></View>
+                  <Text style={styles.pricingCell}>
+                    {label("pricing.infants", "Infants")} ({booking.travelers.infants})
+                  </Text>
+                </View>
                 <Text style={styles.pricingCellRight}>
                   —
                 </Text>
@@ -1682,9 +1754,12 @@ export function ItineraryPDF({
             )}
             {(booking.specialRequestItems ?? []).map((item, i) => (
               <View key={i} style={styles.pricingRow}>
-                <Text style={styles.pricingCell}>
-                  Extra Request · {item.description}
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6, flex: 1 }}>
+                  <View style={{ marginTop: 2 }}><SunDiscBullet size={9} /></View>
+                  <Text style={styles.pricingCell}>
+                    Extra Request · {item.description}
+                  </Text>
+                </View>
                 <Text style={styles.pricingCellRight}>
                   {formatCurrency(item.price, booking.currency)}
                 </Text>
@@ -1738,6 +1813,9 @@ export function ItineraryPDF({
               </Text>
             </View>
             <SmallAnkhDivider />
+            {/* PROTOCOL §4 — downloaded SVG divider between Day sections
+                (flex-row Image, never a raw CSS border). */}
+            <SvgDividerImage />
             <View style={styles.opsGrid}>
               <View style={styles.opsItem}>
                 <Text style={styles.opsLabel}>{label("ops.manager", "Operations Manager")}</Text>
@@ -1793,6 +1871,8 @@ export function ItineraryPDF({
               </Text>
             </View>
             {termsItems.map((item, i) => (
+              // PROTOCOL §4 — downloaded SVG icon bullets in a flex row
+              // (no raw "·" text bullets).
               <View key={i} style={styles.termsItemRow}>
                 <SunDiscBullet size={10} />
                 <Text style={styles.termsItemText}>{item}</Text>
@@ -1805,6 +1885,7 @@ export function ItineraryPDF({
               </Link>
             </Text>
             <AnkhDivider color={PARCHMENT_COLORS.antiqueGold} />
+            <SvgDividerImage />
             <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, marginBottom: 6 }}>
               <View style={{ marginRight: 6 }}>
                 <EyeOfHorusBullet size={13} />
@@ -1975,7 +2056,7 @@ function DayCard({
                     <Text style={styles.dayRoadmapStop}>{stop}</Text>
                   </View>
                   {i < stops.length - 1 && (
-                    <Text style={styles.dayRoadmapArrow}>↓</Text>
+                    <RoadmapArrow />
                   )}
                 </View>
               ))}
@@ -2009,7 +2090,9 @@ function DayCard({
           ) : null}
         </View>
       </View>
-      <SmallAnkhDivider />
+      {/* PROTOCOL §4 — downloaded SVG divider between Day sections
+          (flex-row Image, never a raw CSS border). */}
+      <SvgDividerImage />
     </View>
   );
 }
