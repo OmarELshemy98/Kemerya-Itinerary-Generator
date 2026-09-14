@@ -464,7 +464,242 @@ const DigitalSignature = ({ width = 190, height = 62 }: { width?: number; height
 );
 
 
+  // -------------------------------------------------------------------------
+  // Decorative border frame — inline SVG, replacing `border_pattern.svg`.
+  //
+  // The original SVG used <linearGradient>, nested <g id="..."> with empty
+  // children that a <script> filled by DOM cloning at SVG-load time, and a
+  // <script> block. @react-pdf's <Image> does not execute that script and
+  // cannot render gradients, so this version keeps the visible frame identity
+  // (three nested frames, four corner cartouches, top/bottom gold bands, faint
+  // side rails) using plain filled/stroked shapes with solid colors from the
+  // COLOR palette.
+  // -------------------------------------------------------------------------
+  function BorderFrame({ style }: { style?: Style }) {
+    /* Corner cartouche: filled lapis L-shape + gold outline + crosshatch
+       + small gold teardrop motif, flipped per quadrant. */
+    function CornerCartouche({
+      x,
+      y,
+      flipX = false,
+      flipY = false,
+    }: {
+      x: number;
+      y: number;
+      flipX?: boolean;
+      flipY?: boolean;
+    }) {
+      return (
+        <G
+          transform={`translate(${x}, ${y})${flipX ? " scale(-1, 1)" : ""}${flipY ? " scale(1, -1)" : ""}`}
+        >
+          {/* Lapis L-shape fill. */}
+          <Path
+            d="M0 32 L 0 0 L 32 0 L 28 4 L 4 4 L 4 28 Z"
+            fill={COLOR.lapis}
+            opacity={0.85}
+          />
+          {/* Gold L-shape outline. */}
+          <Path
+            d="M0 32 L 0 0 L 32 0"
+            fill="none"
+            stroke={COLOR.royalGold}
+            strokeWidth={2.2}
+          />
+          {/* Gold cross-hatch accents. */}
+          <G stroke={COLOR.royalGold} strokeWidth={0.9} fill="none" opacity={0.75}>
+            <Path d="M4 10 L 10 4 M4 18 L 18 4 M4 26 L 26 4" />
+          </G>
+          {/* Small gold teardrop motif at centre. */}
+          <Path
+            d="M4 0 C 1.8 0 0 1.8 0 4 C 0 5.8 1 7.2 2.5 7.8 L 2.5 14 L 5.5 14 L 5.5 7.8 C 7 7.2 8 5.8 8 4 C 8 1.8 6.2 0 4 0 Z"
+            fill={COLOR.paleGold}
+          />
+        </G>
+      );
+    }
+
+    return (
+      <Svg
+        viewBox="0 0 595 842"
+        preserveAspectRatio="xMidYMid meet"
+        style={style}
+      >
+        {/* Three nested frames: outer gold, mid gold (faint), inner lapis. */}
+        <Rect
+          x={18}
+          y={18}
+          width={559}
+          height={806}
+          fill="none"
+          stroke={COLOR.royalGold}
+          strokeWidth={2.2}
+        />
+        <Rect
+          x={24}
+          y={24}
+          width={547}
+          height={794}
+          fill="none"
+          stroke={COLOR.royalGold}
+          strokeWidth={0.8}
+          opacity={0.7}
+        />
+        <Rect
+          x={40}
+          y={40}
+          width={515}
+          height={762}
+          fill="none"
+          stroke={COLOR.lapis}
+          strokeWidth={1.4}
+          opacity={0.55}
+        />
+
+        {/* Four corner cartouches. */}
+        <CornerCartouche x={26} y={26} />
+        <CornerCartouche x={569} y={26} flipX />
+        <CornerCartouche x={26} y={816} flipY />
+        <CornerCartouche x={569} y={816} flipX flipY />
+
+        {/* Top gold band (header separator). */}
+        <G transform="translate(40, 30)">
+          <Rect x={0} y={0} width={515} height={10} fill={COLOR.lapis} opacity={0.25} />
+          <G stroke={COLOR.royalGold} strokeWidth={0.8} fill="none">
+            <Path d="M0 0 L 515 0" />
+            <Path d="M0 10 L 515 10" />
+          </G>
+        </G>
+
+        {/* Bottom gold band (footer separator). */}
+        <G transform="translate(40, 786)">
+          <Rect x={0} y={0} width={515} height={10} fill={COLOR.lapis} opacity={0.25} />
+          <G stroke={COLOR.royalGold} strokeWidth={0.8} fill="none">
+            <Path d="M0 0 L 515 0" />
+            <Path d="M0 10 L 515 10" />
+          </G>
+        </G>
+
+        {/* Thin gold side rails. */}
+        <G stroke={COLOR.royalGold} strokeWidth={0.7} fill="none" opacity={0.4}>
+          <Path d="M30 64 L 30 778" />
+          <Path d="M565 64 L 565 778" />
+        </G>
+      </Svg>
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Background parchment — inline SVG, replacing `parchment.svg`.
+  //
+  // The original SVG used <radialGradient>, <filter> (feTurbulence /
+  // feDisplacementMap) and <pattern>, none of which @react-pdf's <Image> can
+  // decode. This component reproduces the same warm aged look using only SVG
+  // primitives that react-pdf supports: layered ellipses for the soft parchment
+  // glow, scattered grain micro-dots, and thin decorative hairlines.
+  // -------------------------------------------------------------------------
+  const ParchmentBackground = ({
+    style,
+  }: {
+    style?: Style;
+  }) => (
+    <Svg
+      viewBox="0 0 595 842"
+      preserveAspectRatio="xMidYMid meet"
+      style={style}
+    >
+      {/* Soft parchment glow via layered ellipses (replaces radialGradient). */}
+      <Ellipse cx={297} cy={380} rx={320} ry={430} fill={COLOR.parchmentLight} />
+      <Ellipse cx={297} cy={380} rx={260} ry={360} fill="#F0E4C6" />
+      <Ellipse cx={297} cy={380} rx={180} ry={250} fill="#E8D9B4" />
+
+      {/* Aged corner stains. */}
+      <Ellipse cx={55} cy={55} rx={55} ry={50} fill="#8B6F47" opacity={0.09} />
+      <Ellipse cx={540} cy={58} rx={58} ry={52} fill="#8B6F47" opacity={0.09} />
+      <Ellipse cx={58} cy={792} rx={55} ry={48} fill="#8B6F47" opacity={0.09} />
+      <Ellipse cx={542} cy={788} rx={56} ry={52} fill="#8B6F47" opacity={0.09} />
+
+      {/* Subtle mid-page bands. */}
+      <Ellipse cx={297} cy={70} rx={160} ry={28} fill="#9B7B4A" opacity={0.08} />
+      <Ellipse cx={297} cy={775} rx={170} ry={30} fill="#8B6B3F" opacity={0.09} />
+      <Ellipse cx={60} cy={420} rx={26} ry={130} fill="#9B7B4A" opacity={0.07} />
+      <Ellipse cx={540} cy={430} rx={28} ry={140} fill="#8B6B3F" opacity={0.08} />
+
+      {/* Fine hairline strokes. */}
+      <Path
+        d="M80 120 Q 180 108 280 125 T 480 118 T 530 132"
+        stroke="#A88550"
+        strokeWidth={0.6}
+        fill="none"
+        opacity={0.35}
+      />
+      <Path
+        d="M70 720 Q 190 735 300 718 T 490 728 T 535 712"
+        stroke="#8B6B3F"
+        strokeWidth={0.5}
+        fill="none"
+        opacity={0.3}
+      />
+      <Path
+        d="M120 180 Q 140 320 132 480 T 124 680"
+        stroke="#A88550"
+        strokeWidth={0.4}
+        fill="none"
+        opacity={0.22}
+      />
+      <Path
+        d="M475 150 Q 460 300 468 460 T 472 690"
+        stroke="#9B7B4A"
+        strokeWidth={0.4}
+        fill="none"
+        opacity={0.25}
+      />
+
+      {/* Grain micro-dots across the page. */}
+      <G fill="#8B6F47" opacity={0.3}>
+        <Circle cx={110} cy={180} r={1.2} />
+        <Circle cx={142} cy={220} r={0.8} />
+        <Circle cx={90} cy={295} r={1} />
+        <Circle cx={500} cy={175} r={1.1} />
+        <Circle cx={470} cy={255} r={0.9} />
+        <Circle cx={520} cy={320} r={0.7} />
+        <Circle cx={130} cy={540} r={1} />
+        <Circle cx={85} cy={605} r={0.85} />
+        <Circle cx={480} cy={560} r={1.1} />
+        <Circle cx={515} cy={630} r={0.8} />
+        <Circle cx={200} cy={80} r={0.7} />
+        <Circle cx={380} cy={75} r={0.75} />
+        <Circle cx={290} cy={765} r={0.9} />
+        <Circle cx={160} cy={770} r={0.6} />
+        <Circle cx={420} cy={768} r={0.7} />
+      </G>
+
+      {/* Tiny stroke tick marks. */}
+      <G stroke="#9B7B4A" strokeWidth={0.25} fill="none" opacity={0.18}>
+        <Path d="M100 100 L 115 112 L 108 128" />
+        <Path d="M495 95 L 508 108 L 502 125" />
+        <Path d="M95 755 L 108 745 L 112 760" />
+        <Path d="M490 760 L 505 750 L 510 765" />
+        <Path d="M240 90 L 248 105 L 256 118" />
+        <Path d="M340 85 L 348 100 L 356 115" />
+        <Path d="M230 760 L 240 748 L 250 735" />
+        <Path d="M350 755 L 360 743 L 370 730" />
+      </G>
+    </Svg>
+  );
+
+
+
 /* ============================================================================
+  // -------------------------------------------------------------------------
+  // Background parchment — inline SVG, replacing `parchment.svg`.
+  //
+  // The original SVG used <radialGradient>, <filter> (feTurbulence /
+  // feDisplacementMap) and <pattern>, none of which @react-pdf's <Image> can
+  // decode. This component reproduces the same warm aged look using only SVG
+  // primitives that react-pdf supports: layered ellipses for the soft parchment
+  // glow, scattered grain micro-dots, and thin decorative hairlines.
+  // -------------------------------------------------------------------------
  * PAGE FRAME
  * ==========================================================================*/
 
@@ -501,9 +736,27 @@ function ParchmentPage({
 
   return (
     <Page size="A4" style={[S.page, { direction: rtl ? "rtl" : "ltr", fontFamily: bodyFont }]} wrap>
-      <Image src={PARCHMENT_SRC} style={S.parchmentBg} fixed />
-      <Image src={BORDER_SRC} style={S.borderFrame} fixed />
+      {/* Pharaonic watermark — vector-crisp at any PDF zoom, no raster asset
+          dependency. */}
       <PharaonicWatermark />
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Background parchment — rendered inline so we never depend on an
+          external raster image asset. The old `parchment.svg` used SVG filters
+          (feTurbulence / feDisplacementMap) and radial gradients, none of which
+          @react-pdf's <Image> can decode, so a soft layered-ellipse parchment
+          with scattered grain dots gives the same warm aged look using only the
+          SVG subset react-pdf actually supports. */}
+      <ParchmentBackground style={S.parchmentBg} />
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Decorative border frame — inline SVG replacing `border_pattern.svg`,
+          which <Image> cannot render (only raster formats are supported, and
+          the original also relied on <linearGradient> + <script>-driven motif
+          cloning). This version keeps the three nested frames, the four corner
+          cartouches, the top/bottom gold bands and the faint side rails using
+          only react-pdf-compatible SVG primitives. */}
+      <BorderFrame style={S.borderFrame} />
 
       <View style={[S.contentLayer, { fontFamily: bodyFont, direction: rtl ? "rtl" : "ltr" }]}>
         {/* Keep the header atomic so the brand is never separated from the

@@ -68,14 +68,14 @@ Font.register({
 Font.register({
   family: "Cinzel",
   fonts: [
-    { src: fontPath("cinzel-latin-400-normal.woff") },
+    { src: fontPath("cinzel-latin-400-normal.woff"), fontWeight: 400 },
     { src: fontPath("cinzel-latin-700-normal.woff"), fontWeight: 700 },
   ],
 });
 // Decorative display face — headings, tour titles & day numbers only.
 Font.register({
   family: "Cinzel Decorative",
-  fonts: [{ src: fontPath("cinzel-decorative-latin-400-normal.woff") }],
+  fonts: [{ src: fontPath("cinzel-decorative-latin-400-normal.woff"), fontWeight: 400 }],
 });
 
 /**
