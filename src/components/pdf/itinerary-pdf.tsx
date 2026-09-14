@@ -176,7 +176,7 @@ export default function ItineraryPDF({ tour, booking, companyInfo, translatedDat
 
       {/* Final page — Company Details & Agent Signature */}
       <SectionPage>
-        <AgentSignature ctx={ctx} companyInfo={c} sectionNumber={nextSectionNumber()} />
+        <AgentSignature ctx={ctx} companyInfo={c} agentName={booking.agentName} createdAt={booking.createdAt} sectionNumber={nextSectionNumber()} />
         <CompanyDetails ctx={ctx} companyInfo={c} sectionNumber={nextSectionNumber()} />
       </SectionPage>
     </Document>

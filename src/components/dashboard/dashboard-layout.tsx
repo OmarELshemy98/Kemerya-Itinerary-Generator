@@ -115,12 +115,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <ToursDataProvider>
       <div className="min-h-screen bg-slate-50">
-        {/* Debug Banner - احذفه بعد ما المشكلة تتحل */}
-        <div className="fixed bottom-4 right-4 z-50 rounded-lg bg-black/80 px-4 py-2 text-sm text-white shadow-lg">
-          <div>Role: <span className="font-bold text-yellow-400">{userRole}</span></div>
-          <div>Is Super Admin: <span className={userRole === "super_admin" ? "text-green-400" : "text-red-400"}>{userRole === "super_admin" ? "YES" : "NO"}</span></div>
-        </div>
-        
         <SideMenu
           userRole={userRole}
           collapsed={collapsed}

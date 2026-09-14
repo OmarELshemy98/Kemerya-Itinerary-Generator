@@ -12,7 +12,7 @@ export const KEMERYA_COMPANY_INFO: CompanyInfo = {
   operationsManager: {
     name: "Omar Elshemy",
     phone: "01275050450",
-    email: "operations@kemeryatours.com",
+    email: "info@kemeryatours.com",
   },
   whatsapp: "01275050450",
   supportPhone: "01275050450",

@@ -98,6 +98,7 @@ export function itineraryRowToBooking(it: {
     dayRoutes: asDayRoutes(bd.dayRoutes),
     customTerms: asStringArray(bd.customTerms),
     customPrivacy: asStringArray(bd.customPrivacy),
+    agentName: asString(bd.agentName),
     offerTitle: asString(bd.offerTitle),
     offerNote: asString(bd.offerNote),
     inclusions: asStringArray(bd.inclusions),

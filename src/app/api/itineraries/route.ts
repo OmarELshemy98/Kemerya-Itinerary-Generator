@@ -212,6 +212,24 @@ export async function POST(request: Request) {
       booking: BookingConfig;
     };
 
+    // Use serviceSupabase to bypass RLS
+    const serviceSupabase = getServiceSupabase();
+    const client = serviceSupabase || supabase;
+
+    // Stamp the creating agent's name (from their profile) into booking_data
+    // so the PDF agent-signature section shows who made the itinerary.
+    let agentName: string | null = null;
+    try {
+      const { data: agentProfile } = await client
+        .from("profiles")
+        .select("full_name")
+        .eq("id", userId)
+        .maybeSingle();
+      agentName = agentProfile?.full_name ?? null;
+    } catch {
+      // best-effort — fall back to the company default
+    }
+
     const itineraryData = {
       user_id: userId,
       tour_id: tour?.id || null,
@@ -256,6 +274,7 @@ export async function POST(request: Request) {
         clientCountry: booking.clientCountry,
         customTerms: booking.customTerms,
         customPrivacy: booking.customPrivacy || null,
+        agentName,
         inclusions: booking.inclusions,
         exclusions: booking.exclusions,
         clientWhatsapp: booking.clientWhatsapp,
@@ -267,9 +286,6 @@ export async function POST(request: Request) {
     };
 
     // Use serviceSupabase to bypass RLS
-    const serviceSupabase = getServiceSupabase();
-    const client = serviceSupabase || supabase;
-
     let { data, error } = await client
       .from("itineraries")
       .insert(itineraryData)

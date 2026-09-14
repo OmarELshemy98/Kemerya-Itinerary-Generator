@@ -171,6 +171,8 @@ export interface BookingConfig {
   customTerms?: string[];
   /** Custom privacy-policy items for this specific itinerary (editable) */
   customPrivacy?: string[];
+  /** Name of the agent (logged-in user) who created this itinerary */
+  agentName?: string;
 }
 
 export interface RouteStop {

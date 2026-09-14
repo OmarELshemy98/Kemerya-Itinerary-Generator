@@ -109,27 +109,6 @@ export function DashboardHeader() {
             <h1 className="text-lg font-semibold text-slate-900">
               Itinerary Dashboard
             </h1>
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-[10px] px-2 py-0.5",
-                source === "website" || source === "cache"
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                  : "bg-amber-50 text-amber-700 border-amber-200"
-              )}
-            >
-              <CheckCircle2 className="mr-1 h-3 w-3" />
-              {source === "website"
-                ? "Live"
-                : source === "cache"
-                ? "Cached"
-                : "Sample"}
-              {scrapedAt && source !== "fallback" && (
-                <span className="ml-1 opacity-70">
-                  · {new Date(scrapedAt).toLocaleDateString()}
-                </span>
-              )}
-            </Badge>
           </div>
         </div>
 
