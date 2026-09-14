@@ -1120,17 +1120,40 @@ export function BookingConfigurationForm({
                   render={({ field }) => (
                     <Select
                       value={field.value}
-                      onValueChange={field.onChange}
+                      onValueChange={(next) => {
+                        const prev = field.value;
+                        if (!next || next === prev) return;
+                        // Auto-convert prices so the same value carries over.
+                        // Rate consistent with the tier pricing used above
+                        // (1 USD ≈ 0.92 EUR, as in basePriceEUR / 0.92).
+                        const RATE = 0.92;
+                        const convert = (v?: number | null): number | undefined => {
+                          if (v == null || !Number.isFinite(v) || v <= 0) return v ?? undefined;
+                          const converted = next === "EUR" ? v * RATE : v / RATE;
+                          return Math.round(converted * 100) / 100;
+                        };
+                        const convertedTotal = convert(totalPrice);
+                        if (convertedTotal != null) setValue("totalPrice", convertedTotal);
+                        if (offerPrice && offerPrice > 0) {
+                          const convertedOffer = convert(offerPrice);
+                          if (convertedOffer != null) setValue("offerPrice", convertedOffer);
+                        }
+                        field.onChange(next);
+                      }}
                     >
                       <SelectTrigger className="mt-1.5">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="USD">$ USD (US Dollar)</SelectItem>
+                        <SelectItem value="EUR">€ EUR (Euro)</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
                 />
+                <p className="mt-1 text-[10px] text-slate-400">
+                  Switching currency auto-converts the prices.
+                </p>
               </div>
               <div>
                 <Label>Total Price ({currency})</Label>
