@@ -1605,7 +1605,7 @@ const styles = StyleSheet.create({
   pricingLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: SPACE.xs, paddingRight: SPACE.sm },
   pricingLeftText: { flex: 1, fontSize: 8.8, color: COLOR.deepBrown },
   pricingSub: { fontSize: 7.4, color: COLOR.agedBrown },
-  pricingRight: { flexShrink: 0, textAlign: "right", fontSize: 9, color: COLOR.deepBrown, fontWeight: 600 },
+  pricingRight: { flexShrink: 0, textAlign: "right", fontSize: 9, color: COLOR.deepBrown, fontWeight: 700 },
 
   // Text blocks (notes / terms)
   notesText: { fontSize: 8.6, color: COLOR.deepBrown, lineHeight: 1.6, textAlign: "justify" },
