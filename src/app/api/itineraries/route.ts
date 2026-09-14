@@ -270,11 +270,22 @@ export async function POST(request: Request) {
     const serviceSupabase = getServiceSupabase();
     const client = serviceSupabase || supabase;
 
-    const { data, error } = await client
+    let { data, error } = await client
       .from("itineraries")
       .insert(itineraryData)
       .select()
       .single();
+
+    // Graceful fallback: if the client_country column migration hasn't been
+    // applied yet, retry once without that column instead of failing with 500.
+    if (error && /client_country/i.test(error.message || "")) {
+      const { client_country: _omitted, ...rest } = itineraryData;
+      ({ data, error } = await client
+        .from("itineraries")
+        .insert(rest)
+        .select()
+        .single());
+    }
 
     if (error) {
       // If table doesn't exist, return success but warn

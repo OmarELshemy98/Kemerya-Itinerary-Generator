@@ -29,8 +29,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           data: { user },
         } = await supabase.auth.getUser();
 
-        console.log("=== DEBUG: User ===", user);
-
         // لو المستخدم مش مسجل دخول، وجهه لصفحة تسجيل الدخول
         if (!user) {
           router.replace("/login");
@@ -40,24 +38,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         setIsAuthenticated(true);
 
         // جلب الـ role من قاعدة البيانات مباشرة بدون أي caching
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", user.id)
           .maybeSingle();
 
-        console.log("=== DEBUG: Profile ===", profile);
-        console.log("=== DEBUG: Profile Error ===", profileError);
-
         if (profile?.role) {
-          console.log("=== DEBUG: Setting role to ===", profile.role);
           setUserRole(profile.role as UserRole);
         } else {
-          console.log("=== DEBUG: No role found, checking user metadata ===");
           // لو مفيش profile، جرب من الـ user metadata
           const metadataRole = user.user_metadata?.role;
           if (metadataRole) {
-            console.log("=== DEBUG: Role from metadata ===", metadataRole);
             setUserRole(metadataRole as UserRole);
           }
         }

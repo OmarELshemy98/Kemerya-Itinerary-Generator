@@ -43,8 +43,10 @@ export function TourDescription({ ctx, tourTitle, description, meta, sectionNumb
           ))}
         </View>
       )}
-      {/* Decorative Pharaonic scene fills all remaining space below the text */}
-      <View style={{ flex: 1, justifyContent: "flex-end", alignItems: "center", marginTop: 14 }}>
+      {/* Decorative Pharaonic scene fills all remaining space below the text.
+          NOTE: must be flexGrow (not flex: 1) — flexBasis 0% makes react-pdf
+          resolve the SVG layout to Infinity ("unsupported number: Infinity"). */}
+      <View style={{ flexGrow: 1, justifyContent: "flex-end", alignItems: "center", marginTop: 14 }}>
         <PharaonicScene />
       </View>
     </View>
