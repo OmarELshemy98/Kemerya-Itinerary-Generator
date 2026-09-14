@@ -732,7 +732,8 @@ function ParchmentPage({
 }) {
   const bodyFont = getGlobalFont(languageCode);
   const latinDisplay = isLatinDisplayLanguage(languageCode);
-  const brandFont = latinDisplay ? "Cinzel" : bodyFont;
+  const brandFont = latinDisplay ? "Cinzel Decorative" : bodyFont;
+  const regionFont = bodyFont;
 
   return (
     <Page size="A4" style={[S.page, { direction: rtl ? "rtl" : "ltr", fontFamily: bodyFont }]} wrap>
@@ -1722,7 +1723,7 @@ export function ItineraryPDF({ tour, booking, companyInfo = KEMERYA_COMPANY_INFO
   // Font families
   const bodyFont = getGlobalFont(langCode);
   const latinDisplay = isLatinDisplayLanguage(langCode);
-  const cinzelStyle = { fontFamily: latinDisplay ? "Cinzel" : bodyFont };
+  const cinzelStyle = { fontFamily: latinDisplay ? "Cinzel Decorative" : bodyFont };
   const headingStyle = { fontFamily: latinDisplay ? "Cinzel Decorative" : bodyFont };
 
   // Traveler breakdown text in the target language.
