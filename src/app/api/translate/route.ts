@@ -207,15 +207,16 @@ Translate every human-readable string VALUE (tour copy, day titles, descriptions
 Here is the JSON to translate:
 ${JSON.stringify(dataToTranslate, null, 2)}`;
 
-    // Get Gemini model — use the highly stable "gemini-2.0-flash" (configurable
-    // via GEMINI_MODEL env var). Older "gemini-3.x" aliases cause 503
-    // routing/availability issues, so we never rely on a single model: we walk
-    // the candidate list, and retry each with exponential backoff on 503/429.
+    // Get Gemini model — candidates verified against the live ListModels API
+    // for this key's API generation (the 1.5/2.0 models are retired and return
+    // 404). We walk the list with retry/backoff on transient 503/429 spikes.
     const MODEL_CANDIDATES_RUNTIME = [
-      process.env.GEMINI_MODEL || "gemini-2.0-flash",
-      "gemini-1.5-flash-latest",
-      "gemini-1.5-flash",
-      "gemini-1.5-pro-latest",
+      process.env.GEMINI_MODEL || "gemini-3.6-flash",
+      "gemini-3.7-flash",
+      "gemini-3.8-flash",
+      "gemini-3.5-flash",
+      "gemini-2.5-flash",
+      "gemini-flash-latest",
     ];
 
     const RETRYABLE_ERROR = /\b(503|429)\b|overloaded|unavailable|rate limit|quota|resource_exhausted/i;
