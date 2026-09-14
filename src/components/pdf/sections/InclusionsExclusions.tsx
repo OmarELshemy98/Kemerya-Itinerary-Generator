@@ -27,7 +27,9 @@ export function InclusionsExclusions({ ctx, inclusions, exclusions, sectionNumbe
   const colStyle = hasInc && hasExc ? styles.col : styles.colFull;
 
   return (
-    <View style={styles.section}>
+    <View style={styles.section} wrap={false}>
+      {/* Outermost wrap={false}: the whole Inclusions & Exclusions block jumps
+          to a fresh page if it cannot fit completely — never torn in half. */}
       <View style={styles.sectionHeader} wrap={false} minPresenceAhead={60}>
         <View style={styles.sectionNum}><Text style={styles.sectionNumText}>{sectionNumber}</Text></View>
         <ScarabIcon s={10} />

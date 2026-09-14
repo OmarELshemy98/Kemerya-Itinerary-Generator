@@ -48,7 +48,8 @@ export function AgentSignature({ ctx, companyInfo, agentName, createdAt, section
     : undefined;
 
   return (
-    <View style={s.section}>
+    <View style={s.section} wrap={false}>
+      {/* Cohesive unit: agent card jumps as one block — never torn in half. */}
       <View style={s.sectionHeader} wrap={false}>
         <View style={s.sectionNum}><Text style={s.sectionNumText}>{sectionNumber}</Text></View>
         <AnkhIcon s={10} />

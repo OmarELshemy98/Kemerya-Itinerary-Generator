@@ -37,14 +37,16 @@ export function ExtraServices({ ctx, notes, specialRequests, specialRequestItems
       </View>
 
       {hasNotes && (
-        <View style={styles.panel}>
+        <View style={styles.panel} wrap={false}>
+          {/* Cohesive unit: notes panel jumps as one block — border never clipped. */}
           <View style={styles.panelTitle}><CartoucheIcon s={10} /><Text style={styles.panelTitleText}>{label("notes.title", "Itinerary Notes")}</Text></View>
           <Text style={styles.notesText}>{notes}</Text>
         </View>
       )}
 
       {(hasRequests || items.length > 0) && (
-        <View style={hasNotes ? [styles.panel, { marginTop: 6 }] : styles.panel}>
+        <View style={hasNotes ? [styles.panel, { marginTop: 6 }] : styles.panel} wrap={false}>
+          {/* Cohesive unit: requests panel jumps as one block — border never clipped. */}
           <View style={styles.panelTitle}><LotusIcon s={10} /><Text style={styles.panelTitleText}>{label("notes.specialRequests", "Special Requests")}</Text></View>
           {hasRequests && <Text style={styles.notesText}>{specialRequests}</Text>}
           {items.length > 0 && (

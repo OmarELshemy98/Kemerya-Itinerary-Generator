@@ -24,7 +24,8 @@ export function OptionalTours({ ctx, items, currency, sectionNumber }: Props) {
   if (!items || items.length === 0) return null;
 
   return (
-    <View style={styles.section}>
+    <View style={styles.section} wrap={false}>
+      {/* Cohesive unit: header + price table jump together — border never clipped. */}
       <View style={styles.sectionHeader} wrap={false} minPresenceAhead={60}>
         <View style={styles.sectionNum}><Text style={styles.sectionNumText}>{sectionNumber}</Text></View>
         <View style={styles.sectionIcon}><CompassIcon s={12} /></View>

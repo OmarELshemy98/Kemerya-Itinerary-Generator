@@ -25,7 +25,8 @@ export function CompanyDetails({ ctx, companyInfo, sectionNumber }: Props) {
   const c = companyInfo || KEMERYA_COMPANY_INFO;
 
   return (
-    <View style={s.section}>
+    <View style={s.section} wrap={false}>
+      {/* Cohesive unit: company card jumps as one block — never torn in half. */}
       <View style={s.sectionHeader} wrap={false}>
         <View style={s.sectionNum}><Text style={s.sectionNumText}>{sectionNumber}</Text></View>
         <PyramidIcon s={10} />

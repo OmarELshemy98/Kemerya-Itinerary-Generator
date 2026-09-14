@@ -28,7 +28,8 @@ export function SpecialOffer({ ctx, booking, sectionNumber }: Props) {
   const pct = total > 0 ? Math.round((savings / total) * 100) : 0;
 
   return (
-    <View style={styles.section}>
+    <View style={styles.section} wrap={false}>
+      {/* Cohesive unit: banner jumps as one block — never torn in half. */}
       <View style={styles.sectionHeader} wrap={false}>
         <View style={styles.sectionNum}><Text style={styles.sectionNumText}>{sectionNumber}</Text></View>
         <Text style={styles.sectionTitle}>{label("offer.special", "Special Offer")}</Text>
