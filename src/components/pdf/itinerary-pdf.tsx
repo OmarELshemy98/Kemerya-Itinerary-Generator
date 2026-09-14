@@ -481,13 +481,30 @@ const styles = StyleSheet.create({
   listItemText: { fontSize: 9, lineHeight: 1.55, flex: 1, color: COLOR.ink },
 
   pricingTable: { ...CARD, padding: SPACE.md, overflow: "hidden" },
-  pricingRow: { flexDirection: "row", paddingVertical: SPACE.xs + 3, paddingHorizontal: SPACE.sm, borderBottomWidth: 0.7, borderBottomColor: COLOR.paleGold },
+  pricingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: SPACE.xs + 3,
+    paddingHorizontal: SPACE.sm,
+    borderBottomWidth: 0.7,
+    borderBottomColor: COLOR.paleGold,
+  },
   pricingRowLast: { borderBottomWidth: 0 },
   pricingCell: { flex: 1, fontSize: 9, color: COLOR.deepBrown },
   pricingCellRight: { flex: 1, textAlign: "right", fontSize: 9, color: COLOR.deepBrown, fontWeight: 600 },
   pricingHeaderCell: { fontSize: 7, textTransform: "uppercase" as const, letterSpacing: 0.8, color: COLOR.agedBrown, fontWeight: 700 },
   pricingTotalLabel: { color: COLOR.deepBrown, fontSize: 10, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: 0.8 },
   pricingTotalValue: { color: COLOR.deepBrown, fontSize: 14, fontWeight: 700 },
+  // Distinct left / right flex columns — space-between pushes them to the two
+  // edges; NO pipe "|" or bullet characters are ever used for layout.
+  pricingLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: SPACE.xs, paddingRight: SPACE.sm },
+  pricingLeftText: { flex: 1, fontSize: 9, color: COLOR.deepBrown },
+  pricingLeftHead: { flex: 1, flexDirection: "row", alignItems: "center", paddingRight: SPACE.sm, fontSize: 7, textTransform: "uppercase" as const, letterSpacing: 0.8, color: COLOR.agedBrown, fontWeight: 700 },
+  pricingRight: { flexShrink: 0, textAlign: "right", fontSize: 9, color: COLOR.deepBrown, fontWeight: 600 },
+  pricingRightHead: { flexShrink: 0, textAlign: "right", fontSize: 7, textTransform: "uppercase" as const, letterSpacing: 0.8, color: COLOR.agedBrown, fontWeight: 700 },
+  pricingRowHead: { backgroundColor: "rgba(232, 215, 177, 0.3)" },
+  pricingRowTotal: { ...CARD, borderWidth: 1, borderColor: COLOR.antiqueGold, marginTop: SPACE.xs, paddingVertical: SPACE.sm + 2 },
 
   termsBlock: { ...CARD, padding: SPACE.md, marginTop: SPACE.sm },
   termsTitle: { fontSize: 8, fontWeight: 700, color: COLOR.lapis, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: SPACE.xs + 2 },
@@ -620,6 +637,8 @@ function ParchmentPage({
   rtl,
   footerTagline,
   brandHeaderVariant = "compact",
+  footerWhatsAppLabel = "WhatsApp",
+  footerPageLabel = "Page",
   S,
 }: {
   children: React.ReactNode;
@@ -628,6 +647,8 @@ function ParchmentPage({
   rtl: boolean;
   footerTagline?: string;
   brandHeaderVariant?: "full" | "compact";
+  footerWhatsAppLabel?: string;
+  footerPageLabel?: string;
   S: typeof styles;
 }) {
   const bodyFont = getGlobalFont(languageCode);
@@ -682,7 +703,7 @@ function ParchmentPage({
             {hasText(companyInfo?.whatsapp) ? (
               <View style={S.companyRectCell}>
                 <View style={S.companyRectIcon}><LotusBullet size={8} /></View>
-                <Text style={S.companyRectText}>WhatsApp {companyInfo!.whatsapp}</Text>
+                <Text style={S.companyRectText}>{footerWhatsAppLabel} {companyInfo!.whatsapp}</Text>
               </View>
             ) : null}
           </View>
@@ -704,7 +725,7 @@ function ParchmentPage({
               per PHYSICAL page, including pages it auto-generates when a
               section overflows. No more hard-coded "Page 2" duplicating
               itself across two sheets. */}
-          <Text style={S.footerPage} render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`} />
+          <Text style={S.footerPage} render={({ pageNumber, totalPages }) => `${footerPageLabel} ${pageNumber} / ${totalPages}`} />
         </View>
       </View>
     </Page>
@@ -767,12 +788,6 @@ export function ItineraryPDF({ tour, booking, companyInfo = KEMERYA_COMPANY_INFO
   const totalTravelers = booking.travelers.adults + booking.travelers.children + booking.travelers.infants;
   const bookingRef = booking.id.replace(/^bk-/, "").toUpperCase();
 
-  const totalTravelersTextParts: string[] = [];
-  if (booking.travelers.adults > 0) totalTravelersTextParts.push(`${booking.travelers.adults} Adult${booking.travelers.adults > 1 ? "s" : ""}`);
-  if (booking.travelers.children > 0) totalTravelersTextParts.push(`${booking.travelers.children} Child${booking.travelers.children > 1 ? "ren" : ""}`);
-  if (booking.travelers.infants > 0) totalTravelersTextParts.push(`${booking.travelers.infants} Infant${booking.travelers.infants > 1 ? "s" : ""}`);
-  const travelersText = totalTravelersTextParts.join(", ");
-
   const langCode = languageCode ?? "en";
   const rtl = isRTL(langCode);
   const S = useDirectionalStyles(rtl);
@@ -832,6 +847,14 @@ export function ItineraryPDF({ tour, booking, companyInfo = KEMERYA_COMPANY_INFO
   const cinzelStyle = { fontFamily: cinzelFont };
   const headingStyle = { fontFamily: headingFont };
 
+  // Traveler breakdown — mapped through label() so Adult/Child/Infant stay in
+  // the target language (moved here so the label helper is in scope).
+  const totalTravelersTextParts: string[] = [];
+  if (booking.travelers.adults > 0) totalTravelersTextParts.push(`${booking.travelers.adults} ${label(booking.travelers.adults > 1 ? "general.adults" : "general.adult", booking.travelers.adults > 1 ? "Adults" : "Adult")}`);
+  if (booking.travelers.children > 0) totalTravelersTextParts.push(`${booking.travelers.children} ${label(booking.travelers.children > 1 ? "general.children" : "general.child", booking.travelers.children > 1 ? "Children" : "Child")}`);
+  if (booking.travelers.infants > 0) totalTravelersTextParts.push(`${booking.travelers.infants} ${label(booking.travelers.infants > 1 ? "general.infants" : "general.infant", booking.travelers.infants > 1 ? "Infants" : "Infant")}`);
+  const travelersText = totalTravelersTextParts.join(", ");
+
   // ---- Visibility flags: EVERYTHING here decides whether a block with no
   // real content renders at all. This directly answers "hide anything with
   // nothing written in it". ----
@@ -864,15 +887,17 @@ export function ItineraryPDF({ tour, booking, companyInfo = KEMERYA_COMPANY_INFO
         languageCode={langCode}
         rtl={rtl}
         footerTagline={label("footer.tagline", "Curated Egyptian Journeys · Est. Luxury")}
+        footerWhatsAppLabel={label("footer.whatsapp", "WhatsApp")}
+        footerPageLabel={label("footer.page", "Page")}
         S={S}
       >
         <View style={S.bookingRefBadge}>
-          <Text style={[S.bookingRefText, cinzelStyle]}>Ref: {bookingRef}</Text>
+          <Text style={[S.bookingRefText, cinzelStyle]}>{label("hero.refLabel", "Ref")}: {bookingRef}</Text>
         </View>
 
         <View style={S.heroCard} wrap={false}>
           <View style={S.clientBadge}>
-            <Text style={S.clientBadgeText}>Booking Reference · {bookingRef}</Text>
+            <Text style={S.clientBadgeText}>{label("hero.bookingRef", "Booking Reference")} · {bookingRef}</Text>
           </View>
           <Text style={[S.heroSubtitle, cinzelStyle]}>{label("hero.subtitle", "Your Exclusive Travel Itinerary")}</Text>
           <Text style={[S.heroTourName, headingStyle]}>{displayTourTitle}</Text>
@@ -888,11 +913,11 @@ export function ItineraryPDF({ tour, booking, companyInfo = KEMERYA_COMPANY_INFO
             </View>
             <View style={S.heroStatLast}>
               <Text style={S.heroStatLabel}>{label("hero.duration", "Duration")}</Text>
-              <Text style={S.heroStatValue}>{daysCount} Days / {nights} Nights</Text>
+              <Text style={S.heroStatValue}>{daysCount} {label("general.days", "Days")} / {nights} {label("general.nights", "Nights")}</Text>
             </View>
             <View style={S.heroStat}>
               <Text style={S.heroStatLabel}>{label("hero.travelers", "Travelers")}</Text>
-              <Text style={S.heroStatValue}>{totalTravelers} Guest{totalTravelers > 1 ? "s" : ""}</Text>
+              <Text style={S.heroStatValue}>{totalTravelers} {label(totalTravelers > 1 ? "general.guests" : "general.guest", totalTravelers > 1 ? "Guests" : "Guest")}</Text>
             </View>
             <View style={S.heroStat}>
               <Text style={S.heroStatLabel}>{label("hero.totalPrice", "Total Price")}</Text>
@@ -903,7 +928,7 @@ export function ItineraryPDF({ tour, booking, companyInfo = KEMERYA_COMPANY_INFO
                     <Text style={S.offerPriceValue}>{formatCurrency(booking.offerPrice!, booking.currency)}</Text>
                     {booking.totalPrice > 0 && (
                       <View style={S.offerBadge}>
-                        <Text style={S.offerBadgeText}>{Math.round(((booking.totalPrice - booking.offerPrice!) / booking.totalPrice) * 100)}% OFF</Text>
+                        <Text style={S.offerBadgeText}>{Math.round(((booking.totalPrice - booking.offerPrice!) / booking.totalPrice) * 100)}% {label("general.off", "OFF")}</Text>
                       </View>
                     )}
                   </>
@@ -923,7 +948,7 @@ export function ItineraryPDF({ tour, booking, companyInfo = KEMERYA_COMPANY_INFO
           <SectionHeader S={S} number={nextSectionNumber()} icon="summary" title={label("section.summary", "Booking Summary")} titleStyle={headingStyle} />
           <View style={S.summaryGrid}>
             <SummaryCard S={S} label={label("summary.totalTravelers", "Total Travelers")} value={`${totalTravelers} (${travelersText})`} />
-            <SummaryCard S={S} label={label("summary.tourDuration", "Tour Duration")} value={`${daysCount} Days / ${nights} Nights`} />
+            <SummaryCard S={S} label={label("summary.tourDuration", "Tour Duration")} value={`${daysCount} ${label("general.days", "Days")} / ${nights} ${label("general.nights", "Nights")}`} />
             <SummaryCard S={S} label={label("summary.travelPeriod", "Travel Period")} value={`${formatDateShort(booking.startDate)} → ${formatDateShort(booking.endDate)}`} />
             <SummaryCard
               S={S}
@@ -958,13 +983,13 @@ export function ItineraryPDF({ tour, booking, companyInfo = KEMERYA_COMPANY_INFO
             <View style={S.offerBanner} wrap={false}>
               <View style={S.offerBannerTop}>
                 <ScarabBullet size={14} />
-                <Text style={[S.offerBannerBadge, cinzelStyle]}>{pct > 0 ? `SPECIAL OFFER · SAVE ${pct}%` : "SPECIAL OFFER"}</Text>
+                <Text style={[S.offerBannerBadge, cinzelStyle]}>{pct > 0 ? `${label("offer.special", "Special Offer")} · ${label("offer.save", "Save")} ${pct}%` : label("offer.special", "Special Offer")}</Text>
               </View>
               <Text style={[S.offerBannerTitle, cinzelStyle]}>{meta.title}</Text>
               <View style={S.offerBannerPrices}>
                 <Text style={S.offerBannerOld}>{formatCurrency(booking.totalPrice, booking.currency)}</Text>
                 <Text style={S.offerBannerNew}>{formatCurrency(booking.offerPrice!, booking.currency)}</Text>
-                {pct > 0 && <Text style={S.offerBannerPct}>You save {formatCurrency(booking.totalPrice - booking.offerPrice!, booking.currency)}</Text>}
+                {pct > 0 && <Text style={S.offerBannerPct}>{label("offer.youSave", "You save")} {formatCurrency(booking.totalPrice - booking.offerPrice!, booking.currency)}</Text>}
               </View>
               {hasText(meta.note) ? <Text style={S.offerBannerNote}>{meta.note}</Text> : null}
             </View>
@@ -989,10 +1014,10 @@ export function ItineraryPDF({ tour, booking, companyInfo = KEMERYA_COMPANY_INFO
             )}
             {(hasText(tour?.location) || hasText(tour?.group) || hasText(tour?.language) || hasText(tour?.durationLabel)) ? (
               <View style={{ ...S.summaryGrid, marginTop: SPACE.sm }}>
-                {hasText(tour?.durationLabel) ? <SummaryCard S={S} label="Duration" value={tour!.durationLabel!} /> : null}
-                {hasText(tour?.location) ? <SummaryCard S={S} label="Location" value={tour!.location!} /> : null}
-                {hasText(tour?.group) ? <SummaryCard S={S} label="Group" value={tour!.group!} /> : null}
-                {hasText(tour?.language) ? <SummaryCard S={S} label="Language" value={tour!.language!} /> : null}
+                {hasText(tour?.durationLabel) ? <SummaryCard S={S} label={label("overview.duration", "Duration")} value={tour!.durationLabel!} /> : null}
+                {hasText(tour?.location) ? <SummaryCard S={S} label={label("overview.location", "Location")} value={tour!.location!} /> : null}
+                {hasText(tour?.group) ? <SummaryCard S={S} label={label("overview.group", "Group")} value={tour!.group!} /> : null}
+                {hasText(tour?.language) ? <SummaryCard S={S} label={label("overview.language", "Language")} value={tour!.language!} /> : null}
               </View>
             ) : null}
           </View>
@@ -1028,7 +1053,14 @@ export function ItineraryPDF({ tour, booking, companyInfo = KEMERYA_COMPANY_INFO
           page number on every physical sheet it produces. No more forced
           per-page slicing, no more wasted blank space, no more duplicate
           "Page 2" overlap. ---------------- */}
-      <ParchmentPage companyInfo={companyInfo} languageCode={langCode} rtl={rtl} S={S}>
+      <ParchmentPage
+        companyInfo={companyInfo}
+        languageCode={langCode}
+        rtl={rtl}
+        footerWhatsAppLabel={label("footer.whatsapp", "WhatsApp")}
+        footerPageLabel={label("footer.page", "Page")}
+        S={S}
+      >
         <View style={S.section}>
           <SectionHeader S={S} number={nextSectionNumber()} icon="roadmap" title={label("section.roadmap", "Day-by-Day Itinerary")} titleStyle={headingStyle} />
 
@@ -1042,7 +1074,7 @@ export function ItineraryPDF({ tour, booking, companyInfo = KEMERYA_COMPANY_INFO
               translatedAccommodation={dayField(idx, "day.accommodation")}
               translatedMeals={dayField(idx, "day.meals")}
               translatedRoadmap={dayField(idx, "day.transport")}
-              tLabels={{ roadmap: label("day.roadmap", "Today's Roadmap"), stay: label("day.stay", "Stay"), meals: label("day.meals", "Meals") }}
+              tLabels={{ day: label("day.day", "Day"), roadmap: label("day.roadmap", "Today's Roadmap"), stay: label("day.stay", "Stay"), meals: label("day.meals", "Meals") }}
               headingStyle={headingStyle}
               cinzelStyle={cinzelStyle}
             />
@@ -1057,6 +1089,7 @@ export function ItineraryPDF({ tour, booking, companyInfo = KEMERYA_COMPANY_INFO
                 description:
                   "This is a fully customized tour. Your dedicated Operations Manager will design each day according to your preferences and provide a detailed schedule shortly.",
               }}
+              tLabels={{ day: label("day.day", "Day"), roadmap: label("day.roadmap", "Today's Roadmap"), stay: label("day.stay", "Stay"), meals: label("day.meals", "Meals") }}
               headingStyle={headingStyle}
               cinzelStyle={cinzelStyle}
             />
@@ -1112,51 +1145,51 @@ export function ItineraryPDF({ tour, booking, companyInfo = KEMERYA_COMPANY_INFO
         <View style={S.section}>
           <SectionHeader S={S} number={nextSectionNumber()} icon="price" title={label("section.pricing", "Pricing & Payment")} titleStyle={headingStyle} />
           <View style={S.pricingTable}>
-            <View style={{ ...S.pricingRow, backgroundColor: "rgba(232, 215, 177, 0.3)" }} wrap={false}>
-              <Text style={{ ...S.pricingCell, ...S.pricingHeaderCell }}>{label("pricing.description", "Description")}</Text>
-              <Text style={{ ...S.pricingCellRight, ...S.pricingHeaderCell }}>{label("pricing.amount", "Amount")} ({booking.currency})</Text>
+            <View style={[S.pricingRow, S.pricingRowHead]} wrap={false}>
+              <Text style={S.pricingLeftHead}>{label("pricing.description", "Description")}</Text>
+              <Text style={S.pricingRightHead}>{label("pricing.amount", "Amount")} ({booking.currency})</Text>
             </View>
             <View style={S.pricingRow} wrap={false}>
-              <Text style={S.pricingCell}>{label("pricing.tourPackage", "Tour Package")} ({displayTourTitle})</Text>
-              <Text style={S.pricingCellRight}>{formatCurrency(booking.totalPrice, booking.currency)}</Text>
+              <Text style={S.pricingCell}>{label("pricing.tourPackage", "Tour Package")}</Text>
+              <Text style={S.pricingCellRight}>{displayTourTitle}</Text>
             </View>
             {booking.travelers.adults > 0 && (
               <View style={S.pricingRow} wrap={false}>
-                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: SPACE.xs, flex: 1 }}>
+                <View style={S.pricingLeft}>
                   <SunDiscBullet size={9} />
-                  <Text style={S.pricingCell}>{label("pricing.adults", "Adults")} ({booking.travelers.adults})</Text>
+                  <Text style={S.pricingLeftText}>{label("pricing.adults", "Adults")} ({booking.travelers.adults})</Text>
                 </View>
-                <Text style={S.pricingCellRight}>—</Text>
+                <Text style={S.pricingRight}>—</Text>
               </View>
             )}
             {booking.travelers.children > 0 && (
               <View style={S.pricingRow} wrap={false}>
-                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: SPACE.xs, flex: 1 }}>
+                <View style={S.pricingLeft}>
                   <SunDiscBullet size={9} />
-                  <Text style={S.pricingCell}>{label("pricing.children", "Children")} ({booking.travelers.children})</Text>
+                  <Text style={S.pricingLeftText}>{label("pricing.children", "Children")} ({booking.travelers.children})</Text>
                 </View>
-                <Text style={S.pricingCellRight}>—</Text>
+                <Text style={S.pricingRight}>—</Text>
               </View>
             )}
             {booking.travelers.infants > 0 && (
               <View style={S.pricingRow} wrap={false}>
-                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: SPACE.xs, flex: 1 }}>
+                <View style={S.pricingLeft}>
                   <SunDiscBullet size={9} />
-                  <Text style={S.pricingCell}>{label("pricing.infants", "Infants")} ({booking.travelers.infants})</Text>
+                  <Text style={S.pricingLeftText}>{label("pricing.infants", "Infants")} ({booking.travelers.infants})</Text>
                 </View>
-                <Text style={S.pricingCellRight}>—</Text>
+                <Text style={S.pricingRight}>—</Text>
               </View>
             )}
             {(booking.specialRequestItems ?? []).map((item, i) => (
               <View key={i} style={S.pricingRow} wrap={false}>
-                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: SPACE.xs, flex: 1 }}>
+                <View style={S.pricingLeft}>
                   <SunDiscBullet size={9} />
-                  <Text style={S.pricingCell}>Extra Request · {item.description}</Text>
+                  <Text style={S.pricingLeftText}>{label("pricing.extraRequest", "Extra Request")}: {shapeForPdf(item.description)}</Text>
                 </View>
-                <Text style={S.pricingCellRight}>{formatCurrency(item.price, booking.currency)}</Text>
+                <Text style={S.pricingRight}>{formatCurrency(item.price, booking.currency)}</Text>
               </View>
             ))}
-            <View style={{ ...S.pricingRow, ...S.pricingRowLast }} wrap={false}>
+            <View style={[S.pricingRow, S.pricingRowTotal]} wrap={false}>
               <Text style={{ ...S.pricingCell, ...S.pricingTotalLabel }}>{label("pricing.totalAmountDue", "Total Amount Due")}</Text>
               <Text style={{ ...S.pricingCellRight, ...S.pricingTotalValue }}>{formatCurrency(booking.totalPrice, booking.currency)}</Text>
             </View>
@@ -1347,7 +1380,7 @@ export function ItineraryPDF({ tour, booking, companyInfo = KEMERYA_COMPANY_INFO
           <Text style={S.reviewSubtitle}>{label("review.subtitle", "Loved your tour? Your feedback on Google Business helps travelers like you find us.")}</Text>
           <Link src={companyInfo.socialMedia?.googleBusiness || "https://share.google/RLldzNlk9YFVuIGbD"}>
             <View style={S.reviewBadge}>
-              <Text style={[S.reviewBadgeText, headingStyle]}>{label("review.cta", "★ Write a Review")}</Text>
+              <Text style={[S.reviewBadgeText, headingStyle]}>{label("review.cta", "Write a Review")}</Text>
             </View>
           </Link>
           <Text style={S.reviewLink}>{companyInfo.socialMedia?.googleBusiness || "https://share.google/RLldzNlk9YFVuIGbD"}</Text>
@@ -1411,7 +1444,7 @@ function DayCard({
   translatedAccommodation?: string;
   translatedMeals?: string;
   translatedRoadmap?: string;
-  tLabels?: { roadmap?: string; stay?: string; meals?: string };
+  tLabels?: { day?: string; roadmap?: string; stay?: string; meals?: string };
   headingStyle?: Record<string, string>;
   cinzelStyle?: Record<string, string>;
 }) {
@@ -1429,6 +1462,16 @@ function DayCard({
   const accommodationText = shapeForPdf(accommodation);
   const mealsText = shapeForPdf(mealsJoined);
 
+  // FIX #4 (Roadmap duplication): only render the roadmap when it actually
+  // adds information. If the stops text is just another rendering of the
+  // day's description (identical after normalization), that section is hidden
+  // so the card never shows the same sentence twice.
+  const normalizeSeg = (s: string) => s.replace(/[\s\u200f\u200e\u00a0]+/g, " ").trim().toLowerCase();
+  const stopsText = stops.join(" ");
+  const roadmapDuplicatesDescription =
+    stops.length > 0 && hasText(dayDescription) && normalizeSeg(stopsText) === normalizeSeg(dayDescription);
+  const showRoadmap = stops.length > 0 && !roadmapDuplicatesDescription;
+
   return (
     // No `break={false}` / `wrap={false}` on the whole card on purpose: a
     // day's text length varies a lot, and forcing the entire card to stay
@@ -1440,13 +1483,13 @@ function DayCard({
     <View style={S.dayCard}>
       <View style={S.dayHeader} wrap={false}>
         <View style={S.dayBadge}>
-          <Text style={[S.dayBadgeText, headingStyle]}>DAY {day.day}</Text>
+          <Text style={[S.dayBadgeText, headingStyle]}>{tLabels?.day || "Day"} {day.day}</Text>
         </View>
         <Text style={[S.dayTitle, headingStyle]}>{dayTitle}</Text>
       </View>
       <View style={S.dayContent}>
         <Text style={S.dayDescription}>{dayDescription}</Text>
-        {stops.length > 0 && (
+        {showRoadmap && (
           <View style={S.dayRoadmap}>
             <Text style={[S.dayRoadmapTitle, cinzelStyle]}>{tLabels?.roadmap || "Today's Roadmap"}</Text>
             {stops.map((stop, i) => (

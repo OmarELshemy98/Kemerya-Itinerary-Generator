@@ -137,6 +137,7 @@ export function getStaticLabels(): Record<string, string> {
     "day.roadmap": "Today's Roadmap",
     "day.stay": "Stay",
     "day.meals": "Meals",
+    "day.day": "Day",
 
     // Pricing labels
     "pricing.description": "Description",
@@ -170,7 +171,7 @@ export function getStaticLabels(): Record<string, string> {
     // Review labels
     "review.title": "Leave a Review",
     "review.subtitle": "Loved your tour? Your feedback on Google Business helps travelers like you find us.",
-    "review.cta": "★ Write a Review",
+    "review.cta": "Write a Review",
 
     // Payment terms (5 bullets)
     "terms.payment.1": "A 30% non-refundable deposit is required to confirm the booking.",
@@ -192,6 +193,34 @@ export function getStaticLabels(): Record<string, string> {
     // Fallback empty state strings
     "fallback.inclusions": "Customized inclusions to be confirmed by Operations team.",
     "fallback.exclusions": "Standard exclusion terms apply.",
+
+    // Extra hardcoded strings now routed through label() so they never stay
+    // in English — every one of these is wrapped in {label(key, fallback)}
+    // in itinerary-pdf.tsx, so adding them here guarantees 100% coverage.
+    "hero.bookingRef": "Booking Reference",
+    "hero.refLabel": "Ref",
+    "hero.dayNight": "Days / Nights",
+    "general.days": "Days",
+    "general.nights": "Nights",
+    "general.guest": "Guest",
+    "general.guests": "Guests",
+    "general.adult": "Adult",
+    "general.adults": "Adults",
+    "general.child": "Child",
+    "general.children": "Children",
+    "general.infant": "Infant",
+    "general.infants": "Infants",
+    "general.off": "OFF",
+    "offer.special": "Special Offer",
+    "offer.save": "Save",
+    "offer.youSave": "You save",
+    "overview.duration": "Duration",
+    "overview.location": "Location",
+    "overview.group": "Group",
+    "overview.language": "Language",
+    "pricing.extraRequest": "Extra Request",
+    "footer.page": "Page",
+    "footer.whatsapp": "WhatsApp",
 
     // FIX #3 (protocol aliases): the SAME four headline labels keyed by their
     // exact on-page text, so Gemini output maps dynamically in the JSX via
