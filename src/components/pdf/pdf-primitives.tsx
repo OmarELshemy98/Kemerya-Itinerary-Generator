@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { View, Text, Svg, Path, G, Circle, Ellipse, StyleSheet } from "@react-pdf/renderer";
+import { View, Text, Svg, Path, G, Circle, Ellipse, StyleSheet, type Styles } from "@react-pdf/renderer";
 
 export const C = {
   deepBrown: "#3D2B17",
@@ -93,8 +93,8 @@ export const DigitalSignature = ({ w = 150, h = 45 }: { w?: number; h?: number }
   </Svg>
 );
 
-export const Divider = ({ style }: { style?: Record<string, unknown> }) => (
-  <View style={[{ height: 1, backgroundColor: CARD_BORDER, marginVertical: 6, opacity: 0.5 }, style]} />
+export const Divider = ({ style }: { style?: Styles }) => (
+  <View style={[{ height: 1, backgroundColor: CARD_BORDER, marginVertical: 6, opacity: 0.5 }, ...(style ? [style] : [])]} />
 );
 
 export const BulletItem = ({ icon, text }: { icon: React.ReactNode; text: string }) => (

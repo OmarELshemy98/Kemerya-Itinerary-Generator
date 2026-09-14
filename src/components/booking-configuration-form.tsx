@@ -1506,7 +1506,7 @@ export function BookingConfigurationForm({
                   />
                 </div>
                 <p className="mt-1 text-[10px] text-slate-400">
-                  The client's country of residence. Appears on the PDF booking summary.
+                  The client&apos;s country of residence. Appears on the PDF booking summary.
                 </p>
               </div>
               <div>

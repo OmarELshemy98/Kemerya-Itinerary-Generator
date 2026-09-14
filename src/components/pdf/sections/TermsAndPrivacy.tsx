@@ -46,7 +46,7 @@ export function TermsAndPrivacy({ ctx, termsItems, privacyItems, sectionNumber }
       )}
 
       {privacyItems.length > 0 && (
-        <View style={[styles.panel, termsItems.length > 0 && { marginTop: 6 }]}>
+        <View style={termsItems.length > 0 ? [styles.panel, { marginTop: 6 }] : styles.panel}>
           <View style={styles.panelTitle}><EyeIcon s={10} /><Text style={styles.panelTitleText}>{label("privacy.title", "Privacy Policy")}</Text></View>
           {renderItems(privacyItems)}
           <Link src={PRIVACY_URL} style={styles.termsLink}>{label("privacy.readMore", "Read full policy")}: {PRIVACY_URL}</Link>

@@ -32,7 +32,7 @@ export function OptionalTours({ ctx, items, currency, sectionNumber }: Props) {
       </View>
       <View style={styles.panel}>
         {items.map((item, i) => (
-          <View key={i} style={[styles.priceRow, i === items.length - 1 && { borderBottomWidth: 0 }]} wrap={false}>
+          <View key={i} style={i === items.length - 1 ? [styles.priceRow, { borderBottomWidth: 0 }] : styles.priceRow} wrap={false}>
             <View style={styles.priceLeft}>
               <SunIcon s={8} />
               <Text style={styles.priceLeftText}>{item.title}</Text>
