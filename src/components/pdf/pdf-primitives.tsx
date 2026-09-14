@@ -98,14 +98,14 @@ export const Divider = ({ style }: { style?: Styles }) => (
 );
 
 export const BulletItem = ({ icon, text }: { icon: React.ReactNode; text: string }) => (
-  <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6, marginBottom: 4 }}>
+  <View wrap={false} style={{ flexDirection: "row", alignItems: "flex-start", gap: 6, marginBottom: 4 }}>
     <View style={{ width: 14, height: 14, justifyContent: "center", alignItems: "center", marginTop: 1 }}>{icon}</View>
     <Text style={{ fontSize: 8.5, color: C.warmBrown, lineHeight: 1.5, flex: 1 }}>{text}</Text>
   </View>
 );
 
 export const MetaRow = ({ icon, label, value }: { icon?: React.ReactNode; label: string; value: string }) => (
-  <View style={{ flexDirection: "row", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+  <View wrap={false} style={{ flexDirection: "row", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
     {icon && <View style={{ flexShrink: 0 }}>{icon}</View>}
     <Text style={{ fontSize: 7, color: C.agedBrown, textTransform: "uppercase", letterSpacing: 0.3 }}>{label} </Text>
     <Text style={{ fontSize: 8.5, color: C.deepBrown }}>{value}</Text>

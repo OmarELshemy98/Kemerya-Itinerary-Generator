@@ -30,7 +30,7 @@ export function DayByDayItinerary({ ctx, itinerary, dayField, sectionNumber, fal
         <Text style={styles.sectionTitle}>{label("section.roadmap", "Day-by-Day Itinerary")}</Text>
       </View>
       {itinerary.map((day, idx) => (
-        <View key={day.day} style={styles.dayCard}>
+        <View key={day.day} style={styles.dayCard} wrap={false}>
           <View style={styles.dayHeader} wrap={false}>
             <View style={styles.dayBadge}><Text style={[styles.dayBadgeText, headingStyle]}>{tLabels.day} {day.day}</Text></View>
             <Text style={[styles.dayTitle, headingStyle]}>{dayField(idx, "day.title") || day.title}</Text>
@@ -43,7 +43,7 @@ export function DayByDayItinerary({ ctx, itinerary, dayField, sectionNumber, fal
         </View>
       ))}
       {itinerary.length === 0 && fallbackDay && (
-        <View style={styles.dayCard}>
+        <View style={styles.dayCard} wrap={false}>
           <Text style={styles.dayDesc}>{fallbackDay.description}</Text>
         </View>
       )}

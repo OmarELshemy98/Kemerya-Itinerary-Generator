@@ -50,6 +50,7 @@ export const S = StyleSheet.create({
   panel: { backgroundColor: CARD_BG, borderWidth: 1, borderColor: CARD_BORDER, borderRadius: 3, padding: 7, marginBottom: 5 },
   panelTitle: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 5 },
   panelTitleText: { fontSize: 9, color: C.deepBrown, fontWeight: 400 },
+  flowBlock: { marginBottom: 6, paddingVertical: 2 },
   priceRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, paddingVertical: 3, borderBottomWidth: 0.5, borderBottomColor: CARD_BORDER },
   priceLeft: { flex: 1 },
   priceLeftText: { fontSize: 8.5, color: C.warmBrown, lineHeight: 1.5 },

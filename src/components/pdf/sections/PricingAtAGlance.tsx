@@ -161,7 +161,7 @@ export function PricingAtAGlance({ ctx, booking, travelersText, sectionNumber }:
   const offerNote = booking.offerNote?.trim();
 
   return (
-    <View style={styles.section}>
+    <View style={styles.section} wrap={false}>
       <View style={styles.sectionHeader} wrap={false} minPresenceAhead={60}>
         <View style={styles.sectionNum}><Text style={styles.sectionNumText}>{sectionNumber}</Text></View>
         <View style={styles.sectionIcon}><SunIcon s={12} /></View>
