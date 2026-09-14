@@ -14,7 +14,7 @@ import { hasText } from "./pdf-primitives";
 
 import { BookingReference } from "./sections/BookingReference";
 import { BookingSummary } from "./sections/BookingSummary";
-import { SpecialOffer } from "./sections/SpecialOffer";
+import { PricingAtAGlance } from "./sections/PricingAtAGlance";
 import { TourDescription } from "./sections/TourDescription";
 import { DayByDayItinerary } from "./sections/DayByDayItinerary";
 import { OptionalTours } from "./sections/OptionalTours";
@@ -123,7 +123,7 @@ export default function ItineraryPDF({ tour, booking, companyInfo, translatedDat
 
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
-      {/* Page 1 — Booking Summary & Special Offer */}
+      {/* Page 1 — Booking Summary & Pricing at a Glance */}
       <SectionPage>
         <BookingReference S={S} label={(k, fb) => label(translatedData, k, fb)} bookingRef={booking.id} cinzelStyle={cinzelStyle} />
         <BookingSummary
@@ -135,7 +135,7 @@ export default function ItineraryPDF({ tour, booking, companyInfo, translatedDat
           tourTitle={label(translatedData, "tour.title", tourTitle)}
           sectionNumber={nextSectionNumber()}
         />
-        <SpecialOffer ctx={ctx} booking={booking} sectionNumber={nextSectionNumber()} />
+        <PricingAtAGlance ctx={ctx} booking={booking} travelersText={travelersText} sectionNumber={nextSectionNumber()} />
       </SectionPage>
 
       {/* Page 2 — Tour Description */}

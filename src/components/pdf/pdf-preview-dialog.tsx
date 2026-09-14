@@ -25,13 +25,22 @@ export function buildWhatsAppMessage(
   tour: Tour | null,
   companyInfo: { name: string; phone: string; website: string },
   fileName: string,
-  lang: string = "en"
+  lang: string = "en",
+  itineraryLink?: string
 ): string {
   const tourName = booking.isCustomTour
     ? booking.customTourTitle || "Custom Tour"
     : tour?.title || "Kemerya Tour";
   const totalTravelers =
     booking.travelers.adults + booking.travelers.children + booking.travelers.infants;
+  // Client-facing link: the PUBLIC itinerary page (never the dashboard).
+  // booking.id is the booking reference (e.g. bk-20260914-649) and the public
+  // /itinerary/<ref> page resolves it via booking_data->>bookingRef.
+  const link =
+    itineraryLink ||
+    (typeof window !== "undefined"
+      ? `${window.location.origin}/itinerary/${booking.id.replace(/^bk-/, "")}`
+      : "");
   // Static luxury template (offline, zero AI cost) — falls back to English.
   return getWhatsAppMessage(lang, {
     clientName: booking.clientName || "Guest",
@@ -41,7 +50,7 @@ export function buildWhatsAppMessage(
     totalTravelers,
     currency: booking.currency,
     price: (booking.offerPrice && booking.offerPrice > 0 ? booking.offerPrice : booking.totalPrice).toLocaleString(),
-    itineraryLink: typeof window !== "undefined" ? window.location.href : "",
+    itineraryLink: link,
     companyPhone: companyInfo.phone,
     companyWebsite: companyInfo.website,
   }) + (fileName ? `\n\n📎 PDF: ${fileName}` : "");

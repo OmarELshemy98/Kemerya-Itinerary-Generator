@@ -25,11 +25,19 @@ export async function GET(
       return NextResponse.json({ ok: false, error: "Service client not available" }, { status: 500 });
     }
 
-    const { data, error } = await client
-      .from("itineraries")
-      .select("*")
-      .eq("id", id)
-      .limit(1);
+    // Accept either the internal UUID or the public booking reference
+    // (booking_data->>bookingRef, e.g. "bk-20260914-649" or "20260914-649")
+    // so client-facing share links work without exposing internal IDs.
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}/i.test(id);
+    let query = client.from("itineraries").select("*").limit(1);
+    if (isUuid) {
+      query = query.eq("id", id);
+    } else {
+      const ref = id.startsWith("bk-") ? id : `bk-${id}`;
+      query = query.filter("booking_data->>bookingRef", "eq", ref);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       return NextResponse.json({ ok: false, error: `Database error: ${error.message}` }, { status: 500 });

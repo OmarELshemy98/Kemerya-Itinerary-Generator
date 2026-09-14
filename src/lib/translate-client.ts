@@ -102,6 +102,7 @@ export function getStaticLabels(): Record<string, string> {
     "section.inclusions": "Inclusions",
     "section.exclusions": "Exclusions",
     "section.pricing": "Pricing Details",
+    "section.pricingGlance": "Pricing at a Glance",
     "section.terms": "Terms & Conditions",
     "section.contact": "Contact Information",
     "general.thankYou": "Thank You",
@@ -147,6 +148,12 @@ export function getStaticLabels(): Record<string, string> {
     "pricing.children": "Children",
     "pricing.infants": "Infants",
     "pricing.totalAmountDue": "Total Amount Due",
+    // PRICING AT A GLANCE — financial breakdown table (PDF page 1)
+    "pricing.packageTotal": "Package Total",
+    "pricing.perPerson": "Price Per Person",
+    "pricing.perPersonUnit": "per person",
+    "pricing.bookingDeposit": "35% Booking Deposit",
+    "pricing.remainingBalance": "Remaining 65%",
 
     // Operations labels
     "ops.roundClock": "Your Operations Team \u2014 Available Round the Clock",
