@@ -23,7 +23,7 @@ import {
   formatCurrency,
   calculateNights,
 } from "@/lib/utils";
-import { UserIcon, CalendarIcon, MapPinIcon } from "./pdf-icons";
+import { CheckIcon, CrossIcon, UserIcon, CalendarIcon, MapPinIcon } from "./pdf-icons";
 import {
   isRTL,
   getGlobalFont,
@@ -50,9 +50,26 @@ interface ItineraryPDFProps {
 Font.registerHyphenationCallback((word) => [word]);
 
 /* ============================================================================
- * DESIGN SYSTEM
- * A single source of truth for color + spacing so every panel, border and
- * gap in the document reads as ONE coherent product instead of a collage.
+ * WHY THIS VERSION IS STRUCTURED DIFFERENTLY
+ * ----------------------------------------------------------------------------
+ * The previous overlap / blank-page bugs were not styling bugs — they were
+ * pagination bugs:
+ *
+ *  1. The itinerary was manually sliced into fixed groups ("days 1-3" on one
+ *     hard-coded <Page pageLabel="Page 2">, "days 4-7" on another). When one
+ *     day's text was longer than expected, react-pdf auto-continued that
+ *     SAME <Page> onto a second physical sheet — but the fixed footer (with
+ *     the hard-coded "Page 2" label) got redrawn on both physical sheets,
+ *     printing directly over the flowing text. That is the overlap you saw.
+ *  2. Inclusions / Pricing / Ops / Terms were each forced onto their OWN
+ *     separate <Page>, so whenever a section didn't fill a full page, the
+ *     rest of that page was simply wasted blank space.
+ *
+ * Fix: everything after the cover is ONE continuous flow inside a single
+ * <Page>. react-pdf paginates that flow automatically and correctly,
+ * repeating the fixed header/footer on every physical sheet it needs — and
+ * we use react-pdf's built-in `render={({pageNumber, totalPages}) => ...}`
+ * so the page number is always accurate, never hard-coded.
  * ==========================================================================*/
 
 const COLOR = {
@@ -67,21 +84,19 @@ const COLOR = {
   parchmentLight: "#F5EBD3",
   ink: "#2C1E10",
   scarabGreen: "#1F6B45",
-  rust: "#8B3A2E", // strike-through / sale-price accent (was ad-hoc before)
-  white: "#FDFBF7",
+  rust: "#8B3A2E",
 };
 
-// Every "card" panel in the document shares the exact same skin.
 const CARD_BG = "rgba(253, 251, 247, 0.5)";
 const CARD_BORDER = "rgba(184, 150, 58, 0.55)";
-const CARD = {
-  backgroundColor: CARD_BG,
-  borderWidth: 1,
-  borderColor: CARD_BORDER,
-} as const;
+const CARD = { backgroundColor: CARD_BG, borderWidth: 1, borderColor: CARD_BORDER } as const;
 
-// One spacing scale used everywhere — nothing outside this set.
 const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 22, xxl: 30 };
+
+/** True only when the value is a real, non-blank string. Used everywhere to
+ * decide whether a block should render at all — nothing with empty content
+ * is ever shown. */
+const hasText = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
 
 function getOfferMeta(booking: BookingConfig): { title: string; note: string } {
   return {
@@ -91,8 +106,7 @@ function getOfferMeta(booking: BookingConfig): { title: string; note: string } {
 }
 
 /* ============================================================================
- * ICONOGRAPHY — small, purposeful pharaonic glyphs used as list bullets.
- * Kept intentionally restrained: one glyph per icon, no stacked ornaments.
+ * ICONOGRAPHY
  * ==========================================================================*/
 
 const ScarabBullet = ({ size = 11 }: { size?: number }) => (
@@ -122,13 +136,6 @@ const EyeOfHorusBullet = ({ size = 11 }: { size?: number }) => (
       />
       <Circle cx={13} cy={12} r={2.5} fill={COLOR.paleGold} />
       <Circle cx={13} cy={12} r={1.1} fill="#0F172A" />
-      <Path
-        d="M0 14 L 5 13 M 1 18 Q 4 21 7 20 M 13 20 C 13 22 12 24.5 10 25"
-        stroke={COLOR.royalGold}
-        strokeWidth={1.1}
-        fill="none"
-        strokeLinecap="round"
-      />
     </G>
   </Svg>
 );
@@ -186,24 +193,9 @@ const AnkhGlyph = ({ size = 12, color = COLOR.royalGold }: { size?: number; colo
   </Svg>
 );
 
-/* --------------------------------------------------------------------------
- * SECTION TITLE ICONOGRAPHY
- * A small, themed gold glyph that sits next to each numbered section title so
- * the reader instantly recognises what a page is about without reading a word.
- * --------------------------------------------------------------------------*/
-
-type SectionGlyphKind =
-  | "summary"
-  | "overview"
-  | "roadmap"
-  | "list"
-  | "price"
-  | "contact"
-  | "terms";
+type SectionGlyphKind = "summary" | "overview" | "roadmap" | "list" | "price" | "contact" | "terms";
 
 const SectionGlyph = ({ kind, size = 15 }: { kind: SectionGlyphKind; size?: number }) => {
-  const W = 24;
-  const c = COLOR.royalGold;
   const glyphs: Record<SectionGlyphKind, React.ReactNode> = {
     summary: (
       <>
@@ -227,7 +219,6 @@ const SectionGlyph = ({ kind, size = 15 }: { kind: SectionGlyphKind; size?: numb
     list: (
       <>
         <Path d="M9 5h11M9 12h11M9 19h11" />
-        <Path d="M3.5 4.5h0M3.5 11.5h0M3.5 18.5h0" />
         <Path d="M1.5 18l1.3 1.3L5 16.6" />
       </>
     ),
@@ -235,13 +226,10 @@ const SectionGlyph = ({ kind, size = 15 }: { kind: SectionGlyphKind; size?: numb
       <>
         <Path d="M2 7.5h20v9H2Z" />
         <Circle cx={12} cy={12} r={2.6} />
-        <Path d="M6 10.5h0M18 13.5h0" />
       </>
     ),
     contact: (
-      <>
-        <Path d="M4 3h4l1.6 4.4-2.1 1.8a13.5 13.5 0 0 0 7.3 7.3l1.8-2.1L21 16v4a2 2 0 0 1-2 2A17 17 0 0 1 2 5a2 2 0 0 1 2-2Z" />
-      </>
+      <Path d="M4 3h4l1.6 4.4-2.1 1.8a13.5 13.5 0 0 0 7.3 7.3l1.8-2.1L21 16v4a2 2 0 0 1-2 2A17 17 0 0 1 2 5a2 2 0 0 1 2-2Z" />
     ),
     terms: (
       <>
@@ -251,15 +239,14 @@ const SectionGlyph = ({ kind, size = 15 }: { kind: SectionGlyphKind; size?: numb
     ),
   };
   return (
-    <Svg width={size} height={size} viewBox={`0 0 ${W} ${W}`}>
-      <G fill="none" stroke={c} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <G fill="none" stroke={COLOR.royalGold} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
         {glyphs[kind]}
       </G>
     </Svg>
   );
 };
 
-/** Numbered + iconed section title with the trailing gold rule. */
 function SectionHeader({
   S,
   number,
@@ -274,7 +261,7 @@ function SectionHeader({
   titleStyle?: Record<string, string>;
 }) {
   return (
-    <View style={S.sectionHeader}>
+    <View style={S.sectionHeader} wrap={false}>
       <View style={S.sectionNumber}><Text>{number}</Text></View>
       <View style={S.sectionIcon}><SectionGlyph kind={icon} size={15} /></View>
       <Text style={[S.sectionTitle, titleStyle]}>{title}</Text>
@@ -283,25 +270,9 @@ function SectionHeader({
   );
 }
 
-/**
- * The ONE divider used throughout the document. A single hairline with a
- * small gold medallion — replaces the five competing divider styles from
- * the previous version so pages read as calm and premium, not busy.
- */
-const Divider = ({
-  compact = false,
-  color = COLOR.royalGold,
-}: {
-  compact?: boolean;
-  color?: string;
-}) => (
-  <View
-    style={{
-      flexDirection: "row",
-      alignItems: "center",
-      marginVertical: compact ? SPACE.xs : SPACE.sm,
-    }}
-  >
+/** The one divider used throughout the document. */
+const Divider = ({ compact = false, color = COLOR.royalGold }: { compact?: boolean; color?: string }) => (
+  <View style={{ flexDirection: "row", alignItems: "center", marginVertical: compact ? SPACE.xs : SPACE.sm }}>
     <View style={{ flex: 1, height: 0.75, backgroundColor: color, opacity: 0.55 }} />
     {!compact && (
       <View
@@ -330,41 +301,37 @@ const Divider = ({
  * ==========================================================================*/
 
 const styles = StyleSheet.create({
-  page: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: COLOR.parchmentLight,
-  },
+  page: { width: "100%", height: "100%", backgroundColor: COLOR.parchmentLight },
   parchmentBg: { position: "absolute", top: 0, left: 0, width: 595, height: 842 },
   borderFrame: { position: "absolute", top: 0, left: 0, width: 595, height: 842 },
 
   contentLayer: {
-    // Bottom clearance keeps text safely above the fixed footer band
-    // (bottom:18 + ~92pt footer) with a small buffer — no wasted margin
-    // beyond what's needed to guarantee zero overlap.
     paddingTop: 30,
     paddingLeft: 40,
     paddingRight: 40,
-    paddingBottom: 124,
+    // Just enough to clear the (now single, compact) footer bar with a
+    // small safety buffer — this used to be inflated to hide a broken
+    // image box; removing that box let us tighten this and reclaim space.
+    paddingBottom: 92,
     flexDirection: "column",
   },
 
+  // ---- Footer: ONE bordered rectangle with real company details, always
+  // populated. No decorative image box that can render empty. ----
   footerBand: { position: "absolute", bottom: 18, left: 38, right: 38, width: 519, flexDirection: "column" },
-  nileImageWrap: { width: "100%", height: 30, borderWidth: 1, borderColor: COLOR.royalGold, overflow: "hidden", marginBottom: SPACE.xs },
-  nileImage: { width: "100%", height: "100%", objectFit: "cover" },
   companyRect: {
     borderWidth: 1,
     borderColor: COLOR.royalGold,
-    backgroundColor: "rgba(253, 251, 247, 0.78)",
-    paddingVertical: SPACE.xs + 1,
+    backgroundColor: "rgba(253, 251, 247, 0.85)",
+    paddingVertical: SPACE.xs + 2,
     paddingHorizontal: SPACE.sm,
   },
   companyRectRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: SPACE.md },
   companyRectCell: { flexDirection: "row", alignItems: "center", gap: 3 },
-  companyRectIcon: { width: 12, height: 12, justifyContent: "center", alignItems: "center" },
-  companyRectText: { fontSize: 7, color: COLOR.deepBrown, fontWeight: 700, letterSpacing: 0.2 },
+  companyRectIcon: { width: 11, height: 11, justifyContent: "center", alignItems: "center" },
+  companyRectText: { fontSize: 7, color: COLOR.deepBrown, fontWeight: 700 },
   companyRectAddressRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 3, marginTop: 3 },
-  companyRectAddress: { fontSize: 6.6, color: COLOR.warmBrown, fontWeight: 600, maxWidth: 420 },
+  companyRectAddress: { fontSize: 6.6, color: COLOR.warmBrown, fontWeight: 600 },
   footerCaption: {
     marginTop: SPACE.xs,
     paddingHorizontal: SPACE.sm,
@@ -376,30 +343,12 @@ const styles = StyleSheet.create({
   footerPage: { fontSize: 7.5, color: COLOR.agedBrown, fontWeight: 700, letterSpacing: 1 },
   footerTagline: { fontSize: 6.5, color: COLOR.antiqueGold, letterSpacing: 2.5, textTransform: "uppercase" as const, marginTop: 1 },
 
-  // ---- Header -------------------------------------------------------------
-  headerBox: {
-    flexDirection: "column",
-    alignItems: "center",
-    marginBottom: SPACE.md,
-    gap: SPACE.xs,
-  },
-  officialLogo: { width: 168, height: 64, objectFit: "contain", alignSelf: "center" },
-  officialLogoSmall: { width: 118, height: 46, objectFit: "contain", alignSelf: "center" },
-  brandTitle: {
-    fontSize: 20,
-    color: COLOR.deepBrown,
-    letterSpacing: 2.5,
-    fontWeight: 700,
-    textAlign: "center",
-    lineHeight: 1.3,
-  },
-  brandTagline: {
-    fontSize: 8.5,
-    color: COLOR.agedBrown,
-    letterSpacing: 2,
-    textTransform: "uppercase" as const,
-    textAlign: "center",
-  },
+  // ---- Header ----
+  headerBox: { flexDirection: "column", alignItems: "center", marginBottom: SPACE.md, gap: SPACE.xs },
+  officialLogo: { width: 160, height: 60, objectFit: "contain", alignSelf: "center" },
+  officialLogoSmall: { width: 112, height: 44, objectFit: "contain", alignSelf: "center" },
+  brandTitle: { fontSize: 20, color: COLOR.deepBrown, letterSpacing: 2.5, fontWeight: 700, textAlign: "center", lineHeight: 1.3 },
+  brandTagline: { fontSize: 8.5, color: COLOR.agedBrown, letterSpacing: 2, textTransform: "uppercase" as const, textAlign: "center" },
 
   bookingRefBadge: {
     backgroundColor: COLOR.deepBrown,
@@ -412,13 +361,7 @@ const styles = StyleSheet.create({
   },
   bookingRefText: { color: COLOR.royalGold, fontSize: 9.5, fontWeight: 700, letterSpacing: 1.2 },
 
-  // ---- Hero card ------------------------------------------------------------
-  heroCard: {
-    ...CARD,
-    borderWidth: 1.4,
-    padding: SPACE.md,
-    marginBottom: SPACE.md,
-  },
+  heroCard: { ...CARD, borderWidth: 1.4, padding: SPACE.md, marginBottom: SPACE.md },
   clientBadge: {
     backgroundColor: COLOR.antiqueGold,
     paddingHorizontal: SPACE.sm,
@@ -427,36 +370,17 @@ const styles = StyleSheet.create({
     marginBottom: SPACE.sm,
   },
   clientBadgeText: { color: COLOR.deepBrown, fontSize: 7.5, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase" as const },
-  heroSubtitle: {
-    color: COLOR.lapis,
-    fontSize: 8.5,
-    letterSpacing: 3,
-    textTransform: "uppercase" as const,
-    textAlign: "center",
-    marginBottom: SPACE.xs,
-  },
-  heroTourName: {
-    color: COLOR.ink,
-    fontSize: 17,
-    lineHeight: 1.4,
-    textAlign: "center",
-    marginBottom: SPACE.sm,
-  },
+  heroSubtitle: { color: COLOR.lapis, fontSize: 8.5, letterSpacing: 3, textTransform: "uppercase" as const, textAlign: "center", marginBottom: SPACE.xs },
+  heroTourName: { color: COLOR.ink, fontSize: 17, lineHeight: 1.4, textAlign: "center", marginBottom: SPACE.sm },
   heroGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACE.sm, marginTop: SPACE.sm },
   heroStat: { width: "31.5%", paddingRight: SPACE.xs, borderRightWidth: 0.8, borderRightColor: COLOR.paleGold, marginBottom: SPACE.sm },
   heroStatLast: { width: "31.5%", marginBottom: SPACE.sm },
   heroStatLabel: { color: COLOR.agedBrown, fontSize: 6.8, letterSpacing: 1.3, textTransform: "uppercase" as const, marginBottom: 2 },
   heroStatValue: { color: COLOR.deepBrown, fontSize: 10, fontWeight: 700 },
 
-  strikethroughOldPrice: {
-    color: COLOR.agedBrown,
-    textDecorationLine: "line-through" as const,
-    textDecorationColor: COLOR.rust,
-    fontSize: 9,
-  },
+  strikethroughOldPrice: { color: COLOR.agedBrown, textDecorationLine: "line-through" as const, textDecorationColor: COLOR.rust, fontSize: 9 },
   offerPriceValue: { color: COLOR.scarabGreen, fontSize: 10.5, fontWeight: 700 },
 
-  // ---- Sections -------------------------------------------------------------
   section: { marginBottom: SPACE.md },
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: SPACE.sm, gap: SPACE.sm },
   sectionNumber: {
@@ -476,13 +400,7 @@ const styles = StyleSheet.create({
   sectionIcon: { width: 20, height: 20, justifyContent: "center", alignItems: "center" },
   sectionUnderline: { flex: 1, height: 1, backgroundColor: COLOR.royalGold, opacity: 0.6 },
 
-  summaryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: SPACE.xs + 2,
-    ...CARD,
-    padding: SPACE.sm,
-  },
+  summaryGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACE.xs + 2, ...CARD, padding: SPACE.sm },
   summaryItem: {
     width: "48.7%",
     flexDirection: "row",
@@ -500,13 +418,7 @@ const styles = StyleSheet.create({
   summaryStrikethrough: { fontSize: 8, color: COLOR.agedBrown, textDecorationLine: "line-through" as const, textDecorationColor: COLOR.rust },
   summaryOfferValue: { fontSize: 10.5, color: COLOR.scarabGreen, fontWeight: 700 },
 
-  offerBanner: {
-    marginTop: SPACE.sm,
-    borderWidth: 1,
-    borderColor: COLOR.royalGold,
-    backgroundColor: "rgba(255, 248, 224, 0.55)",
-    padding: SPACE.sm + 2,
-  },
+  offerBanner: { marginTop: SPACE.sm, borderWidth: 1, borderColor: COLOR.royalGold, backgroundColor: "rgba(255, 248, 224, 0.55)", padding: SPACE.sm + 2 },
   offerBannerTop: { flexDirection: "row", alignItems: "center", gap: SPACE.xs, marginBottom: SPACE.xs },
   offerBannerBadge: {
     backgroundColor: COLOR.deepLapis,
@@ -523,18 +435,9 @@ const styles = StyleSheet.create({
   offerBannerNew: { fontSize: 16, color: COLOR.deepBrown, fontWeight: 700 },
   offerBannerPct: { fontSize: 7.5, color: COLOR.scarabGreen, fontWeight: 700 },
   offerBannerNote: { fontSize: 7.8, color: COLOR.warmBrown, marginTop: SPACE.xs, lineHeight: 1.5 },
-  offerBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: COLOR.scarabGreen,
-    paddingHorizontal: SPACE.xs + 2,
-    paddingVertical: 2,
-    alignSelf: "flex-start",
-  },
+  offerBadge: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: COLOR.scarabGreen, paddingHorizontal: SPACE.xs + 2, paddingVertical: 2, alignSelf: "flex-start" },
   offerBadgeText: { color: "#FFFFFF", fontSize: 6.5, fontWeight: 700, letterSpacing: 0.5 },
 
-  // ---- Day cards --------------------------------------------------------------
   dayCard: { ...CARD, marginBottom: SPACE.sm, overflow: "hidden" },
   dayHeader: {
     flexDirection: "row",
@@ -545,14 +448,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1.4,
     borderBottomColor: COLOR.royalGold,
   },
-  dayBadge: {
-    backgroundColor: COLOR.royalGold,
-    paddingHorizontal: SPACE.xs + 3,
-    paddingVertical: SPACE.xs - 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
+  dayBadge: { backgroundColor: COLOR.royalGold, paddingHorizontal: SPACE.xs + 3, paddingVertical: SPACE.xs - 1, flexDirection: "row", alignItems: "center", gap: 4 },
   dayBadgeText: { color: COLOR.deepBrown, fontSize: 8, letterSpacing: 0.5, fontWeight: 700 },
   dayTitle: { color: COLOR.royalGold, fontSize: 11, flex: 1 },
   dayContent: { padding: SPACE.md },
@@ -577,20 +473,15 @@ const styles = StyleSheet.create({
 
   twoCol: { flexDirection: "row", gap: SPACE.sm },
   col: { flex: 1, width: "49%" },
+  colFull: { flex: 1, width: "100%" },
   panelCard: { ...CARD, padding: SPACE.md },
   sectionCardTitle: { fontSize: 9.5, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: SPACE.sm, flexDirection: "row", alignItems: "center", gap: SPACE.xs },
   listItem: { flexDirection: "row", marginBottom: SPACE.xs + 2, gap: SPACE.xs + 2, alignItems: "flex-start" },
-  listItemIcon: { width: 11, height: 11, flexShrink: 0, marginTop: 2 },
+  listItemIcon: { width: 12, height: 12, flexShrink: 0, marginTop: 1 },
   listItemText: { fontSize: 9, lineHeight: 1.55, flex: 1, color: COLOR.ink },
 
   pricingTable: { ...CARD, padding: SPACE.md, overflow: "hidden" },
-  pricingRow: {
-    flexDirection: "row",
-    paddingVertical: SPACE.xs + 3,
-    paddingHorizontal: SPACE.sm,
-    borderBottomWidth: 0.7,
-    borderBottomColor: COLOR.paleGold,
-  },
+  pricingRow: { flexDirection: "row", paddingVertical: SPACE.xs + 3, paddingHorizontal: SPACE.sm, borderBottomWidth: 0.7, borderBottomColor: COLOR.paleGold },
   pricingRowLast: { borderBottomWidth: 0 },
   pricingCell: { flex: 1, fontSize: 9, color: COLOR.deepBrown },
   pricingCellRight: { flex: 1, textAlign: "right", fontSize: 9, color: COLOR.deepBrown, fontWeight: 600 },
@@ -618,15 +509,7 @@ const styles = StyleSheet.create({
   reviewBadgeText: { color: COLOR.deepBrown, fontSize: 8.5, letterSpacing: 0.6, fontWeight: 700 },
   reviewLink: { color: COLOR.agedBrown, fontSize: 7, marginTop: SPACE.xs },
 
-  socialRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: SPACE.md,
-    marginTop: SPACE.sm,
-    paddingTop: SPACE.sm,
-    borderTopWidth: 0.8,
-    borderTopColor: COLOR.antiqueGold,
-  },
+  socialRow: { flexDirection: "row", justifyContent: "center", gap: SPACE.md, marginTop: SPACE.sm, paddingTop: SPACE.sm, borderTopWidth: 0.8, borderTopColor: COLOR.antiqueGold },
   socialLinkItem: { fontSize: 7.6, color: COLOR.deepBrown, fontWeight: 700 },
 
   operationsCard: { ...CARD, borderWidth: 1.2, padding: SPACE.md, marginTop: SPACE.sm },
@@ -649,7 +532,7 @@ const styles = StyleSheet.create({
     marginTop: SPACE.sm,
     gap: SPACE.xs + 2,
   },
-  companyShowcaseLogo: { width: 140, height: 54, objectFit: "contain", alignSelf: "center" },
+  companyShowcaseLogo: { width: 130, height: 50, objectFit: "contain", alignSelf: "center" },
   companyShowcaseName: { fontSize: 14, color: COLOR.royalGold, letterSpacing: 2, fontWeight: 700, textAlign: "center", lineHeight: 1.35 },
   companyShowcaseTagline: { fontSize: 8, color: COLOR.paleGold, letterSpacing: 1.5, textTransform: "uppercase" as const, textAlign: "center", lineHeight: 1.4 },
   companyShowcaseAbout: { fontSize: 8, color: "#F5EBD3", textAlign: "center", lineHeight: 1.55, marginTop: 2 },
@@ -679,16 +562,16 @@ function resolvePdfAsset(filename: string): string {
 
 const PARCHMENT_SRC = resolvePdfAsset("parchment.svg");
 const BORDER_SRC = resolvePdfAsset("border_pattern.svg");
-const NILE_SRC = resolvePdfAsset("nile_sunset.svg");
 const LOGO_SRC = resolvePdfAsset("pdf-kemerya-logo.png");
+// NOTE: the Nile-sunset image box was removed on purpose — it was rendering
+// as an empty bordered rectangle (the asset wasn't resolving on the server),
+// which is exactly the "empty box at the bottom of the page" you flagged.
+// The footer now shows only the always-populated company-details bar below.
 
 /* ============================================================================
- * RTL SUPPORT (fixed)
- * The previous version mutated the module-level `styles` object AND wrote to
- * `globalThis`, which is unsafe: any two PDFs rendered concurrently (e.g. one
- * Arabic + one English request at the same time on the server) would corrupt
- * each other's layout. This version computes mirrored styles PURELY, on every
- * render, into a local object — no shared/global state, no race conditions.
+ * RTL SUPPORT — pure per-render mirroring, no shared/global mutable state
+ * (a previous version mutated a module-level style object via globalThis,
+ * which is unsafe under concurrent server rendering).
  * ==========================================================================*/
 
 const LR_PAIRS: Array<[string, string]> = [
@@ -696,8 +579,6 @@ const LR_PAIRS: Array<[string, string]> = [
   ["marginLeft", "marginRight"],
   ["borderLeftWidth", "borderRightWidth"],
   ["borderLeftColor", "borderRightColor"],
-  ["borderTopLeftRadius", "borderTopRightRadius"],
-  ["borderBottomLeftRadius", "borderBottomRightRadius"],
 ];
 
 function mirrorOne(style: Record<string, unknown>): Record<string, unknown> {
@@ -711,18 +592,12 @@ function mirrorOne(style: Record<string, unknown>): Record<string, unknown> {
   if (style.flexDirection === "row") out.flexDirection = "row-reverse";
   if (style.justifyContent === "flex-start") out.justifyContent = "flex-end";
   else if (style.justifyContent === "flex-end") out.justifyContent = "flex-start";
-  if (
-    !("textAlign" in style) &&
-    ("fontSize" in style || "color" in style || "fontFamily" in style || "lineHeight" in style)
-  ) {
+  if (!("textAlign" in style) && ("fontSize" in style || "color" in style || "fontFamily" in style || "lineHeight" in style)) {
     out.textAlign = "right";
   }
   return out;
 }
 
-/** Builds an RTL-mirrored copy of the whole stylesheet, or returns the
- * original (LTR) stylesheet untouched. Pure function — safe under
- * concurrent renders. */
 function useDirectionalStyles(rtl: boolean): typeof styles {
   return React.useMemo(() => {
     if (!rtl) return styles;
@@ -742,7 +617,6 @@ function ParchmentPage({
   children,
   companyInfo,
   languageCode = "en",
-  pageLabel,
   rtl,
   footerTagline,
   brandHeaderVariant = "compact",
@@ -751,7 +625,6 @@ function ParchmentPage({
   children: React.ReactNode;
   companyInfo?: CompanyInfo;
   languageCode?: string;
-  pageLabel?: string;
   rtl: boolean;
   footerTagline?: string;
   brandHeaderVariant?: "full" | "compact";
@@ -762,9 +635,7 @@ function ParchmentPage({
   const brandFont = latinDisplay ? "Cinzel" : bodyFont;
 
   return (
-    <Page size="A4" style={[S.page, { direction: rtl ? "rtl" : "ltr", fontFamily: bodyFont }]}>
-      {/* Background layers first so they sit behind everything and repeat
-          on every page without pushing content down. */}
+    <Page size="A4" style={[S.page, { direction: rtl ? "rtl" : "ltr", fontFamily: bodyFont }]} wrap>
       <Image src={PARCHMENT_SRC} style={S.parchmentBg} fixed />
       <Image src={BORDER_SRC} style={S.borderFrame} fixed />
 
@@ -772,16 +643,14 @@ function ParchmentPage({
         {brandHeaderVariant === "full" ? (
           <View style={S.headerBox}>
             <Image src={LOGO_SRC} style={S.officialLogo} />
-            <Text style={[S.brandTitle, { fontFamily: brandFont }]}>
-              {companyInfo?.name || "KEMERYA TOURS"}
-            </Text>
-            {companyInfo?.tagline ? (
-              <Text style={[S.brandTagline, { fontFamily: bodyFont }]}>{shapeForPdf(companyInfo.tagline)}</Text>
+            <Text style={[S.brandTitle, { fontFamily: brandFont }]}>{companyInfo?.name || "KEMERYA TOURS"}</Text>
+            {hasText(companyInfo?.tagline) ? (
+              <Text style={[S.brandTagline, { fontFamily: bodyFont }]}>{shapeForPdf(companyInfo!.tagline!)}</Text>
             ) : null}
             <Divider />
           </View>
         ) : (
-          <View style={[S.headerBox, { marginBottom: SPACE.sm }]}>
+          <View style={[S.headerBox, { marginBottom: SPACE.sm }]} fixed>
             <Image src={LOGO_SRC} style={S.officialLogoSmall} />
             <Divider compact />
           </View>
@@ -790,43 +659,40 @@ function ParchmentPage({
       </View>
 
       <View style={S.footerBand} fixed>
-        <View style={S.nileImageWrap}>
-          <Image src={NILE_SRC} style={S.nileImage} />
-        </View>
         <View style={S.companyRect}>
           <View style={S.companyRectRow}>
-              {companyInfo?.phone ? (
-                <View style={S.companyRectCell}>
-                  <View style={S.companyRectIcon}><SunDiscBullet size={8} /></View>
-                  <Text style={S.companyRectText}>{companyInfo.phone}</Text>
-                </View>
-              ) : null}
-              {companyInfo?.email ? (
-                <View style={S.companyRectCell}>
-                  <View style={S.companyRectIcon}><EyeOfHorusBullet size={8} /></View>
-                  <Text style={S.companyRectText}>{companyInfo.email}</Text>
-                </View>
-              ) : null}
-              {companyInfo?.website ? (
-                <View style={S.companyRectCell}>
-                  <View style={S.companyRectIcon}><ScarabBullet size={8} /></View>
-                  <Text style={S.companyRectText}>{companyInfo.website}</Text>
-                </View>
-              ) : null}
-              {companyInfo?.whatsapp ? (
-                <View style={S.companyRectCell}>
-                  <View style={S.companyRectIcon}><LotusBullet size={8} /></View>
-                  <Text style={S.companyRectText}>WhatsApp {companyInfo.whatsapp}</Text>
-                </View>
-              ) : null}
-            </View>
-            {companyInfo?.address ? (
-              <View style={S.companyRectAddressRow}>
-                <View style={S.companyRectIcon}><AnkhGlyph size={8} /></View>
-                <Text style={S.companyRectAddress}>{shapeForPdf(companyInfo.address)}</Text>
+            {hasText(companyInfo?.phone) ? (
+              <View style={S.companyRectCell}>
+                <View style={S.companyRectIcon}><SunDiscBullet size={8} /></View>
+                <Text style={S.companyRectText}>{companyInfo!.phone}</Text>
+              </View>
+            ) : null}
+            {hasText(companyInfo?.email) ? (
+              <View style={S.companyRectCell}>
+                <View style={S.companyRectIcon}><EyeOfHorusBullet size={8} /></View>
+                <Text style={S.companyRectText}>{companyInfo!.email}</Text>
+              </View>
+            ) : null}
+            {hasText(companyInfo?.website) ? (
+              <View style={S.companyRectCell}>
+                <View style={S.companyRectIcon}><ScarabBullet size={8} /></View>
+                <Text style={S.companyRectText}>{companyInfo!.website}</Text>
+              </View>
+            ) : null}
+            {hasText(companyInfo?.whatsapp) ? (
+              <View style={S.companyRectCell}>
+                <View style={S.companyRectIcon}><LotusBullet size={8} /></View>
+                <Text style={S.companyRectText}>WhatsApp {companyInfo!.whatsapp}</Text>
               </View>
             ) : null}
           </View>
+          {hasText(companyInfo?.address) ? (
+            <View style={S.companyRectAddressRow}>
+              <View style={S.companyRectIcon}><AnkhGlyph size={8} /></View>
+              <Text style={S.companyRectAddress}>{shapeForPdf(companyInfo!.address!)}</Text>
+            </View>
+          ) : null}
+        </View>
         <View style={S.footerCaption}>
           <View>
             <Text style={[S.footerBrand, { fontFamily: brandFont }]}>{companyInfo?.name || "KEMERYA TOURS"}</Text>
@@ -834,7 +700,11 @@ function ParchmentPage({
               {footerTagline || "Curated Egyptian Journeys · Est. Luxury"}
             </Text>
           </View>
-          <Text style={S.footerPage}>{pageLabel || "Page 1"}</Text>
+          {/* Dynamic, always-correct page number — react-pdf fills this in
+              per PHYSICAL page, including pages it auto-generates when a
+              section overflows. No more hard-coded "Page 2" duplicating
+              itself across two sheets. */}
+          <Text style={S.footerPage} render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`} />
         </View>
       </View>
     </Page>
@@ -842,7 +712,7 @@ function ParchmentPage({
 }
 
 /* ============================================================================
- * DATA HELPERS (unchanged behaviour)
+ * DATA HELPERS
  * ==========================================================================*/
 
 function buildItineraryList(tour: Tour | null, booking: BookingConfig): ItineraryDay[] {
@@ -852,8 +722,7 @@ function buildItineraryList(tour: Tour | null, booking: BookingConfig): Itinerar
       {
         day: 1,
         title: "Arrival Day",
-        description:
-          "Custom tour itinerary - details to be arranged by the Operations Team based on client requirements.",
+        description: "Custom tour itinerary - details to be arranged by the Operations Team based on client requirements.",
         highlights: ["Meet & Greet at Airport", "Hotel Transfer", "Welcome Drink"],
         accommodation: "To be confirmed",
       },
@@ -888,13 +757,7 @@ function getExclusions(tour: Tour | null, booking: BookingConfig): string[] {
  * MAIN DOCUMENT
  * ==========================================================================*/
 
-export function ItineraryPDF({
-  tour,
-  booking,
-  companyInfo = KEMERYA_COMPANY_INFO,
-  translatedData,
-  languageCode,
-}: ItineraryPDFProps) {
+export function ItineraryPDF({ tour, booking, companyInfo = KEMERYA_COMPANY_INFO, translatedData, languageCode }: ItineraryPDFProps) {
   const tourTitle = getTourTitle(tour, booking);
   const daysCount = getTourDurationDays(tour, booking);
   const nights = Math.max(daysCount - 1, calculateNights(new Date(booking.startDate), new Date(booking.endDate)));
@@ -912,7 +775,7 @@ export function ItineraryPDF({
 
   const langCode = languageCode ?? "en";
   const rtl = isRTL(langCode);
-  const S = useDirectionalStyles(rtl); // pure, per-render — no shared mutable state
+  const S = useDirectionalStyles(rtl);
   const sh = shapeForPdf;
 
   const hasTranslation = Boolean(translatedData && languageCode);
@@ -929,7 +792,7 @@ export function ItineraryPDF({
     const ui = translatedData["ui"] as Record<string, string> | undefined;
     for (const candidate of [key, ...(aliases[key] || [])]) {
       const hit = ui?.[candidate] || labels?.[candidate];
-      if (typeof hit === "string" && hit.trim().length > 0) return sh(hit);
+      if (hasText(hit)) return sh(hit as string);
     }
     return sh(fallback);
   };
@@ -940,9 +803,9 @@ export function ItineraryPDF({
     if (!translatedData) return fallback;
     const raw = translatedData[key];
     if (!Array.isArray(raw)) return fallback;
-    const strings = raw.filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+    const strings = raw.filter((v): v is string => hasText(v));
     if (strings.length === 0) return fallback;
-    return fallback.map((fb, i) => (i < strings.length && strings[i].trim().length > 0 ? sh(strings[i]) : sh(fb)));
+    return fallback.map((fb, i) => (i < strings.length && hasText(strings[i]) ? sh(strings[i]) : sh(fb)));
   };
 
   const translatedDays = Array.isArray(translatedData?.["itinerary.days"])
@@ -953,18 +816,14 @@ export function ItineraryPDF({
     const day = translatedDays[idx];
     if (!day) return undefined;
     const value = day[field];
-    return typeof value === "string" && value.trim().length > 0 ? sh(value) : undefined;
+    return hasText(value) ? sh(value as string) : undefined;
   };
 
-  const termsItems = getTranslatedArray(translatedData, "terms.items", getTermsItems(booking)).map(sh);
-  const privacyItems = getTranslatedArray(translatedData, "privacy.items", getPrivacyItems(booking)).map(sh);
-  const overviewParas = getTranslatedArray(translatedData, "tour.overview", tour?.overview ?? []).map(sh);
+  const termsItems = getTranslatedArray(translatedData, "terms.items", getTermsItems(booking)).map(sh).filter(hasText);
+  const privacyItems = getTranslatedArray(translatedData, "privacy.items", getPrivacyItems(booking)).map(sh).filter(hasText);
+  const overviewParas = getTranslatedArray(translatedData, "tour.overview", tour?.overview ?? []).map(sh).filter(hasText);
 
-  const displayTourTitle = hasTranslation
-    ? booking.isCustomTour
-      ? t("booking.customTourTitle", tourTitle)
-      : t("tour.title", tourTitle)
-    : tourTitle;
+  const displayTourTitle = hasTranslation ? (booking.isCustomTour ? t("booking.customTourTitle", tourTitle) : t("tour.title", tourTitle)) : tourTitle;
 
   const bodyFont = getGlobalFont(langCode);
   const latinDisplay = isLatinDisplayLanguage(langCode);
@@ -973,17 +832,36 @@ export function ItineraryPDF({
   const cinzelStyle = { fontFamily: cinzelFont };
   const headingStyle = { fontFamily: headingFont };
 
-  const page2Label = "Page 2";
-  const hasExtraDays = itinerary.length > 3;
+  // ---- Visibility flags: EVERYTHING here decides whether a block with no
+  // real content renders at all. This directly answers "hide anything with
+  // nothing written in it". ----
+  const hasOverview =
+    !booking.isCustomTour &&
+    !!tour &&
+    (overviewParas.length > 0 || hasText(tour.location) || hasText(tour.group) || hasText(tour.language) || hasText(tour.durationLabel));
+  const hasNotes = hasText(booking.notes);
+  const hasSpecialRequests = hasText(booking.specialRequests);
+  const hasOffer = booking.offerPrice != null && booking.offerPrice > 0;
+  const inclusionItems = tList("inclusions", inclusions).filter(hasText);
+  const exclusionItems = tList("exclusions", exclusions).filter(hasText);
+  const hasInclusions = inclusionItems.length > 0;
+  const hasExclusions = exclusionItems.length > 0;
+  const hasInclusionsSection = hasInclusions || hasExclusions;
+  const hasTermsSection = termsItems.length > 0 || privacyItems.length > 0;
+
+  // Section numbers are computed as we go, purely locally to this render —
+  // no shared state, so numbering always matches what's actually visible
+  // (e.g. if there's no Tour Overview, later sections shift up cleanly).
+  let sectionCounter = 0;
+  const nextSectionNumber = () => String(++sectionCounter).padStart(2, "0");
 
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
-      {/* ---------------- PAGE 1 — Cover + Summary ---------------- */}
+      {/* ---------------- COVER PAGE ---------------- */}
       <ParchmentPage
         brandHeaderVariant="full"
         companyInfo={companyInfo}
         languageCode={langCode}
-        pageLabel="Page 1"
         rtl={rtl}
         footerTagline={label("footer.tagline", "Curated Egyptian Journeys · Est. Luxury")}
         S={S}
@@ -992,7 +870,7 @@ export function ItineraryPDF({
           <Text style={[S.bookingRefText, cinzelStyle]}>Ref: {bookingRef}</Text>
         </View>
 
-        <View style={S.heroCard}>
+        <View style={S.heroCard} wrap={false}>
           <View style={S.clientBadge}>
             <Text style={S.clientBadgeText}>Booking Reference · {bookingRef}</Text>
           </View>
@@ -1019,15 +897,13 @@ export function ItineraryPDF({
             <View style={S.heroStat}>
               <Text style={S.heroStatLabel}>{label("hero.totalPrice", "Total Price")}</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                {booking.offerPrice != null && booking.offerPrice > 0 ? (
+                {hasOffer ? (
                   <>
                     <Text style={[S.heroStatValue, S.strikethroughOldPrice]}>{formatCurrency(booking.totalPrice, booking.currency)}</Text>
-                    <Text style={S.offerPriceValue}>{formatCurrency(booking.offerPrice, booking.currency)}</Text>
+                    <Text style={S.offerPriceValue}>{formatCurrency(booking.offerPrice!, booking.currency)}</Text>
                     {booking.totalPrice > 0 && (
                       <View style={S.offerBadge}>
-                        <Text style={S.offerBadgeText}>
-                          {Math.round(((booking.totalPrice - booking.offerPrice) / booking.totalPrice) * 100)}% OFF
-                        </Text>
+                        <Text style={S.offerBadgeText}>{Math.round(((booking.totalPrice - booking.offerPrice!) / booking.totalPrice) * 100)}% OFF</Text>
                       </View>
                     )}
                   </>
@@ -1044,66 +920,65 @@ export function ItineraryPDF({
         </View>
 
         <View style={S.section}>
-          <SectionHeader S={S} number="01" icon="summary" title={label("section.summary", "Booking Summary")} titleStyle={headingStyle} />
+          <SectionHeader S={S} number={nextSectionNumber()} icon="summary" title={label("section.summary", "Booking Summary")} titleStyle={headingStyle} />
           <View style={S.summaryGrid}>
             <SummaryCard S={S} label={label("summary.totalTravelers", "Total Travelers")} value={`${totalTravelers} (${travelersText})`} />
             <SummaryCard S={S} label={label("summary.tourDuration", "Tour Duration")} value={`${daysCount} Days / ${nights} Nights`} />
-            <SummaryCard
-              S={S}
-              label={label("summary.travelPeriod", "Travel Period")}
-              value={`${formatDateShort(booking.startDate)} → ${formatDateShort(booking.endDate)}`}
-            />
+            <SummaryCard S={S} label={label("summary.travelPeriod", "Travel Period")} value={`${formatDateShort(booking.startDate)} → ${formatDateShort(booking.endDate)}`} />
             <SummaryCard
               S={S}
               label={`${label("summary.totalAmount", "Total Amount")} (${booking.currency})`}
               value={
-                booking.offerPrice && booking.offerPrice > 0 ? (
+                hasOffer ? (
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     <Text style={[S.summaryItemValue, S.summaryStrikethrough]}>{formatCurrency(booking.totalPrice, booking.currency)}</Text>
-                    <Text style={S.summaryOfferValue}>{formatCurrency(booking.offerPrice, booking.currency)}</Text>
+                    <Text style={S.summaryOfferValue}>{formatCurrency(booking.offerPrice!, booking.currency)}</Text>
                   </View>
                 ) : (
                   formatCurrency(booking.totalPrice, booking.currency)
                 )
               }
             />
-            {booking.clientName ? <SummaryCard S={S} label={label("summary.clientName", "Client Name")} value={booking.clientName} /> : null}
-            {booking.clientEmail ? <SummaryCard S={S} label={label("summary.clientEmail", "Client Email")} value={booking.clientEmail} /> : null}
-            {booking.clientPhone ? <SummaryCard S={S} label={label("summary.clientPhone", "Client Phone")} value={booking.clientPhone} /> : null}
-            {booking.clientWhatsapp ? <SummaryCard S={S} label={label("summary.clientWhatsapp", "Client WhatsApp")} value={booking.clientWhatsapp} /> : null}
-            {booking.meetingPoint ? <SummaryCard S={S} label={label("summary.meetingPoint", "Meeting Point")} value={booking.meetingPoint} /> : null}
-            {booking.flightArrival ? (
-              <SummaryCard S={S} label={label("summary.airportArrival", "Airport Arrival / Tour Start")} value={booking.flightArrival.replace("T", " · ")} />
+            {hasText(booking.clientName) ? <SummaryCard S={S} label={label("summary.clientName", "Client Name")} value={booking.clientName!} /> : null}
+            {hasText(booking.clientEmail) ? <SummaryCard S={S} label={label("summary.clientEmail", "Client Email")} value={booking.clientEmail!} /> : null}
+            {hasText(booking.clientPhone) ? <SummaryCard S={S} label={label("summary.clientPhone", "Client Phone")} value={booking.clientPhone!} /> : null}
+            {hasText(booking.clientWhatsapp) ? <SummaryCard S={S} label={label("summary.clientWhatsapp", "Client WhatsApp")} value={booking.clientWhatsapp!} /> : null}
+            {hasText(booking.meetingPoint) ? <SummaryCard S={S} label={label("summary.meetingPoint", "Meeting Point")} value={booking.meetingPoint!} /> : null}
+            {hasText(booking.flightArrival) ? (
+              <SummaryCard S={S} label={label("summary.airportArrival", "Airport Arrival / Tour Start")} value={booking.flightArrival!.replace("T", " · ")} />
             ) : null}
-            {booking.pickupTime ? <SummaryCard S={S} label={label("summary.pickupTime", "Pickup Time")} value={booking.pickupTime} /> : null}
+            {hasText(booking.pickupTime) ? <SummaryCard S={S} label={label("summary.pickupTime", "Pickup Time")} value={booking.pickupTime!} /> : null}
           </View>
         </View>
 
-        {booking.offerPrice != null && booking.offerPrice > 0 && (() => {
+        {hasOffer && (() => {
           const meta = getOfferMeta(booking);
-          const pct = Math.round(((booking.totalPrice - booking.offerPrice) / booking.totalPrice) * 100);
+          const pct = Math.round(((booking.totalPrice - booking.offerPrice!) / booking.totalPrice) * 100);
           return (
-            <View style={S.offerBanner}>
-              <View style={S.offerBannerTop} wrap={false}>
+            <View style={S.offerBanner} wrap={false}>
+              <View style={S.offerBannerTop}>
                 <ScarabBullet size={14} />
                 <Text style={[S.offerBannerBadge, cinzelStyle]}>{pct > 0 ? `SPECIAL OFFER · SAVE ${pct}%` : "SPECIAL OFFER"}</Text>
               </View>
               <Text style={[S.offerBannerTitle, cinzelStyle]}>{meta.title}</Text>
               <View style={S.offerBannerPrices}>
                 <Text style={S.offerBannerOld}>{formatCurrency(booking.totalPrice, booking.currency)}</Text>
-                <Text style={S.offerBannerNew}>{formatCurrency(booking.offerPrice, booking.currency)}</Text>
-                {pct > 0 && <Text style={S.offerBannerPct}>You save {formatCurrency(booking.totalPrice - booking.offerPrice, booking.currency)}</Text>}
+                <Text style={S.offerBannerNew}>{formatCurrency(booking.offerPrice!, booking.currency)}</Text>
+                {pct > 0 && <Text style={S.offerBannerPct}>You save {formatCurrency(booking.totalPrice - booking.offerPrice!, booking.currency)}</Text>}
               </View>
-              {meta.note ? <Text style={S.offerBannerNote}>{meta.note}</Text> : null}
+              {hasText(meta.note) ? <Text style={S.offerBannerNote}>{meta.note}</Text> : null}
             </View>
           );
         })()}
 
-        {!booking.isCustomTour && tour && (overviewParas.length > 0 || tour.location || tour.group || tour.language || tour.durationLabel) ? (
+        {/* Tour Overview — only rendered when there is real content. This is
+            what fixes the empty box you saw: previously the header could
+            appear with nothing underneath it. */}
+        {hasOverview ? (
           <View style={S.section}>
-            <SectionHeader S={S} number="02" icon="overview" title={label("section.overview", "Tour Overview")} titleStyle={headingStyle} />
+            <SectionHeader S={S} number={nextSectionNumber()} icon="overview" title={label("section.overview", "Tour Overview")} titleStyle={headingStyle} />
             {overviewParas.map((para, i) =>
-              i === 0 && para.length > 0 && !rtl ? (
+              i === 0 && !rtl ? (
                 <Text key={i} style={{ ...S.notesText, marginBottom: SPACE.xs }}>
                   <Text style={[S.dropCap, headingStyle]}>{para.charAt(0)}</Text>
                   {para.slice(1)}
@@ -1112,47 +987,52 @@ export function ItineraryPDF({
                 <Text key={i} style={{ ...S.notesText, marginBottom: SPACE.xs }}>{para}</Text>
               )
             )}
-            {(tour.location || tour.group || tour.language || tour.durationLabel) ? (
+            {(hasText(tour?.location) || hasText(tour?.group) || hasText(tour?.language) || hasText(tour?.durationLabel)) ? (
               <View style={{ ...S.summaryGrid, marginTop: SPACE.sm }}>
-                {tour.durationLabel ? <SummaryCard S={S} label="Duration" value={tour.durationLabel} /> : null}
-                {tour.location ? <SummaryCard S={S} label="Location" value={tour.location} /> : null}
-                {tour.group ? <SummaryCard S={S} label="Group" value={tour.group} /> : null}
-                {tour.language ? <SummaryCard S={S} label="Language" value={tour.language} /> : null}
+                {hasText(tour?.durationLabel) ? <SummaryCard S={S} label="Duration" value={tour!.durationLabel!} /> : null}
+                {hasText(tour?.location) ? <SummaryCard S={S} label="Location" value={tour!.location!} /> : null}
+                {hasText(tour?.group) ? <SummaryCard S={S} label="Group" value={tour!.group!} /> : null}
+                {hasText(tour?.language) ? <SummaryCard S={S} label="Language" value={tour!.language!} /> : null}
               </View>
             ) : null}
           </View>
         ) : null}
 
-        {(booking.notes || booking.specialRequests) ? (
-          <View style={S.notesBlock}>
-            {booking.notes ? (
+        {(hasNotes || hasSpecialRequests) ? (
+          <View style={S.notesBlock} wrap={false}>
+            {hasNotes ? (
               <>
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: SPACE.xs, gap: SPACE.xs }}>
                   <PyramidBullet size={11} />
                   <Text style={S.notesTitle}>{label("notes.title", "Itinerary Notes")}</Text>
                 </View>
-                <Text style={S.notesText}>{shapeForPdf(booking.notes)}</Text>
+                <Text style={S.notesText}>{shapeForPdf(booking.notes!)}</Text>
               </>
             ) : null}
-            {booking.specialRequests ? (
+            {hasSpecialRequests ? (
               <>
-                <View style={{ flexDirection: "row", alignItems: "center", marginTop: booking.notes ? SPACE.sm : 0, marginBottom: SPACE.xs, gap: SPACE.xs }}>
+                <View style={{ flexDirection: "row", alignItems: "center", marginTop: hasNotes ? SPACE.sm : 0, marginBottom: SPACE.xs, gap: SPACE.xs }}>
                   <LotusBullet size={11} />
                   <Text style={S.notesTitle}>{label("notes.specialRequests", "Special Requests")}</Text>
                 </View>
-                <Text style={S.notesText}>{shapeForPdf(booking.specialRequests)}</Text>
+                <Text style={S.notesText}>{shapeForPdf(booking.specialRequests!)}</Text>
               </>
             ) : null}
           </View>
         ) : null}
       </ParchmentPage>
 
-      {/* ---------------- PAGE 2 — Day-by-day (1-3) ---------------- */}
-      <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel={page2Label} rtl={rtl} S={S}>
+      {/* ---------------- BODY: everything else in ONE continuous flow.
+          react-pdf paginates this automatically wherever it needs to, with
+          a correctly-repeating compact header/footer and a real dynamic
+          page number on every physical sheet it produces. No more forced
+          per-page slicing, no more wasted blank space, no more duplicate
+          "Page 2" overlap. ---------------- */}
+      <ParchmentPage companyInfo={companyInfo} languageCode={langCode} rtl={rtl} S={S}>
         <View style={S.section}>
-          <SectionHeader S={S} number="03" icon="roadmap" title={label("section.roadmap", "Day-by-Day Itinerary")} titleStyle={headingStyle} />
+          <SectionHeader S={S} number={nextSectionNumber()} icon="roadmap" title={label("section.roadmap", "Day-by-Day Itinerary")} titleStyle={headingStyle} />
 
-          {itinerary.slice(0, 3).map((day, idx) => (
+          {itinerary.map((day, idx) => (
             <DayCard
               key={day.day}
               S={S}
@@ -1182,89 +1062,66 @@ export function ItineraryPDF({
             />
           )}
         </View>
-      </ParchmentPage>
 
-      {/* ---------------- PAGE 3 (optional) — Day-by-day (4-7) ---------------- */}
-      {hasExtraDays && (
-        <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel="Page 3" rtl={rtl} S={S}>
+        {hasInclusionsSection ? (
           <View style={S.section}>
-            <SectionHeader S={S} number="03" icon="roadmap" title={label("section.roadmap", "Itinerary (Continued)")} titleStyle={headingStyle} />
-            {itinerary.slice(3, 7).map((day, idx) => (
-              <DayCard
-                key={day.day}
-                S={S}
-                day={day}
-                translatedTitle={dayField(idx + 3, "day.title")}
-                translatedDescription={dayField(idx + 3, "day.description")}
-                translatedAccommodation={dayField(idx + 3, "day.accommodation")}
-                translatedMeals={dayField(idx + 3, "day.meals")}
-                translatedRoadmap={dayField(idx + 3, "day.transport")}
-                tLabels={{ roadmap: label("day.roadmap", "Today's Roadmap"), stay: label("day.stay", "Stay"), meals: label("day.meals", "Meals") }}
-                headingStyle={headingStyle}
-                cinzelStyle={cinzelStyle}
-              />
-            ))}
-          </View>
-        </ParchmentPage>
-      )}
-
-      {/* ---------------- Inclusions / Pricing / Ops ---------------- */}
-      <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel={hasExtraDays ? "Page 4" : "Page 3"} rtl={rtl} S={S}>
-        <View style={S.section}>
-          <SectionHeader S={S} number="04" icon="list" title={`${label("section.inclusions", "Inclusions")} & ${label("section.exclusions", "Exclusions")}`} titleStyle={headingStyle} />
-          <View style={S.twoCol}>
-            <View style={S.col}>
-              <View style={S.panelCard}>
-                <View style={[S.sectionCardTitle, { color: COLOR.deepBrown }, headingStyle]}>
-                  <ScarabBullet size={12} />
-                  <Text>{label("tour.inclusions", "What's Included")}</Text>
-                </View>
-                {tList("inclusions", inclusions).length > 0 ? (
-                  tList("inclusions", inclusions).map((inc, i) => (
-                    <View key={i} style={S.listItem}>
-                      <View style={S.listItemIcon}><ScarabBullet size={12} /></View>
-                      <Text style={S.listItemText}>{inc}</Text>
+            <SectionHeader
+              S={S}
+              number={nextSectionNumber()}
+              icon="list"
+              title={hasInclusions && hasExclusions ? `${label("section.inclusions", "Inclusions")} & ${label("section.exclusions", "Exclusions")}` : hasInclusions ? label("section.inclusions", "Inclusions") : label("section.exclusions", "Exclusions")}
+              titleStyle={headingStyle}
+            />
+            <View style={hasInclusions && hasExclusions ? S.twoCol : undefined}>
+              {hasInclusions ? (
+                <View style={hasInclusions && hasExclusions ? S.col : S.colFull}>
+                  <View style={S.panelCard}>
+                    <View style={[S.sectionCardTitle, { color: COLOR.deepBrown }, headingStyle]}>
+                      <CheckIcon />
+                      <Text>{label("tour.inclusions", "What's Included")}</Text>
                     </View>
-                  ))
-                ) : (
-                  <Text style={S.listItemText}>{label("fallback.inclusions", "Customized inclusions to be confirmed by Operations team.")}</Text>
-                )}
-              </View>
-            </View>
-            <View style={S.col}>
-              <View style={S.panelCard}>
-                <View style={[S.sectionCardTitle, { color: COLOR.deepBrown }, headingStyle]}>
-                  <EyeOfHorusBullet size={12} />
-                  <Text>{label("tour.exclusions", "What's Not Included")}</Text>
+                    {inclusionItems.map((inc, i) => (
+                      <View key={i} style={S.listItem}>
+                        <View style={S.listItemIcon}><CheckIcon /></View>
+                        <Text style={S.listItemText}>{inc}</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
-                {tList("exclusions", exclusions).length > 0 ? (
-                  tList("exclusions", exclusions).map((exc, i) => (
-                    <View key={i} style={S.listItem}>
-                      <View style={S.listItemIcon}><EyeOfHorusBullet size={12} /></View>
-                      <Text style={S.listItemText}>{exc}</Text>
+              ) : null}
+              {hasExclusions ? (
+                <View style={hasInclusions && hasExclusions ? S.col : S.colFull}>
+                  <View style={S.panelCard}>
+                    <View style={[S.sectionCardTitle, { color: COLOR.deepBrown }, headingStyle]}>
+                      <CrossIcon />
+                      <Text>{label("tour.exclusions", "What's Not Included")}</Text>
                     </View>
-                  ))
-                ) : (
-                  <Text style={S.listItemText}>{label("fallback.exclusions", "Standard exclusion terms apply.")}</Text>
-                )}
-              </View>
+                    {exclusionItems.map((exc, i) => (
+                      <View key={i} style={S.listItem}>
+                        <View style={S.listItemIcon}><CrossIcon /></View>
+                        <Text style={S.listItemText}>{exc}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
             </View>
           </View>
-        </View>
+        ) : null}
 
         <View style={S.section}>
-          <SectionHeader S={S} number="05" icon="price" title={label("section.pricing", "Pricing & Payment")} titleStyle={headingStyle} />
+          <SectionHeader S={S} number={nextSectionNumber()} icon="price" title={label("section.pricing", "Pricing & Payment")} titleStyle={headingStyle} />
           <View style={S.pricingTable}>
-            <View style={{ ...S.pricingRow, backgroundColor: "rgba(232, 215, 177, 0.3)" }}>
+            <View style={{ ...S.pricingRow, backgroundColor: "rgba(232, 215, 177, 0.3)" }} wrap={false}>
               <Text style={{ ...S.pricingCell, ...S.pricingHeaderCell }}>{label("pricing.description", "Description")}</Text>
               <Text style={{ ...S.pricingCellRight, ...S.pricingHeaderCell }}>{label("pricing.amount", "Amount")} ({booking.currency})</Text>
             </View>
-            <View style={S.pricingRow}>
+            <View style={S.pricingRow} wrap={false}>
               <Text style={S.pricingCell}>{label("pricing.tourPackage", "Tour Package")} ({displayTourTitle})</Text>
               <Text style={S.pricingCellRight}>{formatCurrency(booking.totalPrice, booking.currency)}</Text>
             </View>
             {booking.travelers.adults > 0 && (
-              <View style={S.pricingRow}>
+              <View style={S.pricingRow} wrap={false}>
                 <View style={{ flexDirection: "row", alignItems: "flex-start", gap: SPACE.xs, flex: 1 }}>
                   <SunDiscBullet size={9} />
                   <Text style={S.pricingCell}>{label("pricing.adults", "Adults")} ({booking.travelers.adults})</Text>
@@ -1273,7 +1130,7 @@ export function ItineraryPDF({
               </View>
             )}
             {booking.travelers.children > 0 && (
-              <View style={S.pricingRow}>
+              <View style={S.pricingRow} wrap={false}>
                 <View style={{ flexDirection: "row", alignItems: "flex-start", gap: SPACE.xs, flex: 1 }}>
                   <SunDiscBullet size={9} />
                   <Text style={S.pricingCell}>{label("pricing.children", "Children")} ({booking.travelers.children})</Text>
@@ -1282,7 +1139,7 @@ export function ItineraryPDF({
               </View>
             )}
             {booking.travelers.infants > 0 && (
-              <View style={S.pricingRow}>
+              <View style={S.pricingRow} wrap={false}>
                 <View style={{ flexDirection: "row", alignItems: "flex-start", gap: SPACE.xs, flex: 1 }}>
                   <SunDiscBullet size={9} />
                   <Text style={S.pricingCell}>{label("pricing.infants", "Infants")} ({booking.travelers.infants})</Text>
@@ -1291,7 +1148,7 @@ export function ItineraryPDF({
               </View>
             )}
             {(booking.specialRequestItems ?? []).map((item, i) => (
-              <View key={i} style={S.pricingRow}>
+              <View key={i} style={S.pricingRow} wrap={false}>
                 <View style={{ flexDirection: "row", alignItems: "flex-start", gap: SPACE.xs, flex: 1 }}>
                   <SunDiscBullet size={9} />
                   <Text style={S.pricingCell}>Extra Request · {item.description}</Text>
@@ -1299,7 +1156,7 @@ export function ItineraryPDF({
                 <Text style={S.pricingCellRight}>{formatCurrency(item.price, booking.currency)}</Text>
               </View>
             ))}
-            <View style={{ ...S.pricingRow, ...S.pricingRowLast }}>
+            <View style={{ ...S.pricingRow, ...S.pricingRowLast }} wrap={false}>
               <Text style={{ ...S.pricingCell, ...S.pricingTotalLabel }}>{label("pricing.totalAmountDue", "Total Amount Due")}</Text>
               <Text style={{ ...S.pricingCellRight, ...S.pricingTotalValue }}>{formatCurrency(booking.totalPrice, booking.currency)}</Text>
             </View>
@@ -1317,7 +1174,7 @@ export function ItineraryPDF({
               { key: "terms.payment.4", fallback: "Cancellations received 30+ days before departure: Deposit retained. 14–29 days: 50% of total due. Less than 14 days: No refund." },
               { key: "terms.payment.5", fallback: `${companyInfo.name} reserves the right to modify the itinerary due to local conditions, safety, or force majeure.` },
             ].map((item, i) => (
-              <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: SPACE.xs, marginBottom: i < 4 ? SPACE.xs : 0 }}>
+              <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: SPACE.xs, marginBottom: i < 4 ? SPACE.xs : 0 }} wrap={false}>
                 <SunDiscBullet size={8} />
                 <Text style={S.termsText}>{label(item.key, item.fallback).replace("{companyName}", companyInfo.name)}</Text>
               </View>
@@ -1326,7 +1183,7 @@ export function ItineraryPDF({
         </View>
 
         <View style={S.section}>
-          <SectionHeader S={S} number="06" icon="contact" title={label("section.contact", "Operations & Contact Info")} titleStyle={headingStyle} />
+          <SectionHeader S={S} number={nextSectionNumber()} icon="contact" title={label("section.contact", "Operations & Contact Info")} titleStyle={headingStyle} />
           <View style={S.operationsCard}>
             <View style={S.operationsHeader}>
               <View style={S.opsBadge}><Text style={S.opsBadgeText}>{label("general.247", "24/7 Support")}</Text></View>
@@ -1334,45 +1191,63 @@ export function ItineraryPDF({
             </View>
             <Divider compact />
             <View style={S.opsGrid}>
-              <View style={S.opsItem}>
-                <Text style={S.opsLabel}>{label("ops.manager", "Operations Manager")}</Text>
-                <Text style={S.opsValue}>{shapeForPdf(companyInfo.operationsManager.name)}</Text>
-              </View>
-              <View style={S.opsItem}>
-                <Text style={S.opsLabel}>{label("ops.directMobile", "Direct Mobile")}</Text>
-                <Text style={S.opsValue}>{companyInfo.operationsManager.phone}</Text>
-              </View>
-              <View style={S.opsItem}>
-                <Text style={S.opsLabel}>{label("ops.email", "Operations Email")}</Text>
-                <Text style={S.opsValue}>{companyInfo.operationsManager.email}</Text>
-              </View>
-              <View style={S.opsItem}>
-                <Text style={S.opsLabel}>{label("ops.whatsapp", "WhatsApp Hotline")}</Text>
-                <Text style={S.opsValue}>{companyInfo.whatsapp}</Text>
-              </View>
-              <View style={S.opsItem}>
-                <Text style={S.opsLabel}>{label("ops.headOffice", "Head Office")}</Text>
-                <Text style={S.opsValue}>{companyInfo.phone}</Text>
-              </View>
-              <View style={S.opsItem}>
-                <Text style={S.opsLabel}>{label("ops.companyEmail", "Company Email")}</Text>
-                <Text style={S.opsValue}>{companyInfo.email}</Text>
-              </View>
-              <View style={S.opsItem}>
-                <Text style={S.opsLabel}>{label("ops.website", "Website")}</Text>
-                <Text style={S.opsValue}>{companyInfo.website}</Text>
-              </View>
-              <View style={S.opsItem}>
-                <Text style={S.opsLabel}>{label("ops.address", "Office Address")}</Text>
-                <Text style={S.opsValue}>{shapeForPdf(companyInfo.address)}</Text>
-              </View>
+              {hasText(companyInfo.operationsManager?.name) ? (
+                <View style={S.opsItem}>
+                  <Text style={S.opsLabel}>{label("ops.manager", "Operations Manager")}</Text>
+                  <Text style={S.opsValue}>{shapeForPdf(companyInfo.operationsManager.name)}</Text>
+                </View>
+              ) : null}
+              {hasText(companyInfo.operationsManager?.phone) ? (
+                <View style={S.opsItem}>
+                  <Text style={S.opsLabel}>{label("ops.directMobile", "Direct Mobile")}</Text>
+                  <Text style={S.opsValue}>{companyInfo.operationsManager.phone}</Text>
+                </View>
+              ) : null}
+              {hasText(companyInfo.operationsManager?.email) ? (
+                <View style={S.opsItem}>
+                  <Text style={S.opsLabel}>{label("ops.email", "Operations Email")}</Text>
+                  <Text style={S.opsValue}>{companyInfo.operationsManager.email}</Text>
+                </View>
+              ) : null}
+              {hasText(companyInfo.whatsapp) ? (
+                <View style={S.opsItem}>
+                  <Text style={S.opsLabel}>{label("ops.whatsapp", "WhatsApp Hotline")}</Text>
+                  <Text style={S.opsValue}>{companyInfo.whatsapp}</Text>
+                </View>
+              ) : null}
+              {hasText(companyInfo.phone) ? (
+                <View style={S.opsItem}>
+                  <Text style={S.opsLabel}>{label("ops.headOffice", "Head Office")}</Text>
+                  <Text style={S.opsValue}>{companyInfo.phone}</Text>
+                </View>
+              ) : null}
+              {hasText(companyInfo.email) ? (
+                <View style={S.opsItem}>
+                  <Text style={S.opsLabel}>{label("ops.companyEmail", "Company Email")}</Text>
+                  <Text style={S.opsValue}>{companyInfo.email}</Text>
+                </View>
+              ) : null}
+              {hasText(companyInfo.website) ? (
+                <View style={S.opsItem}>
+                  <Text style={S.opsLabel}>{label("ops.website", "Website")}</Text>
+                  <Text style={S.opsValue}>{companyInfo.website}</Text>
+                </View>
+              ) : null}
+              {hasText(companyInfo.address) ? (
+                <View style={S.opsItem}>
+                  <Text style={S.opsLabel}>{label("ops.address", "Office Address")}</Text>
+                  <Text style={S.opsValue}>{shapeForPdf(companyInfo.address)}</Text>
+                </View>
+              ) : null}
             </View>
           </View>
 
           <View wrap={false} style={S.companyShowcase}>
             <Image src={LOGO_SRC} style={S.companyShowcaseLogo} />
             <Text style={[S.companyShowcaseName, headingStyle]}>{shapeForPdf(companyInfo.name)}</Text>
-            <Text style={S.companyShowcaseTagline}>{shapeForPdf(companyInfo.tagline || "Discover Egypt with Excellence")}</Text>
+            {hasText(companyInfo.tagline) ? (
+              <Text style={S.companyShowcaseTagline}>{shapeForPdf(companyInfo.tagline!)}</Text>
+            ) : null}
             <Text style={S.companyShowcaseAbout}>
               {label(
                 "company.about",
@@ -1380,83 +1255,96 @@ export function ItineraryPDF({
               )}
             </Text>
             <View style={S.companyShowcaseContact}>
-              <View style={S.companyContactCell}>
-                <View style={S.companyContactIcon}><SunDiscBullet size={11} /></View>
-                <View style={S.companyContactTextWrap}>
-                  <Text style={S.companyContactLabel}>{label("ops.directMobile", "Phone")}</Text>
-                  <Text style={S.companyContactValue}>{companyInfo.phone}</Text>
+              {hasText(companyInfo.phone) ? (
+                <View style={S.companyContactCell}>
+                  <View style={S.companyContactIcon}><SunDiscBullet size={11} /></View>
+                  <View style={S.companyContactTextWrap}>
+                    <Text style={S.companyContactLabel}>{label("ops.directMobile", "Phone")}</Text>
+                    <Text style={S.companyContactValue}>{companyInfo.phone}</Text>
+                  </View>
                 </View>
-              </View>
-              <View style={S.companyContactCell}>
-                <View style={S.companyContactIcon}><EyeOfHorusBullet size={11} /></View>
-                <View style={S.companyContactTextWrap}>
-                  <Text style={S.companyContactLabel}>{label("ops.companyEmail", "Email")}</Text>
-                  <Text style={S.companyContactValue}>{companyInfo.email}</Text>
+              ) : null}
+              {hasText(companyInfo.email) ? (
+                <View style={S.companyContactCell}>
+                  <View style={S.companyContactIcon}><EyeOfHorusBullet size={11} /></View>
+                  <View style={S.companyContactTextWrap}>
+                    <Text style={S.companyContactLabel}>{label("ops.companyEmail", "Email")}</Text>
+                    <Text style={S.companyContactValue}>{companyInfo.email}</Text>
+                  </View>
                 </View>
-              </View>
-              <View style={S.companyContactCell}>
-                <View style={S.companyContactIcon}><ScarabBullet size={11} /></View>
-                <View style={S.companyContactTextWrap}>
-                  <Text style={S.companyContactLabel}>{label("ops.website", "Website")}</Text>
-                  <Text style={S.companyContactValue}>{companyInfo.website}</Text>
+              ) : null}
+              {hasText(companyInfo.website) ? (
+                <View style={S.companyContactCell}>
+                  <View style={S.companyContactIcon}><ScarabBullet size={11} /></View>
+                  <View style={S.companyContactTextWrap}>
+                    <Text style={S.companyContactLabel}>{label("ops.website", "Website")}</Text>
+                    <Text style={S.companyContactValue}>{companyInfo.website}</Text>
+                  </View>
                 </View>
-              </View>
-              <View style={S.companyContactCell}>
-                <View style={S.companyContactIcon}><LotusBullet size={11} /></View>
-                <View style={S.companyContactTextWrap}>
-                  <Text style={S.companyContactLabel}>{label("ops.address", "Office")}</Text>
-                  <Text style={S.companyContactValue}>{shapeForPdf(companyInfo.address)}</Text>
+              ) : null}
+              {hasText(companyInfo.address) ? (
+                <View style={S.companyContactCell}>
+                  <View style={S.companyContactIcon}><LotusBullet size={11} /></View>
+                  <View style={S.companyContactTextWrap}>
+                    <Text style={S.companyContactLabel}>{label("ops.address", "Office")}</Text>
+                    <Text style={S.companyContactValue}>{shapeForPdf(companyInfo.address)}</Text>
+                  </View>
                 </View>
-              </View>
+              ) : null}
             </View>
           </View>
         </View>
-      </ParchmentPage>
 
-      {/* ---------------- Terms / Review / Social ---------------- */}
-      <ParchmentPage companyInfo={companyInfo} languageCode={langCode} pageLabel={hasExtraDays ? "Page 5" : "Page 4"} rtl={rtl} S={S}>
-        <View style={S.section}>
-          <SectionHeader S={S} number="07" icon="terms" title={label("terms.policy", "Terms & Policy")} titleStyle={headingStyle} />
-          <View style={S.termsCard}>
-            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: SPACE.xs + 2, gap: SPACE.xs }}>
-              <CartoucheSeal size={12} />
-              <Text style={{ ...cinzelStyle, fontSize: 8.5, color: COLOR.deepLapis, fontWeight: 700 }}>{label("section.terms", "Terms & Conditions")}</Text>
+        {hasTermsSection ? (
+          <View style={S.section}>
+            <SectionHeader S={S} number={nextSectionNumber()} icon="terms" title={label("terms.policy", "Terms & Policy")} titleStyle={headingStyle} />
+            <View style={S.termsCard}>
+              {termsItems.length > 0 ? (
+                <>
+                  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: SPACE.xs + 2, gap: SPACE.xs }} wrap={false}>
+                    <CartoucheSeal size={12} />
+                    <Text style={{ ...cinzelStyle, fontSize: 8.5, color: COLOR.deepLapis, fontWeight: 700 }}>{label("section.terms", "Terms & Conditions")}</Text>
+                  </View>
+                  {termsItems.map((item, i) => (
+                    <View key={i} style={S.termsItemRow}>
+                      <SunDiscBullet size={9} />
+                      <Text style={S.termsItemText}>{item}</Text>
+                    </View>
+                  ))}
+                  <Text style={S.termsItemText}>
+                    {label("terms.readFull", "Read the full terms on our website:")}{" "}
+                    <Link src={TERMS_URL} style={S.termsLinkText}>{TERMS_URL}</Link>
+                  </Text>
+                </>
+              ) : null}
+
+              {termsItems.length > 0 && privacyItems.length > 0 ? <Divider compact /> : null}
+
+              {privacyItems.length > 0 ? (
+                <>
+                  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: SPACE.xs + 2, gap: SPACE.xs }} wrap={false}>
+                    <EyeOfHorusBullet size={12} />
+                    <Text style={{ ...cinzelStyle, fontSize: 8.5, color: COLOR.deepLapis, fontWeight: 700 }}>{label("general.privacyPolicy", "Privacy Policy")}</Text>
+                  </View>
+                  {privacyItems.map((item, i) => (
+                    <View key={i} style={S.termsItemRow}>
+                      <PyramidBullet size={9} />
+                      <Text style={S.termsItemText}>{item}</Text>
+                    </View>
+                  ))}
+                  <Text style={S.termsItemText}>
+                    {label("privacy.readFull", "Read the full privacy policy:")}{" "}
+                    <Link src={PRIVACY_URL} style={S.termsLinkText}>{PRIVACY_URL}</Link>
+                  </Text>
+                </>
+              ) : null}
             </View>
-            {termsItems.map((item, i) => (
-              <View key={i} style={S.termsItemRow}>
-                <SunDiscBullet size={9} />
-                <Text style={S.termsItemText}>{item}</Text>
-              </View>
-            ))}
-            <Text style={S.termsItemText}>
-              {label("terms.readFull", "Read the full terms on our website:")}{" "}
-              <Link src={TERMS_URL} style={S.termsLinkText}>{TERMS_URL}</Link>
-            </Text>
-
-            <Divider compact />
-
-            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: SPACE.xs + 2, gap: SPACE.xs }}>
-              <EyeOfHorusBullet size={12} />
-              <Text style={{ ...cinzelStyle, fontSize: 8.5, color: COLOR.deepLapis, fontWeight: 700 }}>{label("general.privacyPolicy", "Privacy Policy")}</Text>
-            </View>
-            {privacyItems.map((item, i) => (
-              <View key={i} style={S.termsItemRow}>
-                <PyramidBullet size={9} />
-                <Text style={S.termsItemText}>{item}</Text>
-              </View>
-            ))}
-            <Text style={S.termsItemText}>
-              {label("privacy.readFull", "Read the full privacy policy:")}{" "}
-              <Link src={PRIVACY_URL} style={S.termsLinkText}>{PRIVACY_URL}</Link>
-            </Text>
           </View>
-        </View>
+        ) : null}
 
-        <View style={S.reviewCard}>
+        <View style={S.reviewCard} wrap={false}>
           <Text style={[S.reviewTitle, headingStyle]}>{label("review.title", "Leave a Review")}</Text>
-          <Text style={S.reviewSubtitle}>
-            {label("review.subtitle", "Loved your tour? Your feedback on Google Business helps travelers like you find us.")}
-          </Text>
+          <Text style={S.reviewSubtitle}>{label("review.subtitle", "Loved your tour? Your feedback on Google Business helps travelers like you find us.")}</Text>
           <Link src={companyInfo.socialMedia?.googleBusiness || "https://share.google/RLldzNlk9YFVuIGbD"}>
             <View style={S.reviewBadge}>
               <Text style={[S.reviewBadgeText, headingStyle]}>{label("review.cta", "★ Write a Review")}</Text>
@@ -1465,13 +1353,15 @@ export function ItineraryPDF({
           <Text style={S.reviewLink}>{companyInfo.socialMedia?.googleBusiness || "https://share.google/RLldzNlk9YFVuIGbD"}</Text>
         </View>
 
-        <View style={S.socialRow}>
-          {companyInfo.socialMedia?.facebook ? <Link src={companyInfo.socialMedia.facebook} style={S.socialLinkItem}>{label("social.facebook", "Facebook")}</Link> : null}
-          {companyInfo.socialMedia?.instagram ? <Link src={companyInfo.socialMedia.instagram} style={S.socialLinkItem}>{label("social.instagram", "Instagram")}</Link> : null}
-          {companyInfo.socialMedia?.youtube ? <Link src={companyInfo.socialMedia.youtube} style={S.socialLinkItem}>{label("social.youtube", "YouTube")}</Link> : null}
-          {companyInfo.socialMedia?.twitter ? <Link src={companyInfo.socialMedia.twitter} style={S.socialLinkItem}>{label("social.twitter", "X (Twitter)")}</Link> : null}
-          {companyInfo.socialMedia?.googleBusiness ? <Link src={companyInfo.socialMedia.googleBusiness} style={S.socialLinkItem}>{label("social.googleBusiness", "Google Business")}</Link> : null}
-        </View>
+        {(companyInfo.socialMedia?.facebook || companyInfo.socialMedia?.instagram || companyInfo.socialMedia?.youtube || companyInfo.socialMedia?.twitter || companyInfo.socialMedia?.googleBusiness) ? (
+          <View style={S.socialRow} wrap={false}>
+            {companyInfo.socialMedia?.facebook ? <Link src={companyInfo.socialMedia.facebook} style={S.socialLinkItem}>{label("social.facebook", "Facebook")}</Link> : null}
+            {companyInfo.socialMedia?.instagram ? <Link src={companyInfo.socialMedia.instagram} style={S.socialLinkItem}>{label("social.instagram", "Instagram")}</Link> : null}
+            {companyInfo.socialMedia?.youtube ? <Link src={companyInfo.socialMedia.youtube} style={S.socialLinkItem}>{label("social.youtube", "YouTube")}</Link> : null}
+            {companyInfo.socialMedia?.twitter ? <Link src={companyInfo.socialMedia.twitter} style={S.socialLinkItem}>{label("social.twitter", "X (Twitter)")}</Link> : null}
+            {companyInfo.socialMedia?.googleBusiness ? <Link src={companyInfo.socialMedia.googleBusiness} style={S.socialLinkItem}>{label("social.googleBusiness", "Google Business")}</Link> : null}
+          </View>
+        ) : null}
       </ParchmentPage>
     </Document>
   );
@@ -1492,7 +1382,7 @@ function SummaryCard({ S, label, value }: { S: typeof styles; label: string; val
   };
 
   return (
-    <View style={S.summaryItem}>
+    <View style={S.summaryItem} wrap={false}>
       <View style={S.summaryItemIcon}>{getIcon()}</View>
       <View style={S.summaryItemTextWrap}>
         <Text style={S.summaryItemLabel}>{shapeForPdf(label)}</Text>
@@ -1540,8 +1430,15 @@ function DayCard({
   const mealsText = shapeForPdf(mealsJoined);
 
   return (
-    <View style={S.dayCard} break={false}>
-      <View style={S.dayHeader}>
+    // No `break={false}` / `wrap={false}` on the whole card on purpose: a
+    // day's text length varies a lot, and forcing the entire card to stay
+    // atomic was exactly what caused it to overflow the page and print over
+    // the footer when it didn't fit. Letting it wrap normally means
+    // react-pdf will cleanly continue it onto the next physical page
+    // instead. Only the small header row is kept atomic (wrap={false}) so a
+    // day title is never orphaned alone at the bottom of a page.
+    <View style={S.dayCard}>
+      <View style={S.dayHeader} wrap={false}>
         <View style={S.dayBadge}>
           <Text style={[S.dayBadgeText, headingStyle]}>DAY {day.day}</Text>
         </View>
@@ -1553,24 +1450,24 @@ function DayCard({
           <View style={S.dayRoadmap}>
             <Text style={[S.dayRoadmapTitle, cinzelStyle]}>{tLabels?.roadmap || "Today's Roadmap"}</Text>
             {stops.map((stop, i) => (
-              <View key={i} style={S.dayRoadmapRow}>
+              <View key={i} style={S.dayRoadmapRow} wrap={false}>
                 <LotusBullet size={9} />
                 <Text style={S.dayRoadmapStop}>{stop}</Text>
               </View>
             ))}
           </View>
         )}
-        {(accommodation || mealsJoined) ? (
+        {(hasText(accommodation) || hasText(mealsJoined)) ? (
           <View style={S.metaRow}>
-            {accommodation ? (
-              <View style={S.metaItem}>
+            {hasText(accommodation) ? (
+              <View style={S.metaItem} wrap={false}>
                 <PyramidBullet size={9} />
                 <Text style={S.metaLabel}>{tLabels?.stay || "Stay"} ·</Text>
                 <Text style={S.metaValue}>{accommodationText}</Text>
               </View>
             ) : null}
-            {mealsJoined ? (
-              <View style={S.metaItem}>
+            {hasText(mealsJoined) ? (
+              <View style={S.metaItem} wrap={false}>
                 <SunDiscBullet size={9} />
                 <Text style={S.metaLabel}>{tLabels?.meals || "Meals"} ·</Text>
                 <Text style={S.metaValue}>{mealsText}</Text>

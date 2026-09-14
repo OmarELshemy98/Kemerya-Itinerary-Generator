@@ -1,7 +1,5 @@
 export const SUPPORTED_LANGUAGES = [
   { code: "en", name: "English", nativeName: "English", rtl: false },
-  { code: "ar", name: "Arabic", nativeName: "العربية", rtl: true },
-  { code: "zh", name: "Chinese (Simplified)", nativeName: "简体中文", rtl: false },
   { code: "zh-TW", name: "Chinese (Traditional)", nativeName: "繁體中文", rtl: false },
   { code: "ja", name: "Japanese", nativeName: "日本語", rtl: false },
   { code: "ko", name: "Korean", nativeName: "한국어", rtl: false },
