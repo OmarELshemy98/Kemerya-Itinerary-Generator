@@ -23,13 +23,14 @@ import { buildItineraryFileName } from "@/components/pdf/pdf-downloader";
 import { formatDateShort } from "@/lib/utils";
 import { generateDynamicMap } from "@/utils/mapGenerator";
 import { useToursData } from "@/components/tours-data-provider";
+import { getWhatsAppMessage, buildWhatsAppUrl } from "@/lib/whatsapp-templates";
 
 /**
  * Standalone, shareable itinerary viewer. Loads a single booking by its id
  * and renders the full PDF itinerary full-screen with Download + WhatsApp
  * share actions. Used by /itinerary/<id>.
  */
-export function ItineraryViewer({ id }: { id: string }) {
+export function ItineraryViewer({ id, languageCode = "en" }: { id: string; languageCode?: string }) {
   const { source, getTourById } = useToursData();
   const [booking, setBooking] = React.useState<BookingConfig | null>(null);
   const [tour, setTour] = React.useState<Tour | null>(null);
@@ -155,16 +156,26 @@ export function ItineraryViewer({ id }: { id: string }) {
     : tour?.title || booking.tourId || "Itinerary";
   const pageUrl = window.location.href;
   const phone = (booking.clientWhatsapp || booking.clientPhone || "").replace(/[^\d]/g, "");
-  const message = `Here is your luxury itinerary: ${pageUrl}`;
-  const shareUrl =
-    phone.length >= 10
-      ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-      : `https://wa.me/?text=${encodeURIComponent(message)}`;
 
   const totalTravelers =
     booking.travelers.adults +
     booking.travelers.children +
     booking.travelers.infants;
+
+  // Static luxury WhatsApp template (offline, zero AI cost) in the client's language
+  const message = getWhatsAppMessage(languageCode, {
+    clientName: booking.clientName || "Guest",
+    tourTitle: title,
+    startDate: booking.startDate,
+    endDate: booking.endDate,
+    totalTravelers,
+    currency: booking.currency,
+    price: (booking.offerPrice && booking.offerPrice > 0 ? booking.offerPrice : booking.totalPrice).toLocaleString(),
+    itineraryLink: pageUrl,
+    companyPhone: KEMERYA_COMPANY_INFO.phone,
+    companyWebsite: KEMERYA_COMPANY_INFO.website,
+  });
+  const shareUrl = buildWhatsAppUrl(message, phone);
 
   const pdfDocument = (
     <ItineraryPDF tour={tour} booking={bookingWithMap} companyInfo={KEMERYA_COMPANY_INFO} />

@@ -285,23 +285,32 @@ export async function POST(request: Request) {
       },
     };
 
-    // Use serviceSupabase to bypass RLS
-    let { data, error } = await client
-      .from("itineraries")
-      .insert(itineraryData)
-      .select()
-      .single();
+    // ── Radical, permanent fix for schema drift (PGRST204) ──
+    // If the database is missing a column (e.g. migrations not applied yet),
+    // Postgres rejects the whole insert. Instead of failing with a 500, we
+    // parse the missing column name from the error, drop it from the payload
+    // and retry — so saving ALWAYS works no matter the DB state.
+    const insertWithDriftRecovery = async () => {
+      let payload: Record<string, unknown> = { ...itineraryData };
+      for (let attempt = 0; attempt < 10; attempt++) {
+        // eslint-disable-next-line no-await-in-loop
+        const res = await client
+          .from("itineraries")
+          .insert(payload)
+          .select()
+          .single();
+        const err = res.error as { code?: string; message?: string } | null;
+        if (!err || err.code !== "PGRST204") return res;
+        const missing = err.message?.match(/'([^']+)'/)?.[1];
+        if (!missing || !(missing in payload)) return res;
+        console.warn(`itineraries: column "${missing}" missing in DB — saving without it (run pending migrations!)`);
+        const { [missing]: _dropped, ...rest } = payload;
+        payload = rest;
+      }
+      return { data: null, error: { code: "PGRST204", message: "Too many missing columns" } };
+    };
 
-    // Graceful fallback: if the client_country column migration hasn't been
-    // applied yet, retry once without that column instead of failing with 500.
-    if (error && /client_country/i.test(error.message || "")) {
-      const { client_country: _omitted, ...rest } = itineraryData;
-      ({ data, error } = await client
-        .from("itineraries")
-        .insert(rest)
-        .select()
-        .single());
-    }
+    const { data, error } = await insertWithDriftRecovery();
 
     if (error) {
       // If table doesn't exist, return success but warn

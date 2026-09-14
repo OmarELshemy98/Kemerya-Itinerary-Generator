@@ -8,6 +8,7 @@ import type { Tour, BookingConfig } from "@/types";
 import { pdf } from "@react-pdf/renderer";
 import { generateDynamicMap } from "@/utils/mapGenerator";
 import { buildItineraryFileName } from "./pdf-downloader";
+import { getWhatsAppMessage } from "@/lib/whatsapp-templates";
 
 export interface PDFPreviewDialogProps {
   open: boolean;
@@ -23,25 +24,27 @@ export function buildWhatsAppMessage(
   booking: BookingConfig,
   tour: Tour | null,
   companyInfo: { name: string; phone: string; website: string },
-  fileName: string
+  fileName: string,
+  lang: string = "en"
 ): string {
   const tourName = booking.isCustomTour
     ? booking.customTourTitle || "Custom Tour"
     : tour?.title || "Kemerya Tour";
-  const dates = booking.startDate.replace("T", " ") + " → " + booking.endDate.replace("T", " ");
-  return "🎉 *" + companyInfo.name + " - Your Itinerary is Ready!*\n\n" +
-    "Dear " + (booking.clientName || "Guest") + ",\n\n" +
-    "Your exclusive travel itinerary \"" + tourName + "\" has been prepared.\n\n" +
-    "📅 *Dates:* " + dates + "\n" +
-    "👥 *Travelers:* " + booking.travelers.adults + " adult(s)" +
-    (booking.travelers.children ? ", " + booking.travelers.children + " child(ren)" : "") +
-    (booking.travelers.infants ? ", " + booking.travelers.infants + " infant(s)" : "") + "\n" +
-    "💰 *Total:* " + booking.currency + " " + booking.totalPrice.toLocaleString() + "\n\n" +
-    "📎 Attached: " + fileName + "\n\n" +
-    "For any questions, contact us:\n" +
-    "📞 " + companyInfo.phone + "\n" +
-    "🌐 " + companyInfo.website + "\n\n" +
-    companyInfo.name + " Team";
+  const totalTravelers =
+    booking.travelers.adults + booking.travelers.children + booking.travelers.infants;
+  // Static luxury template (offline, zero AI cost) — falls back to English.
+  return getWhatsAppMessage(lang, {
+    clientName: booking.clientName || "Guest",
+    tourTitle: tourName,
+    startDate: booking.startDate,
+    endDate: booking.endDate,
+    totalTravelers,
+    currency: booking.currency,
+    price: (booking.offerPrice && booking.offerPrice > 0 ? booking.offerPrice : booking.totalPrice).toLocaleString(),
+    itineraryLink: typeof window !== "undefined" ? window.location.href : "",
+    companyPhone: companyInfo.phone,
+    companyWebsite: companyInfo.website,
+  }) + (fileName ? `\n\n📎 PDF: ${fileName}` : "");
 }
 
 export function PDFPreviewDialog({

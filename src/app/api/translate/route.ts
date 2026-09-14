@@ -207,32 +207,87 @@ Translate every human-readable string VALUE (tour copy, day titles, descriptions
 Here is the JSON to translate:
 ${JSON.stringify(dataToTranslate, null, 2)}`;
 
-    // Get Gemini model
+    // Get Gemini model — use the highly stable "gemini-2.0-flash" (configurable
+    // via GEMINI_MODEL env var). Older "gemini-3.x" aliases cause 503
+    // routing/availability issues, so we never rely on a single model: we walk
+    // the candidate list, and retry each with exponential backoff on 503/429.
+    const MODEL_CANDIDATES_RUNTIME = [
+      process.env.GEMINI_MODEL || "gemini-2.0-flash",
+      "gemini-1.5-flash-latest",
+      "gemini-1.5-flash",
+      "gemini-1.5-pro-latest",
+    ];
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3.6-flash",
-      systemInstruction: SYSTEM_PROMPT,
-      generationConfig: {
-        // Native JSON mode: Gemini is constrained to emit syntactically
-        // valid JSON — no markdown fences, no prose, no truncation artifacts.
-        responseMimeType: "application/json",
-        temperature: 0.3, // Lower temperature for consistent translations
-        topK: 20,
-        topP: 0.95,
-        maxOutputTokens: MAX_OUTPUT_TOKENS,
-      },
-    });
+    const RETRYABLE_ERROR = /\b(503|429)\b|overloaded|unavailable|rate limit|quota|resource_exhausted/i;
+    const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    // Generate translation — truncation-tolerant parsing (FIX #2).
-    const result = await model.generateContent(prompt);
-    const rawText = result.response.text();
-    let translatedData: Record<string, unknown>;
-    try {
-      translatedData = safeParseJson(rawText);
-    } catch {
-      const retryPrompt = `The previous JSON output was cut off mid-way (truncated). Complete it now: return the FULL corrected JSON object with the exact same structure and keys, fully translated to ${targetLanguage}. Return ONLY valid JSON. Truncated fragment: ${rawText.slice(0, 12000)}`;
-      const retry = await model.generateContent(retryPrompt);
-      translatedData = safeParseJson(retry.response.text());
+    /** generateContent with exponential backoff (up to 3 attempts, 1s then 2s) on 503/429. */
+    async function generateWithRetry(
+      mdl: ReturnType<typeof genAI.getGenerativeModel>,
+      promptText: string
+    ) {
+      let lastError: unknown;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          return await mdl.generateContent(promptText);
+        } catch (e) {
+          lastError = e;
+          const msg = String((e as Error)?.message || e);
+          const isLast = attempt === 3;
+          if (isLast || !RETRYABLE_ERROR.test(msg)) throw e;
+          console.warn(`Translation attempt ${attempt} failed (${msg.slice(0, 120)}) — retrying in ${1000 * attempt}ms`);
+          await wait(1000 * attempt); // 1000ms → 2000ms
+        }
+      }
+      throw lastError;
+    }
+
+    let translatedData: Record<string, unknown> | null = null;
+    let lastModelError: unknown = null;
+
+    for (const candidate of MODEL_CANDIDATES_RUNTIME) {
+      const model = genAI.getGenerativeModel({
+        model: candidate,
+        systemInstruction: SYSTEM_PROMPT,
+        generationConfig: {
+          // Native JSON mode: Gemini is constrained to emit syntactically
+          // valid JSON — no markdown fences, no prose, no truncation artifacts.
+          responseMimeType: "application/json",
+          temperature: 0.3, // Lower temperature for consistent translations
+          topK: 20,
+          topP: 0.95,
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
+        },
+      });
+
+      try {
+        // Generate translation — truncation-tolerant parsing (FIX #2) with
+        // retry/backoff for transient 503/429 Google server spikes.
+        const result = await generateWithRetry(model, prompt);
+        const rawText = result.response.text();
+        try {
+          translatedData = safeParseJson(rawText);
+        } catch {
+          const retryPrompt = `The previous JSON output was cut off mid-way (truncated). Complete it now: return the FULL corrected JSON object with the exact same structure and keys, fully translated to ${targetLanguage}. Return ONLY valid JSON. Truncated fragment: ${rawText.slice(0, 12000)}`;
+          const retry = await generateWithRetry(model, retryPrompt);
+          translatedData = safeParseJson(retry.response.text());
+        }
+        break; // success — no need for fallback models
+      } catch (e) {
+        lastModelError = e;
+        // Non-retryable (e.g. invalid API key / bad prompt) → fail fast
+        if (!RETRYABLE_ERROR.test(String((e as Error)?.message || e))) break;
+        console.warn(`Model ${candidate} failed, trying next candidate…`);
+      }
+    }
+
+    if (!translatedData) {
+      const message = lastModelError instanceof Error ? lastModelError.message : "Translation service temporarily unavailable";
+      console.error("Translation API: all model candidates exhausted:", lastModelError);
+      return NextResponse.json(
+        { success: false, error: `Translation service is temporarily unavailable (503). Please try again in a moment.`, detail: message },
+        { status: 503 }
+      );
     }
 
     // Guarantee the ui namespace for JSX mapping translatedData?.ui?.terms.
