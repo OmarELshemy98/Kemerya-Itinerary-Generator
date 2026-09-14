@@ -4,7 +4,7 @@ import * as React from "react";
 import { pdf } from "@react-pdf/renderer";
 import { Download, Loader2 } from "lucide-react";
 import type { Tour, BookingConfig } from "@/types";
-import { ItineraryPDF } from "@/components/pdf/itinerary-pdf";
+import ItineraryPDF from "@/components/pdf/itinerary-pdf";
 import { KEMERYA_COMPANY_INFO } from "@/data/company";
 import { Button } from "@/components/ui/button";
 import { itineraryRowToBooking } from "@/lib/itinerary-view";

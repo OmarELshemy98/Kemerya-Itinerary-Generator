@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import type { Tour, BookingConfig } from "@/types";
-import { ItineraryPDF } from "@/components/pdf/itinerary-pdf";
+import ItineraryPDF from "@/components/pdf/itinerary-pdf";
 import { KEMERYA_COMPANY_INFO } from "@/data/company";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

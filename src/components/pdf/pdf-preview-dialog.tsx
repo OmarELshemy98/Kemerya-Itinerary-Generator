@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ItineraryPDF } from "./itinerary-pdf";
+import ItineraryPDF from "./itinerary-pdf";
 import { KEMERYA_COMPANY_INFO } from "@/data/company";
 import type { Tour, BookingConfig } from "@/types";
 import { pdf } from "@react-pdf/renderer";
