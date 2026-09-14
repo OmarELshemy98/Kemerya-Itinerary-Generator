@@ -49,7 +49,7 @@ export function BookingSummary({ ctx, booking, daysCount, nights, travelersText,
 
   return (
     <View style={styles.section}>
-      <View style={styles.sectionHeader} wrap={false}>
+      <View style={styles.sectionHeader} wrap={false} minPresenceAhead={60}>
         <View style={styles.sectionNum}><Text style={styles.sectionNumText}>{sectionNumber}</Text></View>
         <View style={styles.sectionIcon}><CompassIcon s={12} /></View>
         <Text style={styles.sectionTitle}>{label("section.summary", "Booking Summary")}</Text>

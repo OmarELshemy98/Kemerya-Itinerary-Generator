@@ -96,35 +96,40 @@ export default function ItineraryPDF({ tour, booking, companyInfo, translatedDat
   const nextSectionNumber = (): string => String(++sectionCounter).padStart(2, "0");
   const ctx = { S, label: (k: string, fb: string) => label(translatedData, k, fb), headingStyle, cinzelStyle };
 
-  /** One section per physical page — every <SectionPage> forces a page break.
-   *  The brand header (top) and footer band (bottom) are `fixed` so they
-   *  elegantly repeat on every page. Page paddings reserve room for both. */
+  /** One continuous-flow document: a SINGLE wrapping <Page> holds every
+   *  section. The brand header (top) and the footer band (bottom) are `fixed`
+   *  and are DIRECT children of the Page, so react-pdf repeats them on every
+   *  generated page and positions the absolute footer 20pt above the page
+   *  edge (inside the bottom margin reserved by `S.page.paddingBottom`).
+   *
+   *  Every section is a direct child too — that is what lets the pagination
+   *  engine move or split a section (and honour `<View break />`); wrapping
+   *  the sections in a flex container silently disables both. */
   const SectionPage = ({ children }: { children: React.ReactNode }) => (
     <Page size="A4" style={[S.page, { direction: rtl ? "rtl" : "ltr", fontFamily: bodyFont }]} wrap>
-      <View style={[S.contentLayer, { fontFamily: bodyFont, direction: rtl ? "rtl" : "ltr" }]}>
-        <View style={S.headerBox} fixed>
-          <Image src="/logo-kemerya.png" style={S.headerLogo} />
-          <View style={S.headerText}>
-            <Text style={[S.brandTitle, { fontFamily: cinzelFont }]}>{c.name || "KEMERYA TOURS"}</Text>
-            {hasText(c.tagline) && <Text style={S.brandTagline}>{shapeForPdf(c.tagline)}</Text>}
-          </View>
+      <View style={S.headerBox} fixed>
+        <Image src="/logo-kemerya.png" style={S.headerLogo} />
+        <View style={S.headerText}>
+          <Text style={[S.brandTitle, { fontFamily: cinzelFont }]}>{c.name || "KEMERYA TOURS"}</Text>
+          {hasText(c.tagline) && <Text style={S.brandTagline}>{shapeForPdf(c.tagline)}</Text>}
         </View>
-        {children}
-        {/* Fixed universal footer band — repeats at the bottom of every page */}
-        <View style={S.footerBand} fixed>
-          <Text style={[S.footerBrand, { fontFamily: cinzelFont }]}>{c.name || "KEMERYA TOURS"}</Text>
-          <Text style={S.footerInfo}>
-            {`${c.phone}  •  ${c.email}  •  ${c.website}\n${c.address}`}
-          </Text>
-        </View>
+      </View>
+      {children}
+      {/* Fixed universal footer band — repeats at the bottom of every page */}
+      <View style={S.footerBand} fixed>
+        <Text style={[S.footerBrand, { fontFamily: cinzelFont }]}>{c.name || "KEMERYA TOURS"}</Text>
+        <Text style={S.footerInfo}>
+          {`${c.phone}  •  ${c.email}  •  ${c.website}\n${c.address}`}
+        </Text>
       </View>
     </Page>
   );
 
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
-      {/* Page 1 — Booking Summary & Pricing at a Glance */}
       <SectionPage>
+        {/* Booking reference → summary → pricing → overview. These flow
+            continuously and share pages instead of each burning a whole one. */}
         <BookingReference S={S} label={(k, fb) => label(translatedData, k, fb)} bookingRef={booking.id} cinzelStyle={cinzelStyle} />
         <BookingSummary
           ctx={ctx}
@@ -136,55 +141,32 @@ export default function ItineraryPDF({ tour, booking, companyInfo, translatedDat
           sectionNumber={nextSectionNumber()}
         />
         <PricingAtAGlance ctx={ctx} booking={booking} travelersText={travelersText} sectionNumber={nextSectionNumber()} />
-      </SectionPage>
-
-      {/* Page 2 — Tour Description */}
-      <SectionPage>
         <TourDescription ctx={ctx} tourTitle={label(translatedData, "tour.title", tourTitle)} description={shapeForPdf(tourDescription)} meta={tourMeta} sectionNumber={nextSectionNumber()} />
-      </SectionPage>
 
-      {/* Page 3+ — Day-by-Day Itinerary (wraps across as many pages as needed) */}
-      <SectionPage>
+        {/* The ONE intentional page break: the first pages are crowded by
+            design, so the day-by-day roadmap always opens on a clean page. */}
+        <View break />
+
         <DayByDayItinerary ctx={ctx} itinerary={itinerary} dayField={dayField} sectionNumber={nextSectionNumber()} fallbackDay={fallbackDay} />
-      </SectionPage>
 
-      {/* Page X — Optional Tours (ONLY rendered when tours exist — no blank pages) */}
-      {optionalTours.length > 0 && (
-        <SectionPage>
+        {/* Everything below keeps flowing — no forced breaks — so short
+            sections share pages. Conditional sections are skipped entirely, so
+            no blank pages are ever produced. */}
+        {optionalTours.length > 0 && (
           <OptionalTours ctx={ctx} items={optionalTours} currency={booking.currency} sectionNumber={nextSectionNumber()} />
-        </SectionPage>
-      )}
-
-      {/* Page Y — Extra Services (ONLY rendered when there is data) */}
-      {hasExtraServices && (
-        <SectionPage>
+        )}
+        {hasExtraServices && (
           <ExtraServices ctx={ctx} notes={booking.notes || ""} specialRequests={booking.specialRequests || ""} specialRequestItems={booking.specialRequestItems} currency={booking.currency} sectionNumber={nextSectionNumber()} />
-        </SectionPage>
-      )}
-
-      {/* Page Z — Inclusions & Exclusions (skipped entirely when empty) */}
-      {(inclusions.length > 0 || exclusions.length > 0) && (
-        <SectionPage>
+        )}
+        {(inclusions.length > 0 || exclusions.length > 0) && (
           <InclusionsExclusions ctx={ctx} inclusions={inclusions} exclusions={exclusions} sectionNumber={nextSectionNumber()} />
-        </SectionPage>
-      )}
-
-      {/* Page W — Terms & Conditions */}
-      {termsItems.length > 0 && (
-        <SectionPage>
-          <TermsAndPrivacy ctx={ctx} termsItems={termsItems} privacyItems={[]} sectionNumber={nextSectionNumber()} />
-        </SectionPage>
-      )}
-
-      {/* Page V — Privacy Policy */}
-      {privacyItems.length > 0 && (
-        <SectionPage>
-          <TermsAndPrivacy ctx={ctx} termsItems={[]} privacyItems={privacyItems} sectionNumber={nextSectionNumber()} />
-        </SectionPage>
-      )}
-
-      {/* Final page — Company Details & Agent Signature */}
-      <SectionPage>
+        )}
+        {(termsItems.length > 0 || privacyItems.length > 0) && (
+          /* Terms + privacy share one section (the component renders both
+             panels) — one heading instead of two, and the title always
+             matches the content it introduces. */
+          <TermsAndPrivacy ctx={ctx} termsItems={termsItems} privacyItems={privacyItems} sectionNumber={nextSectionNumber()} />
+        )}
         <AgentSignature ctx={ctx} companyInfo={c} agentName={booking.agentName} createdAt={booking.createdAt} sectionNumber={nextSectionNumber()} />
         <CompanyDetails ctx={ctx} companyInfo={c} sectionNumber={nextSectionNumber()} />
       </SectionPage>

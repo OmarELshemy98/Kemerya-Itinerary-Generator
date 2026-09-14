@@ -23,7 +23,7 @@ export function TourDescription({ ctx, tourTitle, description, meta, sectionNumb
 
   return (
     <View style={styles.section}>
-      <View style={styles.sectionHeader} wrap={false}>
+      <View style={styles.sectionHeader} wrap={false} minPresenceAhead={60}>
         <View style={styles.sectionNum}><Text style={styles.sectionNumText}>{sectionNumber}</Text></View>
         <View style={styles.sectionIcon}><LotusIcon s={12} /></View>
         <Text style={styles.sectionTitle}>{label("section.overview", "Tour Description")}</Text>

@@ -25,7 +25,7 @@ export function DayByDayItinerary({ ctx, itinerary, dayField, sectionNumber, fal
 
   return (
     <View style={styles.section}>
-      <View style={styles.sectionHeader} wrap={false}>
+      <View style={styles.sectionHeader} wrap={false} minPresenceAhead={80}>
         <View style={styles.sectionNum}><Text style={styles.sectionNumText}>{sectionNumber}</Text></View>
         <Text style={styles.sectionTitle}>{label("section.roadmap", "Day-by-Day Itinerary")}</Text>
       </View>
