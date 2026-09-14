@@ -2,7 +2,7 @@
 import React from "react";
 import { View, Text } from "@react-pdf/renderer";
 import { S } from "../pdf-styles";
-import { LotusIcon } from "../pdf-primitives";
+import { LotusIcon, PharaonicScene } from "../pdf-primitives";
 
 interface Ctx {
   S: typeof S;
@@ -43,6 +43,10 @@ export function TourDescription({ ctx, tourTitle, description, meta, sectionNumb
           ))}
         </View>
       )}
+      {/* Decorative Pharaonic scene fills all remaining space below the text */}
+      <View style={{ flex: 1, justifyContent: "flex-end", alignItems: "center", marginTop: 14 }}>
+        <PharaonicScene />
+      </View>
     </View>
   );
 }

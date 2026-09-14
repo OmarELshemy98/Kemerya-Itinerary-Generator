@@ -3,14 +3,14 @@ import { StyleSheet } from "@react-pdf/renderer";
 import { C, CARD_BG, CARD_BORDER } from "./pdf-primitives";
 
 export const S = StyleSheet.create({
-  page: { width: "100%", height: "100%", paddingTop: 110, paddingBottom: 110, paddingHorizontal: 32, backgroundColor: C.parchment },
+  page: { width: "100%", height: "100%", paddingTop: 160, paddingBottom: 110, paddingHorizontal: 32, backgroundColor: C.parchment },
   contentLayer: { flex: 1 },
   section: { marginBottom: 18 },
-  headerBox: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
-  headerLogo: { width: 36, height: 36 },
-  headerText: { flex: 1, marginLeft: 8 },
-  brandTitle: { fontSize: 12, color: C.deepBrown, letterSpacing: 1, textTransform: "uppercase", fontWeight: 400 },
-  brandTagline: { fontSize: 7.5, color: C.agedBrown, letterSpacing: 0.4, marginTop: 1 },
+  headerBox: { flexDirection: "column", alignItems: "center", marginBottom: 10 },
+  headerLogo: { width: 100, height: 100, marginBottom: 6 },
+  headerText: { alignItems: "center" },
+  brandTitle: { fontSize: 15, color: C.deepBrown, letterSpacing: 2, textTransform: "uppercase", fontWeight: 400, textAlign: "center" },
+  brandTagline: { fontSize: 8, color: C.agedBrown, letterSpacing: 0.6, marginTop: 3, textAlign: "center" },
   refBadge: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: C.deepLapis, paddingVertical: 5, paddingHorizontal: 10, borderRadius: 3, alignSelf: "flex-start", marginBottom: 12 },
   refText: { fontSize: 8.5, color: C.paleGold, letterSpacing: 1, fontWeight: 400 },
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
