@@ -58,4 +58,8 @@ export const S = StyleSheet.create({
   termsNumText: { fontSize: 6, color: C.paleGold, fontWeight: 400 },
   termsText: { fontSize: 7.5, color: C.warmBrown, lineHeight: 1.4 },
   termsLink: { fontSize: 7, color: C.lapis, marginTop: 4, textDecoration: "underline" },
+  // Universal footer band — fixed so it repeats at the bottom of every page
+  footerBand: { position: "absolute", bottom: 24, left: 32, right: 32, borderTopWidth: 0.7, borderTopColor: C.royalGold, paddingTop: 6, flexDirection: "row", justifyContent: "space-between", alignItems: "center", opacity: 0.95 },
+  footerBrand: { fontSize: 7.5, color: C.deepBrown, letterSpacing: 0.8, textTransform: "uppercase", fontWeight: 400 },
+  footerInfo: { fontSize: 6.5, color: C.agedBrown, textAlign: "right", lineHeight: 1.4 },
 });

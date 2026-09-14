@@ -145,6 +145,14 @@ export const PharaonicScene = ({ w = 500, h = 300 }: { w?: number; h?: number })
       <Line x1={312} y1={104} x2={300} y2={114} />
     </G>
 
+    {/* Eye of Horus (Wedjat) — royal lapis accent above the pyramids */}
+    <G>
+      <Path d="M226 108 C236 100 264 100 274 108 C264 116 236 116 226 108 Z" fill="none" stroke={C.lapis} strokeWidth={1.4} />
+      <Circle cx={250} cy={108} r={4} fill={C.lapis} />
+      <Circle cx={251.5} cy={106.5} r={1.2} fill={C.paleGold} />
+      <Path d="M250 116 L250 126 M250 120 C256 122 262 124 266 128 M250 124 C246 126 241 128 238 130" fill="none" stroke={C.lapis} strokeWidth={1.2} strokeLinecap="round" />
+    </G>
+
     {/* Giza pyramids — Khufu, Khafre (capped), Menkaure */}
     <G>
       <Path d="M96 218 L172 128 L248 218 Z" fill={C.royalGold} opacity={0.18} />
@@ -158,6 +166,13 @@ export const PharaonicScene = ({ w = 500, h = 300 }: { w?: number; h?: number })
 
     {/* Ground line */}
     <Line x1={60} y1={218} x2={440} y2={218} stroke={C.deepBrown} strokeWidth={1.2} opacity={0.7} />
+
+    {/* The Nile — flowing waves beneath the pyramids */}
+    <G stroke={C.lapis} strokeWidth={1.1} fill="none" strokeLinecap="round" opacity={0.75}>
+      <Path d="M70 232 C96 228 122 236 148 232 C174 228 200 236 226 232 C252 228 278 236 304 232 C330 228 356 236 382 232 C400 229 414 232 430 232" />
+      <Path d="M84 241 C110 237 136 245 162 241 C188 237 214 245 240 241 C266 237 292 245 318 241 C344 237 370 245 396 241 C410 239 420 241 430 241" opacity={0.7} />
+      <Path d="M100 250 C126 246 152 254 178 250 C204 246 230 254 256 250 C282 246 308 254 334 250 C356 247 374 250 390 250" opacity={0.45} />
+    </G>
 
     {/* Ankh pillars flanking the scene */}
     <G stroke={C.lapis} strokeWidth={1.4} fill="none" strokeLinecap="round">

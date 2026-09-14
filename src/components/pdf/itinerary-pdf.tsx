@@ -96,7 +96,9 @@ export default function ItineraryPDF({ tour, booking, companyInfo, translatedDat
   const nextSectionNumber = (): string => String(++sectionCounter).padStart(2, "0");
   const ctx = { S, label: (k: string, fb: string) => label(translatedData, k, fb), headingStyle, cinzelStyle };
 
-  /** One section per physical page — every <SectionPage> forces a page break. */
+  /** One section per physical page — every <SectionPage> forces a page break.
+   *  The brand header (top) and footer band (bottom) are `fixed` so they
+   *  elegantly repeat on every page. Page paddings reserve room for both. */
   const SectionPage = ({ children }: { children: React.ReactNode }) => (
     <Page size="A4" style={[S.page, { direction: rtl ? "rtl" : "ltr", fontFamily: bodyFont }]} wrap>
       <View style={[S.contentLayer, { fontFamily: bodyFont, direction: rtl ? "rtl" : "ltr" }]}>
@@ -108,6 +110,13 @@ export default function ItineraryPDF({ tour, booking, companyInfo, translatedDat
           </View>
         </View>
         {children}
+        {/* Fixed universal footer band — repeats at the bottom of every page */}
+        <View style={S.footerBand} fixed>
+          <Text style={[S.footerBrand, { fontFamily: cinzelFont }]}>{c.name || "KEMERYA TOURS"}</Text>
+          <Text style={S.footerInfo}>
+            {`${c.phone}  •  ${c.email}  •  ${c.website}\n${c.address}`}
+          </Text>
+        </View>
       </View>
     </Page>
   );

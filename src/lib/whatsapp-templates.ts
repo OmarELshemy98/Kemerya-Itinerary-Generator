@@ -30,6 +30,7 @@ const TEMPLATES: Record<WhatsAppTemplateLang, (p: WhatsAppTemplateParams) => str
     `👥 *Travelers:* ${p.totalTravelers}\n` +
     `💰 *Price:* ${p.currency} ${p.price}\n\n` +
     `🔗 *View Your Itinerary:* ${p.itineraryLink}\n\n` +
+    `👉 *Reply CONFIRM to secure your dates.*\n\n` +
     `Our concierge team is at your service at any time:\n` +
     `📞 ${p.companyPhone}\n` +
     `🌐 ${p.companyWebsite}\n\n` +
@@ -43,6 +44,7 @@ const TEMPLATES: Record<WhatsAppTemplateLang, (p: WhatsAppTemplateParams) => str
     `👥 *عدد المسافرين:* ${p.totalTravelers}\n` +
     `💰 *السعر:* ${p.currency} ${p.price}\n\n` +
     `🔗 *شاهد خط سير رحلتك:* ${p.itineraryLink}\n\n` +
+    `👉 *رد بكلمة CONFIRM لتأكيد حجز مواعيدك.*\n\n` +
     `فريق الخدمة الشخصية لدينا في خدمتك في أي وقت:\n` +
     `📞 ${p.companyPhone}\n` +
     `🌐 ${p.companyWebsite}\n\n` +
@@ -56,6 +58,7 @@ const TEMPLATES: Record<WhatsAppTemplateLang, (p: WhatsAppTemplateParams) => str
     `👥 *Voyageurs :* ${p.totalTravelers}\n` +
     `💰 *Tarif :* ${p.currency} ${p.price}\n\n` +
     `🔗 *Consultez votre itinéraire :* ${p.itineraryLink}\n\n` +
+    `👉 *Répondez CONFIRM pour réserver vos dates.*\n\n` +
     `Notre équipe concierge reste à votre entière disposition :\n` +
     `📞 ${p.companyPhone}\n` +
     `🌐 ${p.companyWebsite}\n\n` +
@@ -69,6 +72,7 @@ const TEMPLATES: Record<WhatsAppTemplateLang, (p: WhatsAppTemplateParams) => str
     `👥 *Reisende:* ${p.totalTravelers}\n` +
     `💰 *Preis:* ${p.currency} ${p.price}\n\n` +
     `🔗 *Ihr Reiseverlauf:* ${p.itineraryLink}\n\n` +
+    `👉 *Antworten Sie mit CONFIRM, um Ihre Termine zu sichern.*\n\n` +
     `Unser Concierge-Team ist jederzeit für Sie da:\n` +
     `📞 ${p.companyPhone}\n` +
     `🌐 ${p.companyWebsite}\n\n` +
@@ -82,6 +86,7 @@ const TEMPLATES: Record<WhatsAppTemplateLang, (p: WhatsAppTemplateParams) => str
     `👥 *Viaggiatori:* ${p.totalTravelers}\n` +
     `💰 *Prezzo:* ${p.currency} ${p.price}\n\n` +
     `🔗 *Il tuo itinerario:* ${p.itineraryLink}\n\n` +
+    `👉 *Rispondi CONFERMA per bloccare le tue date.*\n\n` +
     `Il nostro team di concierge è a tua completa disposizione:\n` +
     `📞 ${p.companyPhone}\n` +
     `🌐 ${p.companyWebsite}\n\n` +
@@ -95,6 +100,7 @@ const TEMPLATES: Record<WhatsAppTemplateLang, (p: WhatsAppTemplateParams) => str
     `👥 *Viajeros:* ${p.totalTravelers}\n` +
     `💰 *Precio:* ${p.currency} ${p.price}\n\n` +
     `🔗 *Consulte su itinerario:* ${p.itineraryLink}\n\n` +
+    `👉 *Responda CONFIRMAR para asegurar sus fechas.*\n\n` +
     `Nuestro equipo de conserjería está a su entera disposición:\n` +
     `📞 ${p.companyPhone}\n` +
     `🌐 ${p.companyWebsite}\n\n` +
@@ -108,6 +114,7 @@ const TEMPLATES: Record<WhatsAppTemplateLang, (p: WhatsAppTemplateParams) => str
     `👥 *旅行人数：* ${p.totalTravelers}\n` +
     `💰 *价格：* ${p.currency} ${p.price}\n\n` +
     `🔗 *查看您的行程：* ${p.itineraryLink}\n\n` +
+    `👉 *回复 CONFIRM 以确认并锁定您的日期。*\n\n` +
     `我们的专属礼宾团队随时为您服务：\n` +
     `📞 ${p.companyPhone}\n` +
     `🌐 ${p.companyWebsite}\n\n` +
