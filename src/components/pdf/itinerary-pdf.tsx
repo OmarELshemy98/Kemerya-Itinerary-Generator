@@ -84,36 +84,101 @@ export default function ItineraryPDF({ tour, booking, companyInfo, translatedDat
 
   const termsItems = getTranslatedArray(translatedData, "terms.items", getTermsItems(booking)).map(shapeForPdf).filter(hasText);
   const privacyItems = getTranslatedArray(translatedData, "privacy.items", getPrivacyItems(booking)).map(shapeForPdf).filter(hasText);
-  const optionalTours: Array<{ title: string; description?: string; price: number }> = [];
+  const optionalTours: Array<{ title: string; location?: string; time?: string; day: number; price: number }> = (booking.optionalTours ?? []).filter((t) => !!t?.title?.trim());
 
+  // Which extra-services data exists (extra services page is rendered ONLY when non-empty)
+  const specialRequestItems = (booking.specialRequestItems ?? []).filter((it) => !!it.description?.trim() || it.price > 0);
+  const hasExtraServices = !!booking.notes?.trim() || !!booking.specialRequests?.trim() || specialRequestItems.length > 0;
+
+  // Section numbers are allocated in render order so numbering stays
+  // contiguous even when conditional sections are skipped entirely.
   let sectionCounter = 0;
   const nextSectionNumber = (): string => String(++sectionCounter).padStart(2, "0");
   const ctx = { S, label: (k: string, fb: string) => label(translatedData, k, fb), headingStyle, cinzelStyle };
+
+  /** One section per physical page — every <SectionPage> forces a page break. */
+  const SectionPage = ({ children }: { children: React.ReactNode }) => (
+    <Page size="A4" style={[S.page, { direction: rtl ? "rtl" : "ltr", fontFamily: bodyFont }]} wrap>
+      <View style={[S.contentLayer, { fontFamily: bodyFont, direction: rtl ? "rtl" : "ltr" }]}>
+        <View style={S.headerBox} fixed>
+          <Image src="/logo-kemerya.png" style={S.headerLogo} />
+          <View style={S.headerText}>
+            <Text style={[S.brandTitle, { fontFamily: cinzelFont }]}>{c.name || "KEMERYA TOURS"}</Text>
+            {hasText(c.tagline) && <Text style={S.brandTagline}>{shapeForPdf(c.tagline)}</Text>}
+          </View>
+        </View>
+        {children}
+      </View>
+    </Page>
+  );
+
   return (
     <Document title={`${tourTitle} - Kemerya Tours Itinerary`} author="Kemerya Tours" creator="Kemerya Tours Dashboard">
-      <Page size="A4" style={[S.page, { direction: rtl ? "rtl" : "ltr", fontFamily: bodyFont }]} wrap>
-        <View style={[S.contentLayer, { fontFamily: bodyFont, direction: rtl ? "rtl" : "ltr" }]}>
-          <View style={S.headerBox} fixed>
-            <Image src="/logo-kemerya.png" style={S.headerLogo} />
-            <View style={S.headerText}>
-              <Text style={[S.brandTitle, { fontFamily: cinzelFont }]}>{c.name || "KEMERYA TOURS"}</Text>
-              {hasText(c.tagline) && <Text style={S.brandTagline}>{shapeForPdf(c.tagline)}</Text>}
-            </View>
-          </View>
+      {/* Page 1 — Booking Summary & Special Offer */}
+      <SectionPage>
+        <BookingReference S={S} label={(k, fb) => label(translatedData, k, fb)} bookingRef={booking.id} cinzelStyle={cinzelStyle} />
+        <BookingSummary
+          ctx={ctx}
+          booking={booking}
+          daysCount={daysCount}
+          nights={nights}
+          travelersText={travelersText}
+          tourTitle={label(translatedData, "tour.title", tourTitle)}
+          sectionNumber={nextSectionNumber()}
+        />
+        <SpecialOffer ctx={ctx} booking={booking} sectionNumber={nextSectionNumber()} />
+      </SectionPage>
 
-          <BookingReference S={S} label={(k, fb) => label(translatedData, k, fb)} bookingRef={booking.id} cinzelStyle={cinzelStyle} />
-          <BookingSummary ctx={ctx} booking={booking} daysCount={daysCount} nights={nights} travelersText={travelersText} sectionNumber={nextSectionNumber()} />
-          <SpecialOffer ctx={ctx} booking={booking} sectionNumber={nextSectionNumber()} />
-          <TourDescription ctx={ctx} tourTitle={label(translatedData, "tour.title", tourTitle)} description={shapeForPdf(tourDescription)} meta={tourMeta} sectionNumber={nextSectionNumber()} />
-          <DayByDayItinerary ctx={ctx} itinerary={itinerary} dayField={dayField} sectionNumber={nextSectionNumber()} fallbackDay={fallbackDay} />
-          <OptionalTours ctx={ctx} items={optionalTours} sectionNumber={nextSectionNumber()} />
+      {/* Page 2 — Tour Description */}
+      <SectionPage>
+        <TourDescription ctx={ctx} tourTitle={label(translatedData, "tour.title", tourTitle)} description={shapeForPdf(tourDescription)} meta={tourMeta} sectionNumber={nextSectionNumber()} />
+      </SectionPage>
+
+      {/* Page 3+ — Day-by-Day Itinerary (wraps across as many pages as needed) */}
+      <SectionPage>
+        <DayByDayItinerary ctx={ctx} itinerary={itinerary} dayField={dayField} sectionNumber={nextSectionNumber()} fallbackDay={fallbackDay} />
+      </SectionPage>
+
+      {/* Page X — Optional Tours (ONLY rendered when tours exist — no blank pages) */}
+      {optionalTours.length > 0 && (
+        <SectionPage>
+          <OptionalTours ctx={ctx} items={optionalTours} currency={booking.currency} sectionNumber={nextSectionNumber()} />
+        </SectionPage>
+      )}
+
+      {/* Page Y — Extra Services (ONLY rendered when there is data) */}
+      {hasExtraServices && (
+        <SectionPage>
           <ExtraServices ctx={ctx} notes={booking.notes || ""} specialRequests={booking.specialRequests || ""} specialRequestItems={booking.specialRequestItems} currency={booking.currency} sectionNumber={nextSectionNumber()} />
+        </SectionPage>
+      )}
+
+      {/* Page Z — Inclusions & Exclusions (skipped entirely when empty) */}
+      {(inclusions.length > 0 || exclusions.length > 0) && (
+        <SectionPage>
           <InclusionsExclusions ctx={ctx} inclusions={inclusions} exclusions={exclusions} sectionNumber={nextSectionNumber()} />
-          <TermsAndPrivacy ctx={ctx} termsItems={termsItems} privacyItems={privacyItems} sectionNumber={nextSectionNumber()} />
-          <AgentSignature ctx={ctx} companyInfo={c} sectionNumber={nextSectionNumber()} />
-          <CompanyDetails ctx={ctx} companyInfo={c} sectionNumber={nextSectionNumber()} />
-        </View>
-      </Page>
+        </SectionPage>
+      )}
+
+      {/* Page W — Terms & Conditions */}
+      {termsItems.length > 0 && (
+        <SectionPage>
+          <TermsAndPrivacy ctx={ctx} termsItems={termsItems} privacyItems={[]} sectionNumber={nextSectionNumber()} />
+        </SectionPage>
+      )}
+
+      {/* Page V — Privacy Policy */}
+      {privacyItems.length > 0 && (
+        <SectionPage>
+          <TermsAndPrivacy ctx={ctx} termsItems={[]} privacyItems={privacyItems} sectionNumber={nextSectionNumber()} />
+        </SectionPage>
+      )}
+
+      {/* Final page — Company Details & Agent Signature */}
+      <SectionPage>
+        <AgentSignature ctx={ctx} companyInfo={c} sectionNumber={nextSectionNumber()} />
+        <CompanyDetails ctx={ctx} companyInfo={c} sectionNumber={nextSectionNumber()} />
+      </SectionPage>
     </Document>
   );
 }

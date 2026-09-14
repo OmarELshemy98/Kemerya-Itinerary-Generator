@@ -46,6 +46,16 @@ export interface SpecialRequestItem {
   price: number;
 }
 
+/** An optional (add-on) tour offered during the trip — one entry per tour. */
+export interface OptionalTourItem {
+  title: string;
+  location?: string;
+  time?: string;
+  /** Which itinerary day this tour happens on (1-based) */
+  day: number;
+  price: number;
+}
+
 export interface TripNote {
   question: string;
   answer: string;
@@ -122,6 +132,10 @@ export interface BookingConfig {
   clientName?: string;
   clientEmail?: string;
   clientPhone?: string;
+  /** Client's country of residence (shown in the booking summary) */
+  clientCountry?: string;
+  /** Optional add-on tours selected for this itinerary */
+  optionalTours?: OptionalTourItem[];
   clientWhatsapp?: string;
   notes?: string;
   specialRequests?: string;

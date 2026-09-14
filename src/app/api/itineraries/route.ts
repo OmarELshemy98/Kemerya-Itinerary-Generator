@@ -19,6 +19,14 @@ const dayRouteSchema = z.object({
   stops: z.array(z.string()),
 });
 
+const optionalTourSchema = z.object({
+  title: z.string(),
+  location: z.string().optional(),
+  time: z.string().optional(),
+  day: z.coerce.number().int().min(1),
+  price: z.coerce.number().min(0),
+});
+
 const bookingSchema = z.object({
   id: z.string().min(1),
   isCustomTour: z.boolean(),
@@ -29,10 +37,14 @@ const bookingSchema = z.object({
   customDayRoutes: z.array(z.array(z.string())).optional(),
   customInclusions: z.array(z.string()).optional(),
   customExclusions: z.array(z.string()).optional(),
+  // Roadmap/destinations were removed from the builder — kept optional and
+  // tolerated here so legacy saved payloads still validate (defense in depth).
   customRouteStops: z
     .array(z.object({ id: z.string(), name: z.string(), order: z.number() }))
     .optional(),
   dayRoutes: z.array(dayRouteSchema).optional(),
+  optionalTours: z.array(optionalTourSchema).optional(),
+  clientCountry: z.string().optional(),
   customTerms: z.array(z.string()).optional(),
   customPrivacy: z.array(z.string()).optional(),
   offerPrice: z.number().min(0).optional(),
@@ -210,6 +222,7 @@ export async function POST(request: Request) {
       client_name: booking.clientName || null,
       client_email: booking.clientEmail || null,
       client_phone: booking.clientPhone || null,
+      client_country: booking.clientCountry || null,
       client_whatsapp: booking.clientWhatsapp || null,
       travelers_adults: booking.travelers.adults,
       travelers_children: booking.travelers.children,
@@ -239,6 +252,8 @@ export async function POST(request: Request) {
         customExclusions: booking.customExclusions,
         customRouteStops: booking.customRouteStops,
         dayRoutes: booking.dayRoutes,
+        optionalTours: booking.optionalTours,
+        clientCountry: booking.clientCountry,
         customTerms: booking.customTerms,
         customPrivacy: booking.customPrivacy || null,
         inclusions: booking.inclusions,

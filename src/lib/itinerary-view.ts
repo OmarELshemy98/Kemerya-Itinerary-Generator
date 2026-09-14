@@ -61,6 +61,7 @@ export function itineraryRowToBooking(it: {
   client_name?: unknown;
   client_email?: unknown;
   client_phone?: unknown;
+  client_country?: unknown;
   client_whatsapp?: unknown;
   notes?: unknown;
   special_requests?: unknown;
@@ -119,6 +120,13 @@ export function itineraryRowToBooking(it: {
     clientName: asString(it.client_name),
     clientEmail: asString(it.client_email),
     clientPhone: asString(it.client_phone),
+    clientCountry: asString(bd.clientCountry) ?? asString(it.client_country),
+    optionalTours: Array.isArray(bd.optionalTours)
+      ? (bd.optionalTours.filter(
+          (t): t is NonNullable<BookingConfig["optionalTours"]>[number] =>
+            typeof t === "object" && t !== null && typeof (t as any).title === "string"
+        ) as BookingConfig["optionalTours"])
+      : undefined,
     notes: asString(it.notes),
     specialRequests: asString(it.special_requests),
     createdAt: asString(it.created_at) ?? new Date().toISOString(),

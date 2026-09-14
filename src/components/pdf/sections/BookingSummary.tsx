@@ -17,6 +17,7 @@ interface Props {
   daysCount: number;
   nights: number;
   travelersText: string;
+  tourTitle: string;
   sectionNumber: string;
 }
 
@@ -32,13 +33,18 @@ function SummaryCard({ S: styles, label, value }: { S: typeof S; label: string; 
   );
 }
 
-export function BookingSummary({ ctx, booking, daysCount, nights, travelersText, sectionNumber }: Props) {
+export function BookingSummary({ ctx, booking, daysCount, nights, travelersText, tourTitle, sectionNumber }: Props) {
   const { S: styles, label } = ctx;
   const meta = [
-    { label: label("overview.duration", "Duration"), value: `${daysCount} ${label("general.days", "Days")}` },
-    { label: label("overview.nights", "Nights"), value: `${nights}` },
-    { label: label("general.travelers", "Travelers"), value: travelersText },
-    { label: label("booking.confirmed", "Confirmed"), value: label("booking.yes", "Yes") },
+    { label: label("booking.reference", "Ref Number"), value: booking.id },
+    { label: label("tour.name", "Tour Name"), value: tourTitle },
+    { label: label("booking.clientName", "Client Name"), value: booking.clientName || "—" },
+    { label: label("booking.clientPhone", "Phone"), value: booking.clientPhone || "—" },
+    { label: label("booking.clientCountry", "Client Country"), value: booking.clientCountry || "—" },
+    { label: label("overview.duration", "Duration"), value: `${daysCount} ${label("general.days", "Days")} / ${nights} ${label("overview.nights", "Nights")}` },
+    { label: label("general.travelers", "Travelers"), value: travelersText || "—" },
+    { label: label("booking.startDate", "Start Date"), value: booking.startDate || "—" },
+    { label: label("booking.endDate", "End Date"), value: booking.endDate || "—" },
   ];
 
   return (

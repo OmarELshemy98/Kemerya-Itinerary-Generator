@@ -19,6 +19,7 @@ import {
   Phone,
   Info,
   MessageCircle,
+  Globe,
   Eye,
   Map,
   GripVertical,
@@ -495,6 +496,8 @@ const bookingSchema = z
     clientName: z.string().min(2, "Client name is required"),
     clientEmail: z.string().min(1, "Email is required").email("Invalid email"),
     clientPhone: z.string().min(5, "Phone is required"),
+    /** Client's country of residence (appears in the PDF booking summary) */
+    clientCountry: z.string().optional().or(z.literal("")),
     clientWhatsapp: z.string().optional().or(z.literal("")),
     /** Meeting/pickup point, e.g. "Cairo Airport arrivals hall" */
     meetingPoint: z.string().min(2, "Meeting point is required"),
@@ -519,12 +522,6 @@ const bookingSchema = z
     ).optional(),
     /** Editable booking reference, auto-generated as YYYYMMDD-XXX */
     bookingRef: z.string().optional().or(z.literal("")),
-    /** Custom route stops - editable list of destinations for the journey roadmap */
-    customRouteStops: z.array(z.object({
-      id: z.string(),
-      name: z.string().min(1, "Location name required"),
-      order: z.number().int().min(0),
-    })).optional(),
     /** Whether this itinerary is approved */
     isApproved: z.boolean().optional().default(false),
     /** Special offer price (0 = no offer). Replaces totalPrice when set. */
@@ -536,13 +533,16 @@ const bookingSchema = z
     customTerms: z.array(z.string()).optional(),
     /** Custom privacy-policy items for this specific itinerary (editable) */
     customPrivacy: z.array(z.string()).optional(),
-    /** Per-day journey map stops (simple strings per day) */
-    dayRoutes: z.array(z.object({
-      day: z.coerce.number().int().min(1),
-      stops: z.array(z.string()),
-    })).optional(),
-    /** Route stops attached to each custom itinerary day (index-aligned) */
-    customDayRoutes: z.array(z.array(z.string())).optional(),
+    /** Optional add-on tours (multiple, dynamically added) */
+    optionalTours: z.array(
+      z.object({
+        title: z.string().min(1, "Tour title required"),
+        location: z.string().optional().or(z.literal("")),
+        time: z.string().optional().or(z.literal("")),
+        day: z.coerce.number().int().min(1),
+        price: z.coerce.number().min(0),
+      })
+    ).optional(),
     customInclusions: z.array(z.string()).optional(),
     customExclusions: z.array(z.string()).optional(),
     customItinerary: z.array(z.object({
@@ -658,6 +658,7 @@ export function BookingConfigurationForm({
         clientName: "",
         clientEmail: "",
         clientPhone: "",
+        clientCountry: "",
         clientWhatsapp: "",
         meetingPoint: "",
         notes: "",
@@ -668,8 +669,7 @@ export function BookingConfigurationForm({
         customInclusions: [],
         customExclusions: [],
         customItinerary: [],
-        customRouteStops: [],
-        dayRoutes: [],
+        optionalTours: [],
         isApproved: false,
         offerPrice: 0,
         offerTitle: "Exclusive Limited-Time Offer",
@@ -689,14 +689,13 @@ export function BookingConfigurationForm({
   const children = watch("children");
   const infants = watch("infants");
   const startDateSel = watch("startDate");
-  const customRouteStops = watch("customRouteStops");
   const isApproved = watch("isApproved");
   const offerPrice = watch("offerPrice");
   const offerTitle = watch("offerTitle");
   const offerNote = watch("offerNote");
   const customTerms = watch("customTerms");
   const customPrivacy = watch("customPrivacy");
-  const dayRoutes = watch("dayRoutes");
+  const optionalTours = watch("optionalTours");
 
   React.useEffect(() => {
     if (selectedTour && !isCustomMode) {
@@ -776,8 +775,6 @@ export function BookingConfigurationForm({
       customItinerary: values.isCustomTour ? values.customItinerary : undefined,
       customInclusions: values.isCustomTour ? values.customInclusions : undefined,
       customExclusions: values.isCustomTour ? values.customExclusions : undefined,
-      customRouteStops: values.customRouteStops && values.customRouteStops.length > 0 ? values.customRouteStops : undefined,
-      dayRoutes: values.dayRoutes && values.dayRoutes.length > 0 ? values.dayRoutes : undefined,
       isApproved: values.isApproved || false,
       offerPrice:
         values.offerPrice && values.offerPrice > 0 ? values.offerPrice : undefined,
@@ -800,6 +797,11 @@ export function BookingConfigurationForm({
       clientName: values.clientName,
       clientEmail: values.clientEmail,
       clientPhone: values.clientPhone,
+      clientCountry: values.clientCountry || undefined,
+      optionalTours:
+        values.optionalTours && values.optionalTours.length > 0
+          ? values.optionalTours
+          : undefined,
       clientWhatsapp: values.clientWhatsapp || undefined,
       meetingPoint: values.meetingPoint,
       flightArrival: values.flightArrival || undefined,
@@ -917,13 +919,6 @@ export function BookingConfigurationForm({
                 </p>
               </div>
             </div>
-          </Section>
-
-          <Section icon={<Map className="h-4 w-4" />} title="Journey Route (Destinations)">
-            <RouteStopsEditor
-              stops={customRouteStops}
-              onChange={(stops) => setValue("customRouteStops", stops)}
-            />
           </Section>
 
           {isCustomMode && (
@@ -1073,28 +1068,11 @@ export function BookingConfigurationForm({
                             className="mt-1"
                           />
                         </div>
-                        <div className="sm:col-span-3">
-                          <Label className="flex items-center gap-1.5 text-xs">
-                            <Map className="h-3.5 w-3.5 text-slate-500" />
-                            Roadmap — places visited this day (editable, one per line)
-                          </Label>
-                          <Textarea
-                            value={((dayRoutes || []) as any[]).find((r: any) => r.day === index + 1)?.stops?.join("\n") || ""}
-                            onChange={(e) => {
-                              const stops = e.target.value.split("\n").map((s) => s.trim()).filter(Boolean);
-                              const current = ((dayRoutes || []) as any[]).filter((r: any) => r.day !== index + 1);
-                              setValue("dayRoutes", stops.length > 0 ? [...current, { day: index + 1, stops }] as any : current as any);
-                            }}
-                            placeholder={"Pyramids of Giza\nGreat Sphinx\nEgyptian Museum"}
-                            rows={3}
-                            className="mt-1 resize-none text-sm"
-                          />
-                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              
+                
 </Section>
             </>
           )}
@@ -1395,24 +1373,6 @@ export function BookingConfigurationForm({
                           />
                         </div>
                       )}
-                      <div>
-                        <Label className="flex items-center gap-1.5 text-xs">
-                          <Map className="h-3.5 w-3.5 text-slate-500" />
-                          Roadmap — places visited this day (editable, one per line)
-                        </Label>
-                        <Textarea
-                          defaultValue={(dayRoutes?.find((r: any) => r.day === day.day)?.stops || []).join("\n")}
-                          onChange={(e) => {
-                            const stops = e.target.value.split("\n").map((s) => s.trim()).filter(Boolean);
-                            const current = (dayRoutes || []) as any[];
-                            const without = current.filter((r: any) => r.day !== day.day);
-                            setValue("dayRoutes", stops.length > 0 ? [...without, { day: day.day, stops }] as any : without as any);
-                          }}
-                          placeholder={"Pyramids of Giza\nGreat Sphinx\nEgyptian Museum"}
-                          rows={3}
-                          className="mt-1 resize-none text-sm"
-                        />
-                      </div>
                     </div>
                   </div>
                 ))}
@@ -1475,7 +1435,11 @@ export function BookingConfigurationForm({
           {/* Optional Tours */}
           {!isCustomMode && selectedTour && selectedTour.itinerary.length > 0 && (
             <Section icon={<Plus className="h-4 w-4" />} title="Optional Tours">
-              <OptionalToursEditor selectedTour={selectedTour} />
+              <OptionalToursEditor
+                selectedTour={selectedTour}
+                value={(optionalTours ?? []) as any}
+                onChange={(tours) => setValue("optionalTours", tours as any)}
+              />
             </Section>
           )}
 
@@ -1530,6 +1494,20 @@ export function BookingConfigurationForm({
                     {errors.clientPhone.message}
                   </p>
                 )}
+              </div>
+              <div>
+                <Label>Client Country (بلد العميل)</Label>
+                <div className="relative mt-1.5">
+                  <Globe className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    {...register("clientCountry")}
+                    placeholder="e.g. Egypt, United Kingdom, United States..."
+                    className="pl-9"
+                  />
+                </div>
+                <p className="mt-1 text-[10px] text-slate-400">
+                  The client's country of residence. Appears on the PDF booking summary.
+                </p>
               </div>
               <div>
                 <Label>WhatsApp</Label>
@@ -1782,40 +1760,50 @@ export function BookingConfigurationForm({
   );
 }
 
-function OptionalToursEditor({ selectedTour }: { selectedTour: Tour }) {
-  const [optionalTours, setOptionalTours] = React.useState<Array<{
-    day: number;
-    name: string;
-    price: number;
-    location: string;
-  }>>([]);
-  const [draft, setDraft] = React.useState({ day: 1, name: "", price: 0, location: "" });
+function OptionalToursEditor({
+  selectedTour,
+  value,
+  onChange,
+}: {
+  selectedTour: Tour;
+  value: Array<{ title: string; location?: string; time?: string; day: number; price: number }>;
+  onChange: (tours: Array<{ title: string; location?: string; time?: string; day: number; price: number }>) => void;
+}) {
+  const tours = value ?? [];
+  const [draft, setDraft] = React.useState({
+    title: "",
+    location: "",
+    time: "",
+    day: selectedTour.itinerary[0]?.day || 1,
+    price: 0,
+  });
 
   const addTour = () => {
-    if (!draft.name.trim()) return;
-    setOptionalTours([...optionalTours, { ...draft }]);
-    setDraft({ day: 1, name: "", price: 0, location: "" });
+    if (!draft.title.trim()) return;
+    onChange([...tours, { ...draft, title: draft.title.trim() }]);
+    setDraft({ title: "", location: "", time: "", day: draft.day, price: 0 });
   };
 
   const removeTour = (idx: number) => {
-    setOptionalTours(optionalTours.filter((_, i) => i !== idx));
+    onChange(tours.filter((_, i) => i !== idx));
   };
 
-  const totalOptional = optionalTours.reduce((sum, t) => sum + t.price, 0);
+  const totalOptional = tours.reduce((sum, t) => sum + (t.price || 0), 0);
 
   return (
     <div className="space-y-3">
-      {optionalTours.length > 0 && (
+      {tours.length > 0 && (
         <div className="space-y-2">
-          {optionalTours.map((tour, i) => (
+          {tours.map((tour, i) => (
             <div key={i} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-[10px]">Day {tour.day}</Badge>
-                  <span className="text-sm font-medium text-slate-900">{tour.name}</span>
+                  <span className="text-sm font-medium text-slate-900">{tour.title}</span>
                 </div>
                 <div className="mt-1 flex items-center gap-3 text-xs text-slate-500">
                   {tour.location && <span>📍 {tour.location}</span>}
+                  {tour.time && <span>🕐 {tour.time}</span>}
                   <span className="font-medium text-emerald-700">${tour.price}/pax</span>
                 </div>
               </div>
@@ -1831,9 +1819,9 @@ function OptionalToursEditor({ selectedTour }: { selectedTour: Tour }) {
       )}
       <div className="rounded-lg border border-dashed border-slate-300 p-3">
         <p className="mb-2 text-xs font-semibold text-slate-700">Add Optional Tour</p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           <div>
-            <Label className="text-[10px]">Day</Label>
+            <Label className="text-[10px]">Which Day</Label>
             <select
               value={draft.day}
               onChange={(e) => setDraft({ ...draft, day: Number(e.target.value) })}
@@ -1845,11 +1833,29 @@ function OptionalToursEditor({ selectedTour }: { selectedTour: Tour }) {
             </select>
           </div>
           <div>
-            <Label className="text-[10px]">Tour Name</Label>
+            <Label className="text-[10px]">Title</Label>
             <Input
-              value={draft.name}
-              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              value={draft.title}
+              onChange={(e) => setDraft({ ...draft, title: e.target.value })}
               placeholder="e.g. Hot Air Balloon"
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label className="text-[10px]">Location</Label>
+            <Input
+              value={draft.location}
+              onChange={(e) => setDraft({ ...draft, location: e.target.value })}
+              placeholder="e.g. Luxor"
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label className="text-[10px]">Time</Label>
+            <Input
+              value={draft.time}
+              onChange={(e) => setDraft({ ...draft, time: e.target.value })}
+              placeholder="e.g. 05:00 AM"
               className="mt-1"
             />
           </div>
@@ -1861,15 +1867,6 @@ function OptionalToursEditor({ selectedTour }: { selectedTour: Tour }) {
               value={draft.price || ""}
               onChange={(e) => setDraft({ ...draft, price: Number(e.target.value) || 0 })}
               placeholder="0"
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <Label className="text-[10px]">Location</Label>
-            <Input
-              value={draft.location}
-              onChange={(e) => setDraft({ ...draft, location: e.target.value })}
-              placeholder="e.g. Luxor"
               className="mt-1"
             />
           </div>

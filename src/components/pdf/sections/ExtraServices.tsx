@@ -2,7 +2,8 @@
 import React from "react";
 import { View, Text } from "@react-pdf/renderer";
 import { S } from "../pdf-styles";
-import { SunIcon, LotusIcon, CartoucheIcon, BulletItem, Divider, formatCurrency } from "../pdf-primitives";
+import { SunIcon, LotusIcon, CartoucheIcon, BulletItem, Divider } from "../pdf-primitives";
+import { formatCurrency } from "@/lib/utils";
 import type { BookingConfig, Currency } from "@/types";
 
 interface Ctx {
