@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { useForm, useFieldArray, Controller, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -659,15 +659,7 @@ export function BookingConfigurationForm({
   onSubmit,
   initialValues,
 }: BookingConfigurationFormProps) {
-  const {
-    register,
-    control,
-    handleSubmit,
-    watch,
-    setValue,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<BookingFormValues>({
+  const methods = useForm<BookingFormValues>({
       resolver: zodResolver(bookingSchema),
       defaultValues: {
         isCustomTour: isCustomMode,
@@ -718,6 +710,16 @@ export function BookingConfigurationForm({
         ...initialValues,
       },
     });
+
+  const {
+    register,
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    reset,
+    formState: { errors, isSubmitting },
+  } = methods;
 
   React.useEffect(() => {
     setValue("isCustomTour", isCustomMode);
@@ -932,8 +934,9 @@ export function BookingConfigurationForm({
   };
 
   return (
-    <form onSubmit={handleSubmit((values) => handleFormSubmit(values, "download"))}>
-      <Card className="border-slate-200 bg-white/60 backdrop-blur">
+    <FormProvider {...methods}>
+      <form onSubmit={handleSubmit((values) => handleFormSubmit(values, "download"))}>
+        <Card className="border-slate-200 bg-white/60 backdrop-blur">
         <CardHeader className="border-b border-slate-100">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -1781,7 +1784,8 @@ export function BookingConfigurationForm({
           </div>
         </CardContent>
       </Card>
-    </form>
+      </form>
+    </FormProvider>
   );
 }
 
