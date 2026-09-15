@@ -85,7 +85,7 @@ JSON payload to translate:
 ${JSON.stringify(merged)}`;
 
   const generationConfig = {
-    maxOutputTokens: 8192,
+    maxOutputTokens: 16384,
     temperature: 0.1,
     topK: 40,
     topP: 0.95,
@@ -103,7 +103,10 @@ ${JSON.stringify(merged)}`;
         generationConfig,
       });
 
-      const rawText = result.response.text();
+      const rawText = result.response.text().trim();
+      if (!rawText) {
+        throw new Error("Gemini returned an empty translation response.");
+      }
       const cleaned = rawText
         .replace(/```json\s*/gi, "")
         .replace(/```\s*/g, "")
@@ -116,10 +119,15 @@ ${JSON.stringify(merged)}`;
           ? cleaned.slice(start, end + 1)
           : cleaned;
 
-      parsed = JSON.parse(candidate) as Record<string, unknown>;
+      const value = JSON.parse(candidate) as unknown;
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        throw new Error("Gemini returned valid JSON, but it was not a JSON object.");
+      }
+      parsed = value as Record<string, unknown>;
       break;
     } catch (err: any) {
       lastError = err;
+      console.error(`[translate] Gemini attempt failed (${retries} remaining):`, err);
       retries--;
       if (retries > 0) {
         await new Promise((r) => setTimeout(r, 2000));

@@ -3,8 +3,8 @@ import type { CompanyInfo } from "@/types";
 export const KEMERYA_COMPANY_INFO: CompanyInfo = {
   name: "Kemerya Tours",
   tagline: "Discover Egypt with Excellence",
-  logo: "/logo-kemerya.png",
-  invoiceLogo: "/logo-kemerya.png",
+  logo: "/images/pdf-kemerya-logo.png",
+  invoiceLogo: "/images/pdf-kemerya-logo.png",
   address: "123 Pyramids Road, Giza, Cairo, Egypt",
   phone: "01275050450",
   email: "info@kemeryatours.com",

@@ -8,7 +8,7 @@
 
 /**
  * Returns a logo source that works in the browser PDF renderer:
- * the public URL (e.g. "/logo-kemerya.png").
+ * the public URL (e.g. "/images/pdf-kemerya-logo.png").
  */
 export function resolveLogoSrc(logoPath: string | undefined): string | undefined {
   if (!logoPath) return undefined;

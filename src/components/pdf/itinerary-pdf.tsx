@@ -108,7 +108,7 @@ export default function ItineraryPDF({ tour, booking, companyInfo, translatedDat
   const SectionPage = ({ children }: { children: React.ReactNode }) => (
     <Page size="A4" style={[S.page, { direction: rtl ? "rtl" : "ltr", fontFamily: bodyFont }]} wrap>
       <View style={S.headerBox} fixed>
-        <Image src="/logo-kemerya.png" style={S.headerLogo} />
+        <Image src="/images/pdf-kemerya-logo.png" style={S.headerLogo} />
         <View style={S.headerText}>
           <Text style={[S.brandTitle, { fontFamily: cinzelFont }]}>{c.name || "KEMERYA TOURS"}</Text>
           {hasText(c.tagline) && <Text style={S.brandTagline}>{shapeForPdf(c.tagline)}</Text>}

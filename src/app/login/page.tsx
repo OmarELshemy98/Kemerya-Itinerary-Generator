@@ -108,7 +108,7 @@ function LoginForm() {
               <div className="absolute -inset-4 rounded-3xl bg-[#C9A962]/10 blur-2xl" />
               <div className="relative h-[160px] w-[160px] overflow-hidden rounded-2xl  p-2 shadow-2xl ring-1 ring-[#C9A962]/25">
                 <Image
-                  src="/logo-kemerya.png"
+                  src="/images/pdf-kemerya-logo.png"
                   alt="Kemerya Tours"
                   fill
                   className="object-contain"
