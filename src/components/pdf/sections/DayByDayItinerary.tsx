@@ -2,7 +2,6 @@
 import React from "react";
 import { View, Text } from "@react-pdf/renderer";
 import { S } from "../pdf-styles";
-import { PyramidIcon, SunIcon, MetaRow } from "../pdf-primitives";
 import type { ItineraryDay } from "@/types";
 
 interface Ctx {
@@ -21,7 +20,7 @@ interface Props {
 
 export function DayByDayItinerary({ ctx, itinerary, dayField, sectionNumber, fallbackDay }: Props) {
   const { S: styles, label, headingStyle } = ctx;
-  const tLabels = { day: label("day.day", "Day"), stay: label("day.stay", "Stay"), meals: label("day.meals", "Meals") };
+  const dayLabel = label("day.day", "Day");
 
   return (
     <View style={styles.section}>
@@ -32,14 +31,12 @@ export function DayByDayItinerary({ ctx, itinerary, dayField, sectionNumber, fal
       {itinerary.map((day, idx) => (
         <View key={day.day} style={styles.dayCard} wrap={false}>
           <View style={styles.dayHeader} wrap={false}>
-            <View style={styles.dayBadge}><Text style={[styles.dayBadgeText, headingStyle]}>{tLabels.day} {day.day}</Text></View>
+            <View style={styles.dayBadge}><Text style={[styles.dayBadgeText, headingStyle]}>{dayLabel} {day.day}</Text></View>
             <Text style={[styles.dayTitle, headingStyle]}>{dayField(idx, "day.title") || day.title}</Text>
           </View>
           {(dayField(idx, "day.description") || day.description) && (
             <Text style={styles.dayDesc}>{dayField(idx, "day.description") || day.description}</Text>
           )}
-          <MetaRow icon={<PyramidIcon s={8} />} label={tLabels.stay} value={dayField(idx, "day.accommodation") || day.accommodation || ""} />
-          <MetaRow icon={<SunIcon s={8} />} label={tLabels.meals} value={dayField(idx, "day.meals") || (day.meals?.join(", ") || "")} />
         </View>
       ))}
       {itinerary.length === 0 && fallbackDay && (

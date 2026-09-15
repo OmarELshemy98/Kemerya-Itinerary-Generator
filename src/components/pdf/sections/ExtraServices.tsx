@@ -29,6 +29,9 @@ export function ExtraServices({ ctx, notes, specialRequests, specialRequestItems
 
   if (!hasNotes && !hasRequests && items.length === 0) return null;
 
+  // No-split rule: each bordered panel is its own cohesive unit (outer stays
+  // wrappable so two stacked panels may span pages — a wrap={false} block
+  // taller than one page cannot paginate and gets clipped).
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader} wrap={false}>

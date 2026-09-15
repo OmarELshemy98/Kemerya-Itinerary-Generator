@@ -3,6 +3,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Force dynamic execution to prevent static evaluation at build time
 export const dynamic = "force-dynamic";
+// Long-running translation for large itineraries — must outlive default 3s edge limit
+export const maxDuration = 60;
 
 // ── FIX #2: JSON truncation hardening (position-8340 class of failures) ──
 // Gemini can still stop mid-object on very large itineraries even with a
@@ -195,7 +197,7 @@ export async function POST(request: NextRequest) {
     };
 
     // System prompt for luxury travel translation (used with native JSON mode).
-    const SYSTEM_PROMPT = `Translate the VALUES of this JSON object to ${targetLanguage}. Keep every KEY exactly unchanged (same spelling, same nesting, including "_labels" and "ui"). Return ONLY a valid JSON object with the exact same structure — no markdown, no commentary.`;
+        const SYSTEM_PROMPT = `CRITICAL: Translate the ENTIRE JSON perfectly. DO NOT truncate, summarize, or omit any arrays. Return the exact same structure.`;
 
     // Create prompt for Gemini — translate EVERY human-readable value incl.
     // 'BOOKING SUMMARY', "WHAT'S INCLUDED", 'TERMS & CONDITIONS',
@@ -210,14 +212,7 @@ ${JSON.stringify(dataToTranslate, null, 2)}`;
     // Get Gemini model — candidates verified against the live ListModels API
     // for this key's API generation (the 1.5/2.0 models are retired and return
     // 404). We walk the list with retry/backoff on transient 503/429 spikes.
-    const MODEL_CANDIDATES_RUNTIME = [
-      process.env.GEMINI_MODEL || "gemini-3.6-flash",
-      "gemini-3.7-flash",
-      "gemini-3.8-flash",
-      "gemini-3.5-flash",
-      "gemini-2.5-flash",
-      "gemini-flash-latest",
-    ];
+        const MODEL_CANDIDATES_RUNTIME = ["gemini-1.5-flash"];
 
     const RETRYABLE_ERROR = /\b(503|429)\b|overloaded|unavailable|rate limit|quota|resource_exhausted/i;
     const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

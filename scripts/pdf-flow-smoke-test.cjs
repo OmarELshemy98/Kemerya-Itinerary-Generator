@@ -203,11 +203,11 @@ const microDoc = (withBreaks, placement) =>
 
 /* ── 2. Full document fixture (dense, realistic) ─────────────────────────── */
 const itineraryDays = [
-  { day: 1, title: "Arrival in Cairo & Giza Pyramids", description: "Meet and greet at Cairo International Airport, private transfer to your pyramids-view hotel, then the Great Pyramids of Giza and the Sphinx at golden hour.", accommodation: "Pyramids View Hotel", meals: ["Breakfast", "Lunch"] },
-  { day: 2, title: "Egyptian Museum & Old Cairo", description: "The Grand Egyptian Museum, the treasures of Tutankhamun, then the Hanging Church and Khan El Khalili bazaar.", accommodation: "Pyramids View Hotel", meals: ["Breakfast"] },
-  { day: 3, title: "Fly to Luxor & Karnak Temple", description: "Morning flight to Luxor, check-in on board your Nile cruise, guided tour of Karnak Temple and Luxor Temple.", accommodation: "MS Nile Cruise", meals: ["Breakfast", "Lunch", "Dinner"] },
-  { day: 4, title: "Valley of the Kings & Hatshepsut", description: "Cross to the West Bank for the Valley of the Kings, the Temple of Hatshepsut and the Colossi of Memnon. Optional sunset felucca ride.", accommodation: "MS Nile Cruise", meals: ["Breakfast", "Lunch", "Dinner"] },
-  { day: 5, title: "Edfu Temple & Kom Ombo", description: "Sail south visiting the Temple of Horus at Edfu and the double temple of Kom Ombo before a farewell dinner on deck.", accommodation: "MS Nile Cruise", meals: ["Breakfast", "Lunch", "Dinner"] },
+  { day: 1, title: "Arrival in Cairo & Giza Pyramids", description: "Meet and greet at Cairo International Airport, private transfer to your pyramids-view hotel, then the Great Pyramids of Giza and the Sphinx at golden hour." },
+  { day: 2, title: "Egyptian Museum & Old Cairo", description: "The Grand Egyptian Museum, the treasures of Tutankhamun, then the Hanging Church and Khan El Khalili bazaar." },
+  { day: 3, title: "Fly to Luxor & Karnak Temple", description: "Morning flight to Luxor, check-in on board your Nile cruise, guided tour of Karnak Temple and Luxor Temple." },
+  { day: 4, title: "Valley of the Kings & Hatshepsut", description: "Cross to the West Bank for the Valley of the Kings, the Temple of Hatshepsut and the Colossi of Memnon. Optional sunset felucca ride." },
+  { day: 5, title: "Edfu Temple & Kom Ombo", description: "Sail south visiting the Temple of Horus at Edfu and the double temple of Kom Ombo before a farewell dinner on deck." },
 ];
 
 const tour = {

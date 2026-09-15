@@ -136,8 +136,6 @@ export function getStaticLabels(): Record<string, string> {
 
     // Day card labels
     "day.roadmap": "Today's Roadmap",
-    "day.stay": "Stay",
-    "day.meals": "Meals",
     "day.day": "Day",
 
     // Pricing labels
@@ -296,8 +294,6 @@ export function transformItineraryData(
     "day.day": index + 1,
     "day.title": day.title,
     "day.description": day.description,
-    "day.accommodation": day.accommodation || "",
-    "day.meals": day.meals ? day.meals.join(", ") : "",
     // Use dayRoute if available (newer field name), otherwise empty
     "day.transport": day.dayRoute?.join(", ") || "",
   }));

@@ -104,14 +104,6 @@ export const BulletItem = ({ icon, text }: { icon: React.ReactNode; text: string
   </View>
 );
 
-export const MetaRow = ({ icon, label, value }: { icon?: React.ReactNode; label: string; value: string }) => (
-  <View wrap={false} style={{ flexDirection: "row", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
-    {icon && <View style={{ flexShrink: 0 }}>{icon}</View>}
-    <Text style={{ fontSize: 7, color: C.agedBrown, textTransform: "uppercase", letterSpacing: 0.3 }}>{label} </Text>
-    <Text style={{ fontSize: 8.5, color: C.deepBrown }}>{value}</Text>
-  </View>
-);
-
 /**
  * Large decorative Pharaonic scene, drawn entirely as inline vector art
  * (no external raster assets — cannot fail to load).

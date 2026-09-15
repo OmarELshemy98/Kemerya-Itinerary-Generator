@@ -20,8 +20,6 @@ export interface ItineraryDay {
   title: string;
   description: string;
   highlights?: string[];
-  meals?: ("Breakfast" | "Lunch" | "Dinner")[];
-  accommodation?: string;
   /** Route stops for this specific day */
   routeStops?: DayRouteStop[];
   /** Per-day journey map stops — destinations visited THIS day (employee-editable) */
@@ -163,6 +161,8 @@ export interface BookingConfig {
   /** Special offer price — when > 0 it replaces totalPrice everywhere
    *  and the original price is shown struck through. */
   offerPrice?: number;
+  /** Free-form discount input bound 2-way to offerPrice ("10%" or "150"). */
+  discountInput?: string;
   /** Luxury offer headline shown on the PDF offer banner (editable) */
   offerTitle?: string;
   /** Extra offer note shown under the offer price (editable) */

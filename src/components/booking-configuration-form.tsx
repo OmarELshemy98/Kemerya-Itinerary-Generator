@@ -479,6 +479,40 @@ export function pickPricePerPerson(pricesTable: { personsLabel: string; priceUSD
   return best;
 }
 
+/**
+ * Discount helpers — the 2-way discount system binds a free-form discount
+ * string (percent "10%" or flat amount "150") to the final offer price.
+ *
+ * - parseDiscountInput(raw, total): resolves the discount VALUE in currency
+ *   units (clamped to [0, total]).
+ * - formatDiscountValue(value, total): renders the canonical flat-amount
+ *   string ("150") so the field always reflects the live price difference.
+ */
+export function parseDiscountInput(raw: string, total: number): number {
+  const safeTotal = Number.isFinite(total) && total > 0 ? total : 0;
+  const trimmed = (raw ?? "").trim();
+  if (!trimmed || safeTotal <= 0) return 0;
+  const normalized = trimmed.replace(/,/g, "");
+  if (normalized.endsWith("%")) {
+    const pct = Number(normalized.slice(0, -1).trim());
+    if (!Number.isFinite(pct) || pct <= 0) return 0;
+    return Math.min(safeTotal, (safeTotal * pct) / 100);
+  }
+  const flat = Number(normalized);
+  if (!Number.isFinite(flat) || flat <= 0) return 0;
+  return Math.min(safeTotal, flat);
+}
+
+export function formatDiscountValue(value: number, total: number): string {
+  const safeTotal = Number.isFinite(total) && total > 0 ? total : 0;
+  const safe = Number.isFinite(value) ? Math.min(Math.max(value, 0), safeTotal) : 0;
+  const rounded = Math.round(safe * 100) / 100;
+  return rounded > 0 ? String(rounded) : "";
+}
+
+/** Currency-safe rounding to 2 decimals (cents). */
+const round2 = (value: number) => Math.round(value * 100) / 100;
+
 const bookingSchema = z
   .object({
     isCustomTour: z.boolean(),
@@ -526,6 +560,8 @@ const bookingSchema = z
     isApproved: z.boolean().optional().default(false),
     /** Special offer price (0 = no offer). Replaces totalPrice when set. */
     offerPrice: z.number().min(0).optional().default(0),
+    /** Free-form discount input bound 2-way to offerPrice ("10%" or "150"). */
+    discountInput: z.string().optional().default(""),
     /** Luxury offer headline + note (editable, shown on PDF offer banner) */
     offerTitle: z.string().optional().default(""),
     offerNote: z.string().optional().default(""),
@@ -672,6 +708,7 @@ export function BookingConfigurationForm({
         optionalTours: [],
         isApproved: false,
         offerPrice: 0,
+        discountInput: "",
         offerTitle: "Exclusive Limited-Time Offer",
         offerNote: "",
         customTerms: [],
@@ -691,6 +728,7 @@ export function BookingConfigurationForm({
   const startDateSel = watch("startDate");
   const isApproved = watch("isApproved");
   const offerPrice = watch("offerPrice");
+  const discountInput = watch("discountInput");
   const offerTitle = watch("offerTitle");
   const offerNote = watch("offerNote");
   const customTerms = watch("customTerms");
@@ -746,6 +784,81 @@ export function BookingConfigurationForm({
   const tourExclusions = watch("exclusions");
   const specialRequestItems = watch("specialRequestItems");
 
+  // ── Ultimate Protocol §3: Dynamic Total Price with Extras ──────────────
+  // totalPrice = (Base Package) + (Selected Optional Tours) + (Priced Extras).
+  // We track the *base* portion in a ref: when extras change we strip the old
+  // extras total from the current totalPrice (revealing the base), then add the
+  // new extras total. This works for BOTH standard mode (tier price) and custom
+  // mode (manually-entered base). ──
+  const extrasTotalRef = React.useRef(0);
+  React.useEffect(() => {
+    const optionalTotal = (optionalTours ?? []).reduce(
+      (sum, t) => sum + (Number.isFinite(t?.price) && t.price > 0 ? t.price : 0),
+      0
+    );
+    const extraTotal = (specialRequestItems ?? []).reduce(
+      (sum, it) => sum + (Number.isFinite(it?.price) && it.price > 0 ? it.price : 0),
+      0
+    );
+    const newExtrasTotal = round2(optionalTotal + extraTotal);
+
+    const baseTotal = round2(totalPrice - extrasTotalRef.current);
+    const newTotal = round2(baseTotal + newExtrasTotal);
+    extrasTotalRef.current = newExtrasTotal;
+    setValue("totalPrice", newTotal, { shouldValidate: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [optionalTours, specialRequestItems, totalPrice]);
+
+  // ── Ultimate Protocol §2: 2-Way Discount System ──────────────────────────
+  // discountInput (string: "10%" or "150") ↔ offerPrice (number).
+  // A source-tracking ref prevents infinite update loops: whichever field the
+  // user edits, the other field is synced without re-triggering. ──
+  const discountSourceRef = React.useRef<"discount" | "offer" | null>(null);
+  const discountPrevRef = React.useRef<string>("");
+  const offerPrevRef = React.useRef<number>(0);
+  React.useEffect(() => {
+    const disc = discountInput ?? "";
+    const offer = offerPrice ?? 0;
+    const base = totalPrice ?? 0;
+
+    if (discountSourceRef.current === "discount") {
+      // User changed the discount field → derive offerPrice
+      const discountValue = parseDiscountInput(disc, base);
+      const newOffer = round2(base - discountValue);
+      if (newOffer !== offer) {
+        offerPrevRef.current = newOffer;
+        setValue("offerPrice", newOffer, { shouldValidate: true });
+      }
+      discountPrevRef.current = disc;
+      return;
+    }
+
+    if (discountSourceRef.current === "offer") {
+      // User changed the offer price → derive discountInput (flat amount)
+      const diff = round2(base - offer);
+      const newDisc = formatDiscountValue(diff, base);
+      if (newDisc !== disc) {
+        discountPrevRef.current = newDisc;
+        setValue("discountInput", newDisc, { shouldValidate: true });
+      }
+      offerPrevRef.current = offer;
+      return;
+    }
+
+    // Neither field was directly edited by the user — keep synced if values drift
+    // (e.g. totalPrice changed via extras or currency). Recompute discount from
+    // current offerPrice, and keep discountInput showing the live flat discount.
+    const diff = round2(base - (offer > 0 ? offer : 0));
+    const expectedDisc = offer > 0 ? formatDiscountValue(diff, base) : "";
+    if (offer > 0 && expectedDisc !== disc && disc === discountPrevRef.current) {
+      discountPrevRef.current = expectedDisc;
+      setValue("discountInput", expectedDisc, { shouldValidate: true });
+    }
+    if (offer !== offerPrevRef.current && offer <= base && offer > 0) {
+      offerPrevRef.current = offer;
+    }
+  }, [discountInput, offerPrice, totalPrice, setValue]);
+
   // Pre-fill editable inclusions/exclusions from the selected standard tour
   // (only when the employee hasn't customized them yet).
   React.useEffect(() => {
@@ -778,6 +891,7 @@ export function BookingConfigurationForm({
       isApproved: values.isApproved || false,
       offerPrice:
         values.offerPrice && values.offerPrice > 0 ? values.offerPrice : undefined,
+      discountInput: values.discountInput?.trim() ? values.discountInput.trim() : undefined,
       offerTitle: values.offerTitle?.trim() ? values.offerTitle.trim() : undefined,
       offerNote: values.offerNote?.trim() ? values.offerNote.trim() : undefined,
       customTerms: values.customTerms && values.customTerms.length > 0 ? values.customTerms.filter((t) => t && t.trim()) : undefined,
@@ -1136,7 +1250,16 @@ export function BookingConfigurationForm({
                         if (convertedTotal != null) setValue("totalPrice", convertedTotal);
                         if (offerPrice && offerPrice > 0) {
                           const convertedOffer = convert(offerPrice);
-                          if (convertedOffer != null) setValue("offerPrice", convertedOffer);
+                          if (convertedOffer != null) {
+                            setValue("offerPrice", convertedOffer);
+                            // Re-derive the flat discount input from the converted values
+                            const disc = discountInput ?? "";
+                            if (disc && !disc.endsWith("%")) {
+                              const diff = round2(convertedOffer - (convertedTotal ?? 0));
+                              const newDisc = formatDiscountValue(diff, convertedTotal ?? 0);
+                              setValue("discountInput", newDisc);
+                            }
+                          }
                         }
                         field.onChange(next);
                       }}
@@ -1220,7 +1343,7 @@ export function BookingConfigurationForm({
                     </button>
                   )}
                 </div>
-                <Input
+                                <Input
                   type="number"
                   step="0.01"
                   min={0}
@@ -1228,14 +1351,42 @@ export function BookingConfigurationForm({
                   {...register("offerPrice", {
                     setValueAs: (v) =>
                       v === "" || v == null || Number.isNaN(Number(v)) ? 0 : Number(v),
+                    onChange: (v) => {
+                      discountSourceRef.current = "offer";
+                      offerPrevRef.current = Number(v) || 0;
+                    },
                   })}
                   className="mt-1.5"
                 />
-                <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+                                <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
                   Type the discounted price for this booking. The original price
                   stays recorded, but the offer price becomes the price shown to
                   the client. Leave empty (or 0) if there is no offer.
                 </p>
+
+                {/* ── Ultimate Protocol §2: Discount Input (2-way bound to offerPrice) ── */}
+                <div className="mt-3">
+                  <Label className="text-xs font-semibold text-slate-600">
+                    Discount ({currency})
+                  </Label>
+                  <Input
+                    {...register("discountInput")}
+                    onChange={(e) => {
+                      discountSourceRef.current = "discount";
+                      discountPrevRef.current = e.target.value;
+                      // Trigger the 2-way sync effect (it watches discountInput)
+                      setValue("discountInput", e.target.value);
+                      discountSourceRef.current = null;
+                    }}
+                    value={discountInput ?? ""}
+                    placeholder="10% or 150"
+                    className="mt-1.5"
+                  />
+                  <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
+                    Enter a percentage (e.g. 10%) or a flat amount (e.g. 150).
+                    Editing this field recalculates the Offer Price above.
+                  </p>
+                </div>
                 <div className="mt-3 space-y-2">
                   <div>
                     <Label className="text-[11px] font-semibold text-slate-600">
@@ -1352,9 +1503,6 @@ export function BookingConfigurationForm({
                       <Badge variant="gold" className="rounded-md px-2.5 py-1 text-xs">
                         Day {day.day}
                       </Badge>
-                      <span className="text-xs text-slate-500">
-                        {day.meals?.join(" • ") || "Meals not specified"}
-                      </span>
                     </div>
                     <div className="grid grid-cols-1 gap-3">
                       <div>
@@ -1382,20 +1530,6 @@ export function BookingConfigurationForm({
                           className="mt-1"
                         />
                       </div>
-                      {day.accommodation && (
-                        <div>
-                          <Label className="text-xs">Accommodation</Label>
-                          <Input
-                            defaultValue={day.accommodation}
-                            onChange={(e) => {
-                              const updated = [...selectedTour.itinerary];
-                              updated[index] = { ...updated[index], accommodation: e.target.value };
-                              setValue("customItinerary", updated as any);
-                            }}
-                            className="mt-1"
-                          />
-                        </div>
-                      )}
                     </div>
                   </div>
                 ))}
@@ -2070,4 +2204,3 @@ function InclusionExclusionEditor({
     </div>
   );
 }
-

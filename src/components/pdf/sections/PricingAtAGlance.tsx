@@ -28,6 +28,13 @@ const BALANCE_RATE = 0.65;
 /** Currency-safe rounding to 2 decimals (cents). */
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
+/** One priced add-on line (optional tour / extra service) shown above the total. */
+export interface PricingExtraLine {
+  label: string;
+  sub?: string;
+  amount: number;
+}
+
 interface PricingRow {
   key: string;
   label: string;
@@ -40,18 +47,30 @@ interface PricingRow {
 /** Every figure shown in PRICING AT A GLANCE (pure — fully unit-testable). */
 export interface PricingBreakdown {
   currency: Currency;
-  /** Original package total as entered on the booking form. */
+  /** True package total: base price + optional tours + priced extras. */
   listTotal: number;
   /** Price the client actually pays (offer price when an offer exists). */
   finalTotal: number;
   hasOffer: boolean;
   savings: number;
   discountPct: number;
+  /** Itemized add-ons (optional tours + priced extras) shown above the total. */
+  extras: PricingExtra[];
+  /** Sum of all add-on rows (a subset of listTotal). */
+  addOnsTotal: number;
   /** Total travelers (adults + children + infants) — never below 1. */
   travelers: number;
   perPerson: number;
   deposit: number;
   remaining: number;
+}
+
+/** One optional tour / extra-service line inside PRICING AT A GLANCE. */
+export interface PricingExtra {
+  kind: "tour" | "extra";
+  title: string;
+  detail: string;
+  price: number;
 }
 
 /**
@@ -62,7 +81,40 @@ export interface PricingBreakdown {
  */
 export function computePricing(booking: BookingConfig): PricingBreakdown {
   const currency: Currency = booking.currency;
-  const listTotal = Number.isFinite(booking.totalPrice) ? booking.totalPrice : 0;
+  // ── Ultimate Protocol §3/§4: the true package total is the live base price
+  // PLUS every selected extra (optional tours + priced special requests).
+  // Stored grand-totals from older bookings are backfilled so savings stay
+  // meaningful even when the dashboard auto-total did not exist yet. ──
+  const optionalTotal = (booking.optionalTours ?? []).reduce(
+    (sum, t) => sum + (Number.isFinite(t.price) && t.price > 0 ? t.price : 0),
+    0
+  );
+  const extrasTotal = (booking.specialRequestItems ?? []).reduce(
+    (sum, it) => sum + (Number.isFinite(it.price) && it.price > 0 ? it.price : 0),
+    0
+  );
+  const addOnsTotal = round2(optionalTotal + extrasTotal);
+  const storedTotal = Number.isFinite(booking.totalPrice) ? booking.totalPrice : 0;
+  const computedTotal = round2(storedTotal + addOnsTotal);
+  const extras: PricingExtra[] = [
+    ...(booking.optionalTours ?? [])
+      .filter((t) => Number.isFinite(t.price) && t.price > 0)
+      .map((t) => ({
+        kind: "tour" as const,
+        title: t.title?.trim() || "Optional tour",
+        detail: `Day ${t.day}${t.location?.trim() ? ` • ${t.location.trim()}` : ""}${t.time?.trim() ? ` • ${t.time.trim()}` : ""}`,
+        price: round2(t.price),
+      })),
+    ...(booking.specialRequestItems ?? [])
+      .filter((it) => Number.isFinite(it.price) && it.price > 0)
+      .map((it) => ({
+        kind: "extra" as const,
+        title: it.description?.trim() || "Extra service",
+        detail: "",
+        price: round2(it.price),
+      })),
+  ];
+  const listTotal = computedTotal;
   const offerPrice = booking.offerPrice ?? 0;
   const hasOffer = offerPrice > 0;
   const finalTotal = hasOffer ? offerPrice : listTotal;
@@ -84,6 +136,8 @@ export function computePricing(booking: BookingConfig): PricingBreakdown {
     hasOffer,
     savings,
     discountPct: listTotal > 0 && savings > 0 ? Math.round((savings / listTotal) * 100) : 0,
+    extras,
+    addOnsTotal,
     travelers,
     perPerson: manualPerPerson > 0 ? manualPerPerson : finalTotal / travelers,
     deposit: round2(finalTotal * DEPOSIT_RATE),
@@ -109,6 +163,7 @@ export function PricingAtAGlance({ ctx, booking, travelersText, sectionNumber }:
     hasOffer,
     savings,
     discountPct,
+    extras,
     travelers,
     perPerson,
     deposit,
@@ -120,7 +175,16 @@ export function PricingAtAGlance({ ctx, booking, travelersText, sectionNumber }:
     `${travelers} ${label(travelers > 1 ? "general.guests" : "general.guest", travelers > 1 ? "Guests" : "Guest")}`;
   const perPersonUnit = label("pricing.perPersonUnit", "per person");
 
-  const rows: PricingRow[] = [
+    const rows: PricingRow[] = [
+    // ── Ultimate Protocol §4: Optional Tours + Extras appear directly above
+    // the PACKAGE TOTAL so the add-ons are visible before the final figure,
+    // and each line is a non-breakable row (wrap={false} at render). ──
+    ...extras.map((ex, idx) => ({
+      key: `extra-${idx}`,
+      label: ex.title,
+      value: <Text style={styles.pricingValue}>{formatCurrency(ex.price, currency)}</Text>,
+      caption: ex.detail || undefined,
+    })),
     {
       key: "package-total",
       label: label("pricing.packageTotal", "PACKAGE TOTAL"),
