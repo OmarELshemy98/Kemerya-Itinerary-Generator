@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description:
     "Professional itinerary generator for Kemerya Tours - Create beautiful PDF itineraries for your clients.",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/images/logo-kemerya.png",
   },
 };
 

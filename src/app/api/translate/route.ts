@@ -4,8 +4,9 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const MODEL_NAME = "gemini-1.5-flash";
+const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const API_KEY = process.env.GEMINI_API_KEY || "";
+// الحل 2: إزالة { apiVersion: "v1" } عشان المكتبة تشتغل بالديفولت الصحيح بتاعها
 const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
 
 export async function POST(request: NextRequest) {
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
   } = body as {
     targetLanguage?: string;
     itineraryData?: Record<string, unknown>;
-    staticLabels?: Record<string, string>;
+    staticLabels?: Record<string, unknown>;
     languageCode?: string;
   };
 
@@ -121,7 +122,7 @@ ${JSON.stringify(merged)}`;
       lastError = err;
       retries--;
       if (retries > 0) {
-        await new Promise<void>((r) => setTimeout(r, 2000));
+        await new Promise((r) => setTimeout(r, 2000));
       }
     }
   }
