@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
+import { ExportExcelButton } from "@/components/export-excel-button";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -223,6 +224,15 @@ function UsersPageContent() {
     );
   }, [users, searchQuery]);
 
+  const exportRows = filteredUsers.map((user) => ({
+    Name: user.full_name,
+    Email: user.email,
+    Phone: user.phone_number || "",
+    Role: user.role.replace("_", " "),
+    Status: user.is_active ? "Active" : "Inactive",
+    Created: new Date(user.created_at).toLocaleDateString(),
+  }));
+
   const roleIcon = (role: UserRole) => {
     switch (role) {
       case "super_admin":
@@ -431,8 +441,10 @@ function UsersPageContent() {
             Manage user accounts and permissions
           </p>
         </div>
-        {isSuperAdmin && (
-          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <div className="flex flex-wrap items-center gap-2">
+          <ExportExcelButton rows={exportRows} fileName="Users" />
+          {isSuperAdmin && (
+            <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <Plus className="h-4 w-4" />
@@ -538,8 +550,9 @@ function UsersPageContent() {
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
-        )}
+            </Dialog>
+          )}
+        </div>
       </div>
 
       {/* Search */}

@@ -102,10 +102,24 @@ function DashboardInner() {
 
   const handleClearSelection = () => {
     setSelectedTour(null);
+    setIsCustomMode(false);
     setBookingConfig(null);
     setSelectedLanguage(null);
     setTranslatedData(null);
     setTranslationError(null);
+  };
+
+  const handleCreateCustomTour = () => {
+    setSelectedTour(null);
+    setIsCustomMode(true);
+    setBookingConfig(null);
+    setSelectedLanguage(null);
+    setTranslatedData(null);
+    setTranslationError(null);
+    setTimeout(() => {
+      const el = document.getElementById("booking-section");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
   };
 
   const handleTranslate = (languageCode: SupportedLanguageCode | null): void => {
@@ -115,7 +129,7 @@ function DashboardInner() {
       setTranslationError(null);
       return;
     }
-    if (!bookingConfig || !selectedTour) return;
+    if (!bookingConfig) return;
 
     setSelectedLanguage(languageCode);
     setIsTranslating(true);
@@ -154,7 +168,13 @@ function DashboardInner() {
               <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Create Itinerary</h1>
               <p className="mt-1 text-sm text-slate-500">Select a tour and configure booking details to generate a premium PDF itinerary.</p>
             </div>
-            <div className="flex items-center gap-2"><Badge variant="gold" className="text-xs">{tours.length} Tours</Badge></div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" className="gap-2 border-[#C9A962]/50 text-[#8b7435] hover:bg-[#C9A962]/10" onClick={handleCreateCustomTour}>
+                <Sparkles className="h-4 w-4" />
+                Create Custom Tour from Scratch
+              </Button>
+              <Badge variant="gold" className="text-xs">{tours.length} Tours</Badge>
+            </div>
           </div>
           <div className="mb-6"><TourSearchBar onTourSelect={handleTourSelect} /></div>
           <HierarchicalCategorySelector onTourSelect={handleTourSelect} selectedTourId={selectedTour?.id} />
@@ -163,9 +183,9 @@ function DashboardInner() {
 
       {selectedTour && (<SelectedTourBanner tour={selectedTour} onClear={handleClearSelection} />)}
 
-      {selectedTour && (
+      {(selectedTour || isCustomMode) && (
         <section id="booking-section" className="mb-8">
-          <SectionHeader icon={<FileText className="h-4 w-4" />} step="02" title="Booking Configuration" subtitle="Configure travelers, dates, and pricing for this tour." />
+          <SectionHeader icon={<FileText className="h-4 w-4" />} step="02" title="Booking Configuration" subtitle={isCustomMode ? "Build your custom tour from a blank form." : "Configure travelers, dates, and pricing for this tour."} />
           <BookingConfigurationForm selectedTour={selectedTour} isCustomMode={isCustomMode} onCustomModeChange={setIsCustomMode} onSubmit={handleBookingSubmit} />
         </section>
       )}

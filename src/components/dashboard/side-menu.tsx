@@ -16,6 +16,7 @@ import {
   BadgePercent,
   ContactRound,
   Globe2,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -90,6 +91,12 @@ export function SideMenu({ userRole, collapsed, onToggle, mobileOpen, onMobileCl
         label: "Countries",
         icon: <Globe2 className="h-5 w-5" />,
         path: "/countries",
+      },
+      {
+        id: "popular-tours",
+        label: "Popular Tours",
+        icon: <BarChart3 className="h-5 w-5" />,
+        path: "/popular-tours",
       },
     ];
 

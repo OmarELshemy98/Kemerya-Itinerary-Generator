@@ -47,6 +47,7 @@ import {
 import { cn, formatDateShort } from "@/lib/utils";
 import type { AdminUser, CreateUserRequest, UpdateUserRequest, UserRole } from "@/types";
 import { AuthGate } from "@/components/auth-gate";
+import { ExportExcelButton } from "@/components/export-excel-button";
 
 const ROLE_OPTIONS: { value: UserRole; label: string; description: string; icon: React.ReactNode }[] = [
   {
@@ -145,6 +146,14 @@ export default function AdminUsersPage() {
     );
   }, [users, search]);
 
+  const exportRows = filteredUsers.map((user) => ({
+    Name: user.full_name,
+    Email: user.email,
+    Role: user.role.replace("_", " "),
+    Status: user.is_active ? "Active" : "Inactive",
+    Created: formatDateShort(user.created_at),
+  }));
+
   const counts = React.useMemo(() => {
     const total = users.length;
     const active = users.filter((u) => u.is_active).length;
@@ -241,6 +250,7 @@ export default function AdminUsersPage() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <ExportExcelButton rows={exportRows} fileName="User Management" />
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input

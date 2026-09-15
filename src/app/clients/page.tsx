@@ -1,4 +1,5 @@
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
+import { ExportExcelButton } from "@/components/export-excel-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { getCurrentUserServer, isAdmin } from "@/lib/auth/rbac";
@@ -86,6 +87,15 @@ function formatDate(date: string) {
 
 function ClientsPageContent({ clients }: { clients: Client[] }) {
   const repeatClients = clients.filter((client) => client.totalBookings > 1).length;
+  const exportRows = clients.map((client) => ({
+    "Client ID": client.id,
+    Name: client.name,
+    Email: client.email,
+    Phone: client.phone,
+    Country: client.country,
+    "Total Bookings": client.totalBookings,
+    "Last Booking": formatDate(client.lastBookingDate),
+  }));
 
   return (
     <div className="space-y-6">
@@ -98,7 +108,7 @@ function ClientsPageContent({ clients }: { clients: Client[] }) {
         <div className="flex items-center gap-3 rounded-xl border border-[#C9A962]/20 bg-[#C9A962]/10 px-4 py-3"><Sparkles className="h-5 w-5 text-[#8b7435]" /><div><p className="text-lg font-bold leading-none text-slate-900">{repeatClients}</p><p className="mt-1 text-xs font-medium text-slate-600">Repeat clients</p></div></div>
       </div>
       <Card className="overflow-hidden border-slate-200">
-        <div className="border-b border-slate-200 bg-white p-4 sm:px-6"><div className="flex items-center gap-2 text-sm font-semibold text-slate-900"><ContactRound className="h-4 w-4 text-[#8b7435]" />{clients.length} registered clients</div></div>
+        <div className="flex flex-col gap-3 border-b border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div className="flex items-center gap-2 text-sm font-semibold text-slate-900"><ContactRound className="h-4 w-4 text-[#8b7435]" />{clients.length} registered clients</div><ExportExcelButton rows={exportRows} fileName="Clients Directory" /></div>
         <CardContent className="p-0"><div className="overflow-x-auto"><table className="w-full min-w-[850px] text-sm"><thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-500"><tr><th className="px-6 py-4">Client</th><th className="px-4 py-4">Contact</th><th className="px-4 py-4">Country</th><th className="px-4 py-4">Bookings</th><th className="px-6 py-4">Last booking</th></tr></thead><tbody className="divide-y divide-slate-100">
           {clients.length === 0 ? <tr><td colSpan={5} className="px-6 py-12 text-center text-sm text-slate-500">No client bookings found.</td></tr> : clients.map((client) => <tr key={client.email} className="transition-colors hover:bg-slate-50/80">
             <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#C9A962]/15 text-sm font-bold text-[#8b7435]">{client.name.split(" ").map((part) => part[0]).join("")}</div><div><p className="font-semibold text-slate-900">{client.name}</p><p className="mt-0.5 text-xs text-slate-400">{client.id}</p></div></div></td>
