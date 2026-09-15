@@ -51,6 +51,7 @@ interface FormValues {
   offerTitle: string;
   offerNote: string;
   currency: Currency;
+  depositPercentage: number;
 }
 
 export function PricingSection({
@@ -292,6 +293,50 @@ export function PricingSection({
             <p className="mt-2 text-sm font-semibold text-slate-500">No offer on this booking</p>
           </div>
         )}
+      </div>
+
+      {/* Deposit Percentage */}
+      <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+        <div className="flex items-center gap-2 text-slate-700">
+          <Gift className="h-4 w-4 text-slate-400" />
+          <span className="text-xs font-semibold uppercase tracking-wider">Booking Deposit</span>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label className="text-xs font-semibold text-slate-700">Deposit Percentage (%)</Label>
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              {...register("depositPercentage", { valueAsNumber: true })}
+              className="mt-1.5"
+            />
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-white p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Split Preview</p>
+            <div className="mt-2 space-y-1 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600">Deposit ({watch("depositPercentage") ?? 35}%)</span>
+                <span className="font-semibold text-emerald-700">
+                  {formatCurrency(
+                    (hasOffer ? offerPrice : grandTotal) * ((watch("depositPercentage") ?? 35) / 100),
+                    currency
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600">Remaining ({100 - (watch("depositPercentage") ?? 35)}%)</span>
+                <span className="font-semibold text-[#1E3A8A]">
+                  {formatCurrency(
+                    (hasOffer ? offerPrice : grandTotal) *
+                      ((100 - (watch("depositPercentage") ?? 35)) / 100),
+                    currency
+                  )}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Offer Title & Note */}

@@ -167,6 +167,8 @@ export interface BookingConfig {
   offerTitle?: string;
   /** Extra offer note shown under the offer price (editable) */
   offerNote?: string;
+  /** Booking deposit percentage (0-100). Defaults to 35 when omitted. */
+  depositPercentage?: number;
   /** Custom terms & conditions for this specific itinerary */
   customTerms?: string[];
   /** Custom privacy-policy items for this specific itinerary (editable) */

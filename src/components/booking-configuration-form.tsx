@@ -566,6 +566,8 @@ const bookingSchema = z
     /** Luxury offer headline + note (editable, shown on PDF offer banner) */
     offerTitle: z.string().optional().default(""),
     offerNote: z.string().optional().default(""),
+    /** Booking deposit percentage (0-100). Replaces the hardcoded 35%. */
+    depositPercentage: z.coerce.number().min(0).max(100).optional().default(35),
     /** Custom terms & conditions for this specific itinerary */
     customTerms: z.array(z.string()).optional(),
     /** Custom privacy-policy items for this specific itinerary (editable) */
@@ -704,6 +706,7 @@ export function BookingConfigurationForm({
         discountInput: "",
         offerTitle: "Exclusive Limited-Time Offer",
         offerNote: "",
+        depositPercentage: 35,
         customTerms: [],
         customPrivacy: [],
         bookingRef: generateBookingRef(),
@@ -897,6 +900,7 @@ export function BookingConfigurationForm({
       discountInput: values.discountInput?.trim() ? values.discountInput.trim() : undefined,
       offerTitle: values.offerTitle?.trim() ? values.offerTitle.trim() : undefined,
       offerNote: values.offerNote?.trim() ? values.offerNote.trim() : undefined,
+      depositPercentage: values.depositPercentage,
       customTerms: values.customTerms && values.customTerms.length > 0 ? values.customTerms.filter((t) => t && t.trim()) : undefined,
       customPrivacy: values.customPrivacy && values.customPrivacy.length > 0 ? values.customPrivacy.filter((t) => t && t.trim()) : undefined,
       // Standard mode: employee-editable inclusions/exclusions (pre-filled from tour)

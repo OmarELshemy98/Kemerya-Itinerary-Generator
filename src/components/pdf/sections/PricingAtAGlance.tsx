@@ -21,10 +21,6 @@ interface Props {
   sectionNumber: string;
 }
 
-/** Non-refundable booking deposit and the balance paid upon arrival. */
-const DEPOSIT_RATE = 0.35;
-const BALANCE_RATE = 0.65;
-
 /** Currency-safe rounding to 2 decimals (cents). */
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
@@ -63,6 +59,8 @@ export interface PricingBreakdown {
   perPerson: number;
   deposit: number;
   remaining: number;
+  /** Deposit percentage used (from booking, defaults to 35). */
+  depositPct: number;
 }
 
 /** One optional tour / extra-service line inside PRICING AT A GLANCE. */
@@ -129,6 +127,13 @@ export function computePricing(booking: BookingConfig): PricingBreakdown {
 
   const savings = round2(listTotal - finalTotal);
 
+  // ── Dynamic deposit percentage (editable from UI, default 35%). ──
+  const depositPct = Number.isFinite(booking.depositPercentage as number)
+    ? Math.min(100, Math.max(0, booking.depositPercentage as number))
+    : 35;
+  const depositRate = depositPct / 100;
+  const remainingRate = 1 - depositRate;
+
   return {
     currency,
     listTotal,
@@ -140,8 +145,9 @@ export function computePricing(booking: BookingConfig): PricingBreakdown {
     addOnsTotal,
     travelers,
     perPerson: manualPerPerson > 0 ? manualPerPerson : finalTotal / travelers,
-    deposit: round2(finalTotal * DEPOSIT_RATE),
-    remaining: round2(finalTotal * BALANCE_RATE),
+    deposit: round2(finalTotal * depositRate),
+    remaining: round2(finalTotal * remainingRate),
+    depositPct,
   };
 }
 
@@ -168,6 +174,7 @@ export function PricingAtAGlance({ ctx, booking, travelersText, sectionNumber }:
     perPerson,
     deposit,
     remaining,
+    depositPct,
   } = computePricing(booking);
 
   const composition =
@@ -209,15 +216,15 @@ export function PricingAtAGlance({ ctx, booking, travelersText, sectionNumber }:
     },
     {
       key: "deposit",
-      label: label("pricing.bookingDeposit", "35% BOOKING DEPOSIT"),
+      label: label("pricing.bookingDeposit", `${depositPct}% BOOKING DEPOSIT`),
       value: <Text style={styles.pricingValue}>{formatCurrency(deposit, currency)}</Text>,
-      caption: `35% × ${formatCurrency(finalTotal, currency)}`,
+      caption: `${depositPct}% × ${formatCurrency(finalTotal, currency)}`,
     },
     {
       key: "remaining",
-      label: label("pricing.remainingBalance", "REMAINING 65%"),
+      label: label("pricing.remainingBalance", `REMAINING ${100 - depositPct}%`),
       value: <Text style={styles.pricingValue}>{formatCurrency(remaining, currency)}</Text>,
-      caption: `65% × ${formatCurrency(finalTotal, currency)}`,
+      caption: `${100 - depositPct}% × ${formatCurrency(finalTotal, currency)}`,
     },
   ];
 
