@@ -14,6 +14,8 @@ import {
   Settings,
   Clock,
   BadgePercent,
+  ContactRound,
+  Globe2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -76,6 +78,18 @@ export function SideMenu({ userRole, collapsed, onToggle, mobileOpen, onMobileCl
         label: "Offers Tours",
         icon: <BadgePercent className="h-5 w-5" />,
         path: "/dashboard/offer-tours",
+      },
+      {
+        id: "clients",
+        label: "Clients",
+        icon: <ContactRound className="h-5 w-5" />,
+        path: "/clients",
+      },
+      {
+        id: "countries",
+        label: "Countries",
+        icon: <Globe2 className="h-5 w-5" />,
+        path: "/countries",
       },
     ];
 
