@@ -96,8 +96,11 @@ export function formatDateShort(date: Date | string): string {
   });
 }
 
-export function calculateNights(startDate: Date, endDate: Date): number {
-  const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+export function calculateNights(startDate: Date | string, endDate: Date | string): number {
+  const s = startDate instanceof Date ? startDate : new Date(startDate);
+  const e = endDate instanceof Date ? endDate : new Date(endDate);
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return 0;
+  const diffTime = Math.abs(e.getTime() - s.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays;
 }

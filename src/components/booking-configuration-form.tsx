@@ -54,6 +54,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { cn, calculateNights, formatCurrency } from "@/lib/utils";
+import { PricingSection } from "./booking-form/PricingSection";
 import { EGYPT_LOCATIONS } from "@/utils/mapGenerator";
 
 /**
@@ -511,7 +512,7 @@ export function formatDiscountValue(value: number, total: number): string {
 }
 
 /** Currency-safe rounding to 2 decimals (cents). */
-const round2 = (value: number) => Math.round(value * 100) / 100;
+export const round2 = (value: number) => Math.round(value * 100) / 100;
 
 const bookingSchema = z
   .object({
@@ -1324,148 +1325,15 @@ export function BookingConfigurationForm({
             )}
           </Section>
 
-          {/* Special Offer / Discount — attractive & unique */}
-          <Section icon={<Tag className="h-4 w-4" />} title="Special Offer">
-            <div className="grid gap-4 lg:grid-cols-[320px,1fr]">
-              {/* Offer input */}
-              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold text-slate-700">
-                    Offer Price ({currency})
-                  </Label>
-                  {offerPrice != null && offerPrice > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setValue("offerPrice", 0)}
-                      className="text-[11px] font-semibold text-red-500 hover:underline"
-                    >
-                      Remove offer
-                    </button>
-                  )}
-                </div>
-                                <Input
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  placeholder="0.00"
-                  {...register("offerPrice", {
-                    setValueAs: (v) =>
-                      v === "" || v == null || Number.isNaN(Number(v)) ? 0 : Number(v),
-                    onChange: (v) => {
-                      discountSourceRef.current = "offer";
-                      offerPrevRef.current = Number(v) || 0;
-                    },
-                  })}
-                  className="mt-1.5"
-                />
-                                <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
-                  Type the discounted price for this booking. The original price
-                  stays recorded, but the offer price becomes the price shown to
-                  the client. Leave empty (or 0) if there is no offer.
-                </p>
-
-                {/* ── Ultimate Protocol §2: Discount Input (2-way bound to offerPrice) ── */}
-                <div className="mt-3">
-                  <Label className="text-xs font-semibold text-slate-600">
-                    Discount ({currency})
-                  </Label>
-                  <Input
-                    {...register("discountInput")}
-                    onChange={(e) => {
-                      discountSourceRef.current = "discount";
-                      discountPrevRef.current = e.target.value;
-                      // Trigger the 2-way sync effect (it watches discountInput)
-                      setValue("discountInput", e.target.value);
-                      discountSourceRef.current = null;
-                    }}
-                    value={discountInput ?? ""}
-                    placeholder="10% or 150"
-                    className="mt-1.5"
-                  />
-                  <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
-                    Enter a percentage (e.g. 10%) or a flat amount (e.g. 150).
-                    Editing this field recalculates the Offer Price above.
-                  </p>
-                </div>
-                <div className="mt-3 space-y-2">
-                  <div>
-                    <Label className="text-[11px] font-semibold text-slate-600">
-                      Offer headline (PDF banner)
-                    </Label>
-                    <Input
-                      {...register("offerTitle")}
-                      placeholder="Exclusive Limited-Time Offer"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[11px] font-semibold text-slate-600">
-                      Offer note (PDF banner)
-                    </Label>
-                    <Textarea
-                      {...register("offerNote")}
-                      placeholder="e.g. Valid for bookings confirmed this week — includes all transfers…"
-                      rows={2}
-                      className="mt-1 min-h-[52px] resize-none text-sm"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Live offer preview */}
-              {offerPrice != null && offerPrice > 0 ? (
-                <div className="relative overflow-hidden rounded-xl border-2 border-emerald-300 bg-gradient-to-br from-emerald-50 via-white to-[#C9A962]/15 p-5">
-                  {/* corner ribbon */}
-                  <div className="absolute right-4 top-4 rotate-6 rounded-lg bg-emerald-500 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white shadow-md">
-                    Special Offer
-                  </div>
-                  <div className="flex items-center gap-2 text-emerald-700">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/15">
-                      <Tag className="h-4 w-4" />
-                    </span>
-                    <span className="text-xs font-bold uppercase tracking-widest">
-                      Offer Applied
-                    </span>
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-end gap-3">
-                    <span className="text-lg font-semibold text-slate-400 line-through decoration-red-400 decoration-[2.5px]">
-                      {formatCurrency(totalPrice, currency)}
-                    </span>
-                    <span className="text-3xl font-black tracking-tight text-emerald-600">
-                      {formatCurrency(offerPrice, currency)}
-                    </span>
-                  </div>
-                  {offerTitle?.trim() && (
-                    <p className="mt-2 text-sm font-bold text-emerald-800">
-                      {offerTitle}
-                    </p>
-                  )}
-                  {offerNote?.trim() && (
-                    <p className="mt-1 text-xs leading-relaxed text-emerald-700">
-                      {offerNote}
-                    </p>
-                  )}
-                  {totalPrice > offerPrice && (
-                    <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold text-emerald-800">
-                      <BadgePercent className="h-3.5 w-3.5" />
-                      You save {formatCurrency(totalPrice - offerPrice, currency)} (
-                      {Math.round(((totalPrice - offerPrice) / totalPrice) * 100)}%)
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-5 text-center">
-                  <BadgePercent className="h-8 w-8 text-slate-300" />
-                  <p className="mt-2 text-sm font-semibold text-slate-500">No offer on this booking</p>
-                  <p className="mt-1 max-w-xs text-xs text-slate-400">
-                    Add an offer price to highlight a discount — the original
-                    price will be crossed out everywhere and the offer price will
-                    be shown instead.
-                  </p>
-                </div>
-              )}
-            </div>
-          </Section>
+          {/* Special Offer / Discount — using modular PricingSection component */}
+          <PricingSection
+            currency={currency}
+            totalPrice={totalPrice}
+            offerPrice={offerPrice}
+            discountInput={discountInput}
+            optionalTours={(optionalTours ?? []).map((t: any) => ({ title: t.title, price: t.price }))}
+            specialRequestItems={(specialRequestItems ?? []).map((item: any) => ({ description: item.description, price: item.price }))}
+          />
 
           {/* Inclusions & Exclusions — editable for standard tours */}
           {!isCustomMode && selectedTour && (

@@ -23,7 +23,7 @@ export function TermsAndPrivacy({ ctx, termsItems, privacyItems, sectionNumber }
   if (termsItems.length === 0 && privacyItems.length === 0) return null;
 
   return (
-    <View style={styles.section}>
+    <View style={styles.section} wrap={false}>
       <View style={styles.sectionHeader} wrap={false} minPresenceAhead={60}>
         <View style={styles.sectionNum}><Text style={styles.sectionNumText}>{sectionNumber}</Text></View>
         <CartoucheIcon s={10} />
